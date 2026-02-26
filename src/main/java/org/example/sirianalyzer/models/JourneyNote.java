@@ -1,0 +1,34 @@
+package org.example.sirianalyzer.models;
+
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import tools.jackson.dataformat.xml.annotation.JacksonXmlProperty;
+import tools.jackson.dataformat.xml.annotation.JacksonXmlText;
+
+/**
+ * Represents a journey note with language and text content.
+ * Used to provide additional information about a vehicle journey.
+ *
+ * Mapped so that nested XML elements like:
+ *
+ * <JourneyNote>
+ *   <lang>NO</lang>
+ *   <text>Rute A</text>
+ * </JourneyNote>
+ *
+ * are bound to the corresponding fields.
+ */
+@Getter
+@Setter
+@NoArgsConstructor
+public class JourneyNote {
+
+    /** Language code for the note text (e.g., "NO", "EN") */
+    @JacksonXmlProperty(localName = "lang")
+    private String lang;
+
+    /** The actual note text content */
+    @JacksonXmlText
+    private String text;
+}

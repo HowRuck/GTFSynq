@@ -1,0 +1,18 @@
+spring:
+  main:
+    java-native-access: ALL-UNNAMED
+  application:
+    name: SiriAnalyzer
+  codec:
+    max-in-memory-size: 200MB
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+siri:
+  failed-messages:
+    dir: ./failed-messages
+  kafka:
+    topic: siri-et-messages
