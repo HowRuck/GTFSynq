@@ -32,7 +32,7 @@
     <properties>
         <java.version>21</java.version>
         <jackson.version>3.0.4</jackson.version>
-        <sonar.organization>nordsiri</sonar.organization>
+        <sonar.organization>HowRuck_NordSIRI</sonar.organization>
     </properties>
     <dependencies>
         <dependency>
