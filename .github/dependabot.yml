@@ -1,0 +1,6 @@
+version: 2
+updates:
+  - package-ecosystem: "java"
+    directory: "/"
+    schedule:
+      cron: "0 7,10,16,22 * * *"
