@@ -1,9 +1,5 @@
 package org.example.sirianalyzer.models;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
 /**
  * Information about platform/quay assignment for an arrival.
  * Used to communicate platform changes from the planned assignment.
@@ -15,23 +11,19 @@ import lombok.Setter;
  * - ExpectedQuayRef   -> expectedQuayRef
  * - ActualQuayRef     -> actualQuayRef
  */
-@Getter
-@Setter
-@NoArgsConstructor
-public class ArrivalStopAssignment {
-
+public record ArrivalStopAssignment(
     /** Reference to the platform (e.g., "1", "2", "A") */
-    private String platformRef;
+    String platformRef,
 
     /** Reference to the quay (e.g., "NSR:Quay:519") */
-    private String quayRef;
+    String quayRef,
 
     /** Originally planned/scheduled quay/platform reference */
-    private String aimedQuayRef;
+    String aimedQuayRef,
 
     /** Currently expected/actual quay/platform reference (may differ from aimed if there's a change) */
-    private String expectedQuayRef;
+    String expectedQuayRef,
 
     /** Actual quay reference for arrival (for recorded calls) */
-    private String actualQuayRef;
-}
+    String actualQuayRef
+) {}

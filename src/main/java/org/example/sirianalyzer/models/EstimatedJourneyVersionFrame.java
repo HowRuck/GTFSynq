@@ -1,9 +1,6 @@
 package org.example.sirianalyzer.models;
 
 import java.util.List;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 import tools.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import tools.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
@@ -21,16 +18,12 @@ import tools.jackson.dataformat.xml.annotation.JacksonXmlProperty;
  *   therefore the list is annotated with {@code @JacksonXmlElementWrapper(useWrapping = false)} and
  *   each element is mapped to the SIRI element name "EstimatedVehicleJourney".
  */
-@Getter
-@Setter
-@NoArgsConstructor
-public class EstimatedJourneyVersionFrame {
-
+public record EstimatedJourneyVersionFrame(
     /** Timestamp when this journey information was recorded/captured */
-    private String recordedAtTime;
+    String recordedAtTime,
 
     /** Detailed information about a specific estimated vehicle journey */
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "EstimatedVehicleJourney")
-    private List<EstimatedVehicleJourney> estimatedVehicleJourneys;
-}
+    List<EstimatedVehicleJourney> estimatedVehicleJourneys
+) {}

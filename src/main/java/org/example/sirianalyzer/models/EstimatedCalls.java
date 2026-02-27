@@ -1,9 +1,6 @@
 package org.example.sirianalyzer.models;
 
 import java.util.List;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 import tools.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 
 /**
@@ -13,12 +10,8 @@ import tools.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
  * The list is configured as unwrapped (elements appear without an enclosing list element).
  * Each element is explicitly mapped to the XML element name "EstimatedCall".
  */
-@Getter
-@Setter
-@NoArgsConstructor
-public class EstimatedCalls {
-
+public record EstimatedCalls(
     /** List of estimated calls in sequence order */
     @JacksonXmlElementWrapper(useWrapping = false)
-    private List<EstimatedCall> estimatedCall;
-}
+    List<EstimatedCall> estimatedCall
+) {}

@@ -1,8 +1,5 @@
 package org.example.sirianalyzer.models;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 import tools.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import tools.jackson.dataformat.xml.annotation.JacksonXmlText;
 
@@ -19,16 +16,10 @@ import tools.jackson.dataformat.xml.annotation.JacksonXmlText;
  *
  * are bound to the corresponding fields.
  */
-@Getter
-@Setter
-@NoArgsConstructor
-public class JourneyNote {
-
+public record JourneyNote(
     /** Language code for the note text (e.g., "NO", "EN") */
-    @JacksonXmlProperty(localName = "lang")
-    private String lang;
+    @JacksonXmlProperty(localName = "lang") String lang,
 
     /** The actual note text content */
-    @JacksonXmlText
-    private String text;
-}
+    @JacksonXmlProperty(localName = "Text") String text
+) {}

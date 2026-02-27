@@ -2,6 +2,7 @@ package org.example.sirianalyzer.producers;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.example.sirianalyzer.models.DepartureStopAssignment;
 import org.example.sirianalyzer.models.EstimatedVehicleJourney;
 import org.example.sirianalyzer.models.SiriEtMessage;
 import org.springframework.beans.factory.annotation.Value;
@@ -49,10 +50,10 @@ public class SiriMessageProducer {
         }
 
         var includedConnections = message
-            .getServiceDelivery()
-            .getEstimatedTimetableDelivery()
-            .getEstimatedJourneyVersionFrame()
-            .getEstimatedVehicleJourneys();
+            .serviceDelivery()
+            .estimatedTimetableDelivery()
+            .estimatedJourneyVersionFrame()
+            .estimatedVehicleJourneys();
 
         if (includedConnections == null || includedConnections.isEmpty()) {
             log.warn(

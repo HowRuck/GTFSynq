@@ -61,14 +61,13 @@ public class SiriParserService {
             long duration = System.currentTimeMillis() - startTime;
 
             // Count the number of connections in the message
-            int connectionCount = (message.getServiceDelivery() != null &&
-                message.getServiceDelivery().getEstimatedTimetableDelivery() !=
-                null)
+            int connectionCount = (message.serviceDelivery() != null &&
+                message.serviceDelivery().estimatedTimetableDelivery() != null)
                 ? message
-                      .getServiceDelivery()
-                      .getEstimatedTimetableDelivery()
-                      .getEstimatedJourneyVersionFrame()
-                      .getEstimatedVehicleJourneys()
+                      .serviceDelivery()
+                      .estimatedTimetableDelivery()
+                      .estimatedJourneyVersionFrame()
+                      .estimatedVehicleJourneys()
                       .size()
                 : 0;
 
