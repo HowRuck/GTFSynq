@@ -68,11 +68,29 @@ public class SiriMessageProducer {
                 includedConnections.size()
             );
 
-            for (var connection : includedConnections) {
-                //var jsonMessage = jsonMapper.writeValueAsString(connection);
+            // Send each connection to Kafka
+            includedConnections.forEach(connection -> {
+                kafkaTemplate
+                    .send(topic, connection)
+                    .thenAccept(result -> {
+                        log.debug(
+                            "Successfully sent message to Kafka topic {}",
+                            topic
+                        );
+                    })
+                    .exceptionally(ex -> {
+                        log.error(
+                            "Failed to send message to topic {}",
+                            topic,
+                            ex
+                        );
+                        log.warn(
+                            "Passed message does not contain any conections, returning null"
+                        );
 
-                kafkaTemplate.send(topic, connection).get();
-            }
+                        return null; // Return null to indicate failure
+                    });
+            });
 
             log.debug("Successfully sent message to Kafka topic {}", topic);
             return true;
