@@ -84,9 +84,6 @@ public class SiriMessageProducer {
                             topic,
                             ex
                         );
-                        log.warn(
-                            "Passed message does not contain any conections, returning null"
-                        );
 
                         return null; // Return null to indicate failure
                     });
