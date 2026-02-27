@@ -1,7 +1,5 @@
 package org.example.sirianalyzer.models;
 
-import tools.jackson.dataformat.xml.annotation.JacksonXmlProperty;
-
 /**
  * Represents an estimated call (stop) at a specific location.
  * Contains both planned (aimed) and real-time estimated arrival/departure information.

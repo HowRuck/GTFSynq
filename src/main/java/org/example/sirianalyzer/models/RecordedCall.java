@@ -1,6 +1,5 @@
 package org.example.sirianalyzer.models;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonRootName;
 
 /**
