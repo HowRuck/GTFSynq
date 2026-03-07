@@ -3,7 +3,10 @@ package org.example.sirianalyzer.util;
 import com.google.common.hash.Hashing;
 import com.google.transit.realtime.GtfsRealtime;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -11,7 +14,12 @@ import java.nio.charset.StandardCharsets;
  */
 public final class FeedEntityHashing {
 
-    private FeedEntityHashing() {}
+    // Murmur3 uses little-endian byte order
+    private static final VarHandle LONG_VIEW =
+            MethodHandles.byteArrayViewVarHandle(long[].class, ByteOrder.LITTLE_ENDIAN);
+
+    private FeedEntityHashing() {
+    }
 
     /**
      * Produces an {@link EntityHash} for a single {@link GtfsRealtime.FeedEntity}.
@@ -21,12 +29,16 @@ public final class FeedEntityHashing {
         var idBytes = entity.getId().getBytes(StandardCharsets.UTF_8);
         var key = ByteBuffer.allocateDirect(idBytes.length).put(idBytes).flip();
 
-        // Wrap the hash bytes in a ByteBuffer for easy long extraction
-        ByteBuffer hb = ByteBuffer.wrap(
-                Hashing.murmur3_128().hashBytes(entity.toByteArray()).asBytes()
-        );
+        var hashBytes = Hashing.murmur3_128()
+                .hashBytes(entity.toByteArray())
+                .asBytes();
 
-        return new EntityHash(key, hb.getLong(), hb.getLong());
+        // Extract longs using VarHandle to skip object overhead
+        // Offset 0 is h1, Offset 8 is h2
+        var h1 = (long) LONG_VIEW.get(hashBytes, 0);
+        var h2 = (long) LONG_VIEW.get(hashBytes, 8);
+
+        return new EntityHash(key, h1, h2);
     }
 
     /**
@@ -35,5 +47,6 @@ public final class FeedEntityHashing {
      * h1 = high 64 bits, h2 = low 64 bits of the 128-bit hash.
      * This avoids object overhead and allows efficient LMDB storage.
      */
-    public record EntityHash(ByteBuffer key, long h1, long h2) {}
+    public record EntityHash(ByteBuffer key, long h1, long h2) {
+    }
 }
