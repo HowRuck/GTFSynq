@@ -44,7 +44,10 @@ public class GtfsEntityRepository {
     }
 
     /**
-     * Pure computation step — parallelisable, no LMDB interaction.
+     * Computes hashes for the given GTFS entities
+     *
+     * @param entities The GTFS entities to compute hashes for
+     * @return A list of hashes, one for each entity
      */
     private List<FeedEntityHashing.EntityHash> computeHashes(List<GtfsRealtime.FeedEntity> entities) {
         return entities.parallelStream()
@@ -53,17 +56,22 @@ public class GtfsEntityRepository {
     }
 
     /**
-     * Write step — single transaction, sequential, all-or-nothing.
+     * Persists hashes to LMDB, skipping unchanged entries
+     *
+     * @param entityHashes The hashes to persist
+     * @return The number of hashes actually written (i.e. new or changed)
      */
     private int persistHashes(List<FeedEntityHashing.EntityHash> entityHashes) {
         int updated = 0;
 
         try (Txn<ByteBuffer> txn = env.txnWrite()) {
             for (FeedEntityHashing.EntityHash eh : entityHashes) {
+                // Fetch existing hash for this entity key
                 var existing = db.get(txn, eh.key());
                 var eh1 = eh.h1();
                 var eh2 = eh.h2();
 
+                // Skip unchanged entries
                 if (existing != null) {
                     var ex1 = existing.getLong();
                     var ex2 = existing.getLong();
@@ -73,6 +81,7 @@ public class GtfsEntityRepository {
                     }
                 }
 
+                // Write new or changed entries
                 var value = ByteBuffer.allocateDirect(HASH_SIZE)
                         .putLong(eh1)
                         .putLong(eh2)
