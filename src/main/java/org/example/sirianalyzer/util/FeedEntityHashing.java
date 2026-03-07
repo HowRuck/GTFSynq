@@ -2,6 +2,7 @@ package org.example.sirianalyzer.util;
 
 import com.google.common.hash.Hashing;
 import com.google.transit.realtime.GtfsRealtime;
+import lombok.NoArgsConstructor;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
@@ -12,14 +13,12 @@ import java.nio.charset.StandardCharsets;
 /**
  * Hashing utilities for GTFS FeedEntity objects using Murmur3 128-bit.
  */
+@NoArgsConstructor
 public final class FeedEntityHashing {
 
     // Murmur3 uses little-endian byte order
     private static final VarHandle LONG_VIEW =
             MethodHandles.byteArrayViewVarHandle(long[].class, ByteOrder.LITTLE_ENDIAN);
-
-    private FeedEntityHashing() {
-    }
 
     /**
      * Produces an {@link EntityHash} for a single {@link GtfsRealtime.FeedEntity}.
