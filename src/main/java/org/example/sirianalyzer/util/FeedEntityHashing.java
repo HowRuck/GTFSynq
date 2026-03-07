@@ -26,7 +26,7 @@ public final class FeedEntityHashing {
      */
     public static EntityHash fromEntity(GtfsRealtime.FeedEntity entity) {
         var idBytes = entity.getId().getBytes(StandardCharsets.UTF_8);
-        var key = ByteBuffer.allocateDirect(idBytes.length).put(idBytes).flip();
+        var key = ByteBuffer.wrap(idBytes);
 
         var hashBytes = Hashing.murmur3_128()
                 .hashBytes(entity.toByteArray())
@@ -46,6 +46,5 @@ public final class FeedEntityHashing {
      * h1 = high 64 bits, h2 = low 64 bits of the 128-bit hash.
      * This avoids object overhead and allows efficient LMDB storage.
      */
-    public record EntityHash(ByteBuffer key, long h1, long h2) {
-    }
+    public record EntityHash(ByteBuffer key, long h1, long h2) {}
 }
