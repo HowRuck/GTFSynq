@@ -43,7 +43,6 @@ public class GtfsStateRepository {
     /**
      * Stores the given hash for the specified key in LMDB
      * <p/>
-     * The hash is represented as two longs (h1, h2) and stored as a 16-byte value
      *
      * @param txn LMDB transaction
      * @param key LMDB key
