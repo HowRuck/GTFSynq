@@ -27,45 +27,35 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 public class GtfsProducerOrchestrator {
 
-    /**
-     * Repository for managing GTFS state data using LMDB
-     */
+    /** Repository for managing GTFS state data using LMDB */
     private final GtfsStateRepository stateRepo;
-    /**
-     * Kafka producer for sending GTFS trip updates
-     */
+    /** Kafka producer for sending GTFS trip updates */
     private final GtfsKafkaProducer kafkaProducer;
-    /**
-     * LMDB environment handle
-     */
+    /** LMDB environment handle */
     private final Env<ByteBuffer> env;
-    /**
-     * Meter registry for metrics
-     */
+    /** Meter registry for metrics */
     private final MeterRegistry meterRegistry;
 
-    /**
-     * Counter for tracking the number of GTFS entities processed
-     */
+    /** Counter for tracking the number of GTFS entities processed */
     private Counter totalEntitiesProcessedCounter;
-    /**
-     * Timer for computing state for GTFS entities
-     */
+    /** Timer for computing state for GTFS entities */
     private Timer stateComputationTimer;
-    /**
-     * Timer for checking and updating state in LMDB
-     */
+    /** Timer for checking and updating state in LMDB */
     private Timer lmdbUpdateTimer;
 
     private Counter kafkaUpdatesCounter;
-    /**
-     * Timer for sending GTFS trip updates to Kafka
-     */
+    /** Timer for sending GTFS trip updates to Kafka */
     private Timer kafkaUpdateTimer;
-    /**
-     * Gauge for tracking the number of entities processed in the current run
-     */
+    /** Gauge for tracking the number of entities processed in the current run */
     private AtomicInteger entitiesProcessedInCurrentRun;
+
+    /** Reusable key buffer for LMDB operations */
+    private final ThreadLocal<ByteBuffer> keyBufThreadLocal =
+            ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(256));
+
+    /** Reusable value buffer for LMDB operations */
+    private final ThreadLocal<ByteBuffer> valBufThreadLocal =
+            ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(Long.BYTES));
 
     /**
      * Initialize metrics and other resources after the application context is initialized
@@ -135,8 +125,8 @@ public class GtfsProducerOrchestrator {
         stateComputationTimer.record(stateDuration, TimeUnit.MILLISECONDS);
 
         // Update LMDB with new hashes and check for changes
-        var keyBuf = ByteBuffer.allocateDirect(256);
-        var valBuf = ByteBuffer.allocateDirect(8);
+        var keyBuf = keyBufThreadLocal.get();
+        var valBuf = valBufThreadLocal.get();
         // Preallocate list to avoid resizing during additions
         var updatesToSend = new ArrayList<GtfsRealtime.FeedEntity>(entityStates.size());
 
@@ -160,6 +150,10 @@ public class GtfsProducerOrchestrator {
                 }
             }
             txn.commit();
+        } finally {
+            // Clean up thread-local buffers
+            keyBufThreadLocal.remove();
+            valBufThreadLocal.remove();
         }
 
         var lmdbEndTime = System.currentTimeMillis();
