@@ -48,6 +48,11 @@
             <version>${protobuf-java.version}</version>
         </dependency>
         <dependency>
+            <groupId>at.yawk.lz4</groupId>
+            <artifactId>lz4-java</artifactId>
+            <version>1.10.4</version>
+        </dependency>
+        <dependency>
             <groupId>org.lmdbjava</groupId>
             <artifactId>lmdbjava</artifactId>
             <version>0.9.3</version>

@@ -28,17 +28,16 @@ public class GtfsStateRepository {
      *
      * @param txn LMDB transaction
      * @param key LMDB key
-     * @param h1 1st hash value
-     * @param h2 2nd hash value
+     * @param h   Hash value to compare with
      * @return True if the hash has changed, false otherwise
      */
     public boolean hasChanged(
-            Txn<ByteBuffer> txn, ByteBuffer key, long h1, long h2
+            Txn<ByteBuffer> txn, ByteBuffer key, long h
     ) {
         var existing = db.get(txn, key);
         if (existing == null) return true;
 
-        return existing.getLong() != h1 || existing.getLong() != h2;
+        return existing.getLong(0) != h;
     }
 
     /**
@@ -48,13 +47,11 @@ public class GtfsStateRepository {
      *
      * @param txn LMDB transaction
      * @param key LMDB key
-     * @param h1 1st hash value
-     * @param h2 2nd hash value
+     * @param h   Hash value to store
      */
-    public void putHash(Txn<ByteBuffer> txn, ByteBuffer key, long h1, long h2) {
+    public void putHash(Txn<ByteBuffer> txn, ByteBuffer key, long h) {
         var val = ByteBuffer.allocateDirect(HASH_SIZE)
-                .putLong(h1)
-                .putLong(h2)
+                .putLong(h)
                 .flip();
 
         db.put(txn, key, val);

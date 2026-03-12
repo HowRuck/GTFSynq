@@ -136,15 +136,14 @@ public class GtfsProducerOrchestrator {
                 keyBuf.clear();
                 keyBuf.put(keyBytes).flip();
 
-                var eh1 = entityState.h1();
-                var eh2 = entityState.h2();
+                var eh = entityState.hash();
 
-                if (stateRepo.hasChanged(txn, keyBuf, eh1, eh2)) {
+                if (stateRepo.hasChanged(txn, keyBuf, eh)) {
                     kafkaProducer.send(
                             entityState.original().getId(), entityState.original()
                     );
                     kafkaUpdatesCounter.increment();
-                    stateRepo.putHash(txn, keyBuf, eh1, eh2);
+                    stateRepo.putHash(txn, keyBuf, eh);
                     updated++;
                 }
             }
