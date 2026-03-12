@@ -24,7 +24,7 @@ public class GtfsParserService {
         var currentHash = Hashing.murmur3_128()
                 .hashBytes(feedBytes);
 
-        if (currentHash == previousFeedHash) {
+        if (currentHash.equals(previousFeedHash)) {
             return false;
         }
 

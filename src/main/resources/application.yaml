@@ -4,9 +4,24 @@ spring:
       enabled: true
   application:
     name: SiriAnalyzer
+  kafka:
+    topic: gtfs-trip-updates
+    bootstrap-servers: localhost:9092
 
 gtfs:
   fetch:
     interval-ms: 20000
   feed:
     url: https://realtime.gtfs.de/realtime-free.pb
+
+management:
+  metrics:
+    tags:
+        application: ${spring.application.name}
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: ALWAYS

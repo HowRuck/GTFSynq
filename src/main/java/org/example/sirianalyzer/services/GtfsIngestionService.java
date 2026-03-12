@@ -2,7 +2,6 @@ package org.example.sirianalyzer.services;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.example.sirianalyzer.repositories.GtfsEntityRepository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -13,7 +12,7 @@ public class GtfsIngestionService {
 
     private final GtfsPollingService gtfsPollingService;
     private final GtfsParserService gtfsParserService;
-    private final GtfsEntityRepository gtfsEntityRepository;
+    private final GtfsProducerOrchestrator gtfsProducerOrchestrator;
 
     @Scheduled(fixedRateString = "${gtfs.fetch.interval-ms}")
     public void process() {
@@ -21,6 +20,6 @@ public class GtfsIngestionService {
 
         var feedMessage = gtfsParserService.parseGtfs(feedBytes);
 
-        var _ = gtfsEntityRepository.storeHashes(feedMessage.getEntityList());
+        gtfsProducerOrchestrator.syncFeed(feedMessage.getEntityList());
     }
 }

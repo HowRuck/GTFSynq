@@ -12,10 +12,13 @@ import static org.lmdbjava.Env.create;
 @Configuration
 public class LmdbConfig {
 
-    @Bean
+    @Bean(destroyMethod = "close")
     public Env<ByteBuffer> lmdbEnv() {
         File path = new File("./lmdb-data");
-        var _ = path.mkdirs();
+
+        if (!path.exists() && !path.mkdirs()) {
+            throw new IllegalStateException("Failed to create LMDB directory at: " + path.getAbsolutePath());
+        }
 
         return create()
                 .setMapSize(1024L * 1024 * 1024) // 1GB
@@ -23,7 +26,7 @@ public class LmdbConfig {
                 .open(path, EnvFlags.MDB_NOSYNC);
     }
 
-    @Bean
+    @Bean(destroyMethod = "close")
     public Dbi<ByteBuffer> lmdbDb(Env<ByteBuffer> env) {
         return env.openDbi("gtfs", DbiFlags.MDB_CREATE);
     }
