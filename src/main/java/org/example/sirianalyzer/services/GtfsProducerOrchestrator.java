@@ -14,6 +14,7 @@ import org.lmdbjava.Env;
 import org.springframework.stereotype.Service;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -125,10 +126,9 @@ public class GtfsProducerOrchestrator {
 
         // Write updates to LMDB and send changed entities to Kafka
         var keyBuf = ByteBuffer.allocateDirect(256);
+        var updatesToSend = new ArrayList<GtfsRealtime.FeedEntity>();
 
         try (var txn = env.txnWrite()) {
-            int updated = 0;
-
             for (var entityState : entityStates) {
                 var keyBytes = entityState.keyBytes();
 
@@ -139,24 +139,24 @@ public class GtfsProducerOrchestrator {
                 var eh = entityState.hash();
 
                 if (stateRepo.hasChanged(txn, keyBuf, eh)) {
-                    kafkaProducer.send(
-                            entityState.original().getId(), entityState.original()
-                    );
-                    kafkaUpdatesCounter.increment();
+                    updatesToSend.add(entityState.original());
                     stateRepo.putHash(txn, keyBuf, eh);
-                    updated++;
                 }
             }
-
             txn.commit();
-
-            var totalDuration = System.currentTimeMillis() - startTime;
-            var kafkaDuration = System.currentTimeMillis() - startTime - stateDuration;
-            kafkaUpdateTimer.record(kafkaDuration, TimeUnit.MILLISECONDS);
-
-            log.info("Sent {} trip updates to Kafka in {}ms", updated, kafkaDuration);
-            log.info("Total sync duration: {}ms", totalDuration);
         }
+
+        for (var entity : updatesToSend) {
+            kafkaProducer.send(entity.getId(), entity);
+            kafkaUpdatesCounter.increment();
+        }
+
+        var totalDuration = System.currentTimeMillis() - startTime;
+        var kafkaDuration = System.currentTimeMillis() - startTime - stateDuration;
+        kafkaUpdateTimer.record(kafkaDuration, TimeUnit.MILLISECONDS);
+
+        log.info("Sent {} trip updates to Kafka in {}ms", updatesToSend.size(), kafkaDuration);
+        log.info("Total sync duration: {}ms", totalDuration);
     }
 
 }
