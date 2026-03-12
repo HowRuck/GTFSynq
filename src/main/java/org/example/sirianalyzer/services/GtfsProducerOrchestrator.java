@@ -124,15 +124,17 @@ public class GtfsProducerOrchestrator {
         stateComputationTimer.record(stateDuration, TimeUnit.MILLISECONDS);
 
         // Write updates to LMDB and send changed entities to Kafka
+        var keyBuf = ByteBuffer.allocateDirect(256);
+
         try (var txn = env.txnWrite()) {
             int updated = 0;
 
             for (var entityState : entityStates) {
                 var keyBytes = entityState.keyBytes();
 
-                var keyBuf = ByteBuffer.allocateDirect(keyBytes.length)
-                        .put(keyBytes)
-                        .flip();
+                // Reuse the buffer for key to avoid unnecessary allocations
+                keyBuf.clear();
+                keyBuf.put(keyBytes).flip();
 
                 var eh1 = entityState.h1();
                 var eh2 = entityState.h2();
