@@ -26,7 +26,7 @@ public class LmdbConfig {
                 .open(path, EnvFlags.MDB_NOSYNC);
     }
 
-    @Bean
+    @Bean(destroyMethod = "close")
     public Dbi<ByteBuffer> lmdbDb(Env<ByteBuffer> env) {
         return env.openDbi("gtfs", DbiFlags.MDB_CREATE);
     }
