@@ -53,8 +53,10 @@ public class GtfsProducerOrchestrator {
      */
     private Timer stateComputationTimer;
     /**
-     * Metrics for Kafka updates
+     * Timer for checking and updating state in LMDB
      */
+    private Timer lmdbUpdateTimer;
+
     private Counter kafkaUpdatesCounter;
     /**
      * Timer for sending GTFS trip updates to Kafka
@@ -79,6 +81,12 @@ public class GtfsProducerOrchestrator {
 
         stateComputationTimer = Timer.builder("gtfs.state.computation.duration")
                 .description("Time taken to compute state for GTFS entities")
+                .tag("feed", feedName)
+                .register(meterRegistry);
+
+        // Register the LMDB timer
+        lmdbUpdateTimer = Timer.builder("gtfs.lmdb.write.duration")
+                .description("Time taken to check and update state in LMDB")
                 .tag("feed", feedName)
                 .register(meterRegistry);
 
@@ -119,12 +127,14 @@ public class GtfsProducerOrchestrator {
                 .map(FeedEntityHashing::computeState)
                 .toList();
 
-        var stateDuration = System.currentTimeMillis() - startTime;
-        log.info("Computed state for {} entities in {}ms", entityStates.size(), stateDuration);
+        var stateEndTime = System.currentTimeMillis();
+        var stateDuration = stateEndTime - startTime;
 
+        log.info("Computed state for {} entities in {}ms",
+                entityStates.size(), stateDuration);
         stateComputationTimer.record(stateDuration, TimeUnit.MILLISECONDS);
 
-        // Write updates to LMDB and send changed entities to Kafka
+        // Update LMDB with new hashes and check for changes
         var keyBuf = ByteBuffer.allocateDirect(256);
         var updatesToSend = new ArrayList<GtfsRealtime.FeedEntity>();
 
@@ -146,20 +156,27 @@ public class GtfsProducerOrchestrator {
             txn.commit();
         }
 
+        var lmdbEndTime = System.currentTimeMillis();
+        var lmdbDuration = lmdbEndTime - stateEndTime;
+
+        log.info("Processed LMDB state checks and updates in {}ms. Identified {} changed entities.",
+                lmdbDuration, updatesToSend.size());
+        lmdbUpdateTimer.record(lmdbDuration, TimeUnit.MILLISECONDS);
+
+        // Send Updates to Kafka
         for (var entity : updatesToSend) {
             kafkaProducer.send(entity.getId(), entity);
             kafkaUpdatesCounter.increment();
         }
 
-        var totalDuration = System.currentTimeMillis() - startTime;
-        var kafkaDuration = System.currentTimeMillis() - startTime - stateDuration;
+        var kafkaEndTime = System.currentTimeMillis();
+        var kafkaDuration = kafkaEndTime - lmdbEndTime;
+
+        log.info("Sent {} trip updates to Kafka in {}ms",
+                updatesToSend.size(), kafkaDuration);
         kafkaUpdateTimer.record(kafkaDuration, TimeUnit.MILLISECONDS);
 
-        log.info("Sent {} trip updates to Kafka in {}ms", updatesToSend.size(), kafkaDuration);
+        var totalDuration = kafkaEndTime - startTime;
         log.info("Total sync duration: {}ms", totalDuration);
     }
-
 }
-
-
-
