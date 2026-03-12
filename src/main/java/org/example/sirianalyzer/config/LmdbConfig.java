@@ -12,7 +12,7 @@ import static org.lmdbjava.Env.create;
 @Configuration
 public class LmdbConfig {
 
-    @Bean
+    @Bean(destroyMethod = "close")
     public Env<ByteBuffer> lmdbEnv() {
         File path = new File("./lmdb-data");
         var _ = path.mkdirs();
