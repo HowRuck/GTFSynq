@@ -20,7 +20,7 @@ public class GtfsKafkaProducer {
      * Kafka topic to send messages to
      */
     @Value("${spring.kafka.topic}")
-    private final String TOPIC = "gtfs-trip-updates";
+    private final String topic = "gtfs-trip-updates";
 
     /**
      * Send a GTFS trip update to Kafka
@@ -29,6 +29,6 @@ public class GtfsKafkaProducer {
      * @param entity The GTFS trip update entity
      */
     public void send(String id, GtfsRealtime.FeedEntity entity) {
-        kafka.send(TOPIC, id, entity.toByteArray());
+        kafka.send(topic, id, entity.toByteArray());
     }
 }
