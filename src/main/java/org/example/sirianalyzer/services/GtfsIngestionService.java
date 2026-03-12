@@ -20,6 +20,10 @@ public class GtfsIngestionService {
 
         var feedMessage = gtfsParserService.parseGtfs(feedBytes);
 
+        if (feedMessage == null) {
+            return;
+        }
+
         gtfsProducerOrchestrator.syncFeed(feedMessage.getEntityList());
     }
 }
