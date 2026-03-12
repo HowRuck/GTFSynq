@@ -64,28 +64,37 @@ public class GtfsProducerOrchestrator {
      */
     private AtomicInteger entitiesProcessedInCurrentRun;
 
+    /**
+     * Initialize metrics and other resources after the application context is initialized
+     */
     @PostConstruct
     public void init() {
-        // Initialize metrics after meterRegistry is ready
-        totalEntitiesProcessedCounter = Counter.builder("gtfs.entities.total.processed")
+        var feedName = "gtfs-rt";
+
+        totalEntitiesProcessedCounter = Counter.builder("gtfs.entities.processed")
                 .description("Total number of GTFS entities processed")
+                .tag("feed", feedName)
                 .register(meterRegistry);
 
-        stateComputationTimer = Timer.builder("gtfs.state.computation")
+        stateComputationTimer = Timer.builder("gtfs.state.computation.duration")
                 .description("Time taken to compute state for GTFS entities")
+                .tag("feed", feedName)
                 .register(meterRegistry);
 
-        kafkaUpdatesCounter = Counter.builder("gtfs.kafka.updates")
+        kafkaUpdatesCounter = Counter.builder("gtfs.kafka.messages.sent")
                 .description("Number of GTFS trip updates sent to Kafka")
+                .tag("feed", feedName)
                 .register(meterRegistry);
 
-        kafkaUpdateTimer = Timer.builder("gtfs.kafka.update")
+        kafkaUpdateTimer = Timer.builder("gtfs.kafka.send.duration")
                 .description("Time taken to send GTFS trip updates to Kafka")
+                .tag("feed", feedName)
                 .register(meterRegistry);
 
         entitiesProcessedInCurrentRun = new AtomicInteger(0);
-        Gauge.builder("gtfs.entities.processed.per.run", entitiesProcessedInCurrentRun::get)
+        Gauge.builder("gtfs.entities.processed.current", entitiesProcessedInCurrentRun::get)
                 .description("Number of GTFS entities processed in the current run")
+                .tag("feed", feedName)
                 .register(meterRegistry);
     }
 
