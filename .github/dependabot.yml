@@ -5,5 +5,5 @@ updates:
     schedule:
       interval: "daily"
     commit-message:
-      prefix: "build(deps)"
-      include: "scope"
+      prefix: chore
+      include: scope
