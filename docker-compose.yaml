@@ -166,7 +166,7 @@ services:
         restart: "no"
 
     timescaledb:
-        image: docker.io/timescale/timescaledb:2.27.0-pg18
+        image: docker.io/timescale/timescaledb:2.27.1-pg18
         container_name: timescaledb
         ports:
             - "5432:5432"
