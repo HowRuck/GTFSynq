@@ -16,7 +16,7 @@ dependencies {
     runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
     runtimeOnly 'org.apache.httpcomponents.client5:httpclient5'
 
-    compileOnly 'io.grpc:grpc-all:1.81.0'
+    compileOnly 'io.grpc:grpc-all:1.82.0'
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
