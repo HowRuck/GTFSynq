@@ -53,11 +53,7 @@ public class GtfsTripUpdateSink {
             return;
         }
 
-        var rawUpdateDto = TripUpdateDto.fromEntity(
-            entity,
-            feedId,
-            entityWithMeta.feedTs()
-        );
+        var rawUpdateDto = TripUpdateDto.fromEntity(entity, feedId, entityWithMeta.feedTs());
 
         bufferLock.lock();
         try {
@@ -65,13 +61,12 @@ public class GtfsTripUpdateSink {
             buffer.add(cleanedUpdate);
 
             log.debug(
-                "Buffered TripUpdate entity={} feed={} bufferSize={}",
-                cleanedUpdate.tripDescriptor() != null
-                    ? cleanedUpdate.tripDescriptor().entityId()
-                    : null,
-                feedId,
-                buffer.size()
-            );
+                    "Buffered TripUpdate entity={} feed={} bufferSize={}",
+                    cleanedUpdate.tripDescriptor() != null
+                            ? cleanedUpdate.tripDescriptor().entityId()
+                            : null,
+                    feedId,
+                    buffer.size());
         } finally {
             bufferLock.unlock();
         }
@@ -104,10 +99,7 @@ public class GtfsTripUpdateSink {
 
         bufferLock.lock();
         try {
-            log.info(
-                "Manual flush requested for {} buffered TripUpdate records",
-                buffer.size()
-            );
+            log.info("Manual flush requested for {} buffered TripUpdate records", buffer.size());
             flushBufferLocked();
         } finally {
             bufferLock.unlock();
@@ -123,19 +115,17 @@ public class GtfsTripUpdateSink {
 
         var flushSize = buffer.size();
 
-        var tripDescriptors = buffer
-            .stream()
-            .map(TripUpdateDto::tripDescriptor)
-            .filter(Objects::nonNull)
-            .toList();
+        var tripDescriptors = buffer.stream()
+                .map(TripUpdateDto::tripDescriptor)
+                .filter(Objects::nonNull)
+                .toList();
 
-        var stopTimeUpdates = buffer
-            .stream()
-            .map(TripUpdateDto::stopTimeUpdates)
-            .filter(Objects::nonNull)
-            .flatMap(List::stream)
-            .filter(u -> u.stopSequence() != null)
-            .toList();
+        var stopTimeUpdates = buffer.stream()
+                .map(TripUpdateDto::stopTimeUpdates)
+                .filter(Objects::nonNull)
+                .flatMap(List::stream)
+                .filter(u -> u.stopSequence() != null)
+                .toList();
 
         metrics.recordEntities(tripDescriptors.size(), stopTimeUpdates.size());
 
@@ -156,10 +146,9 @@ public class GtfsTripUpdateSink {
         metrics.recordTotal(System.nanoTime() - methodStart);
 
         log.info(
-            "Flushed {} buffered TripUpdate records ({} descriptors, {} stop-time updates)",
-            flushSize,
-            tripDescriptors.size(),
-            stopTimeUpdates.size()
-        );
+                "Flushed {} buffered TripUpdate records ({} descriptors, {} stop-time updates)",
+                flushSize,
+                tripDescriptors.size(),
+                stopTimeUpdates.size());
     }
 }

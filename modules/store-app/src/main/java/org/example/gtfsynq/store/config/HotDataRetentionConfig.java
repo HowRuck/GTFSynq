@@ -6,6 +6,5 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 
 @ConfigurationProperties(prefix = "gtfsynq.retention")
 public record HotDataRetentionConfig(
-    @DefaultValue("1h") Duration hours,
-    @DefaultValue("15") Integer rateMinutes
-) {}
+        @DefaultValue("1h") Duration hours,
+        @DefaultValue("15") Integer rateMinutes) {}

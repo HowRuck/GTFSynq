@@ -39,13 +39,10 @@ public class RestConfig {
         var connectTimeoutMs = connectTimeoutSeconds * 1000;
         var readTimeoutMs = readTimeoutSeconds * 1000;
 
-        var clientHttpRequestFactory =
-            new HttpComponentsClientHttpRequestFactory();
+        var clientHttpRequestFactory = new HttpComponentsClientHttpRequestFactory();
         clientHttpRequestFactory.setConnectionRequestTimeout(connectTimeoutMs);
         clientHttpRequestFactory.setReadTimeout(readTimeoutMs);
 
-        return RestClient.builder()
-            .requestFactory(clientHttpRequestFactory)
-            .build();
+        return RestClient.builder().requestFactory(clientHttpRequestFactory).build();
     }
 }

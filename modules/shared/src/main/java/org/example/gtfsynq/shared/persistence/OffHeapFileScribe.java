@@ -8,7 +8,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gtfsynq.shared.protocol.offheap.OffHeapLongTable;
@@ -45,14 +44,9 @@ public class OffHeapFileScribe {
     private final Path savePath;
 
     @Autowired
-    public OffHeapFileScribe(
-        @Value("${state.save.path:state_dump.bin}") String path
-    ) {
+    public OffHeapFileScribe(@Value("${state.save.path:state_dump.bin}") String path) {
         this.savePath = Path.of(path);
-        log.info(
-            "State Scribe initialized with path: {}",
-            this.savePath.toAbsolutePath()
-        );
+        log.info("State Scribe initialized with path: {}", this.savePath.toAbsolutePath());
     }
 
     /**
@@ -69,31 +63,18 @@ public class OffHeapFileScribe {
         var segment = table.getSegment();
         var capacity = segment.byteSize() / OffHeapLongTable.SLOT_SIZE;
 
-        var tmpPath = savePath.resolveSibling(
-            savePath.getFileName().toString() + ".tmp"
-        );
+        var tmpPath = savePath.resolveSibling(savePath.getFileName().toString() + ".tmp");
 
-        try (
-            var channel = FileChannel.open(
-                tmpPath,
-                StandardOpenOption.CREATE,
-                StandardOpenOption.WRITE,
-                StandardOpenOption.TRUNCATE_EXISTING
-            )
-        ) {
-            var header = ByteBuffer
-                .allocate(HEADER_SIZE)
-                .order(ByteOrder.BIG_ENDIAN);
+        try (var channel = FileChannel.open(
+                tmpPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {
+            var header = ByteBuffer.allocate(HEADER_SIZE).order(ByteOrder.BIG_ENDIAN);
             header.putLong(MAGIC).putLong(capacity).flip();
             writeFully(channel, header);
 
             // Write the off-heap memory segment to the file, chunked so the
             // segment can exceed the 2 GiB ByteBuffer limit
             for (var offset = 0L; offset < segment.byteSize(); offset += CHUNK_BYTES) {
-                var chunk = Math.min(
-                    CHUNK_BYTES,
-                    segment.byteSize() - offset
-                );
+                var chunk = Math.min(CHUNK_BYTES, segment.byteSize() - offset);
                 writeFully(channel, segment.asSlice(offset, chunk).asByteBuffer());
             }
         } catch (IOException e) {
@@ -103,30 +84,16 @@ public class OffHeapFileScribe {
 
         try {
             try {
-                Files.move(
-                    tmpPath,
-                    savePath,
-                    StandardCopyOption.ATOMIC_MOVE,
-                    StandardCopyOption.REPLACE_EXISTING
-                );
+                Files.move(tmpPath, savePath, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
             } catch (IOException e) {
-                Files.move(
-                    tmpPath,
-                    savePath,
-                    StandardCopyOption.REPLACE_EXISTING
-                );
+                Files.move(tmpPath, savePath, StandardCopyOption.REPLACE_EXISTING);
             }
         } catch (IOException e) {
             log.error("Failed to move dumped state into place", e);
             return;
         }
 
-        log.info(
-            "State of {} slots dumped to {} in {}ms",
-            capacity,
-            savePath,
-            System.currentTimeMillis() - start
-        );
+        log.info("State of {} slots dumped to {} in {}ms", capacity, savePath, System.currentTimeMillis() - start);
     }
 
     /**
@@ -138,12 +105,8 @@ public class OffHeapFileScribe {
         if (!Files.exists(savePath)) return;
 
         var start = System.currentTimeMillis();
-        try (
-            var channel = FileChannel.open(savePath, StandardOpenOption.READ)
-        ) {
-            var header = ByteBuffer
-                .allocate(HEADER_SIZE)
-                .order(ByteOrder.BIG_ENDIAN);
+        try (var channel = FileChannel.open(savePath, StandardOpenOption.READ)) {
+            var header = ByteBuffer.allocate(HEADER_SIZE).order(ByteOrder.BIG_ENDIAN);
             if (!readFully(channel, header)) {
                 log.warn("State file {} is empty, skipping load", savePath);
                 return;
@@ -152,16 +115,11 @@ public class OffHeapFileScribe {
 
             var magic = header.getLong();
             var capacity = header.getLong();
-            if (
-                magic != MAGIC ||
-                capacity < 1 ||
-                Long.bitCount(capacity) != 1 ||
-                capacity > OffHeapLongTable.MAX_CAPACITY
-            ) {
-                log.warn(
-                    "State file {} has an invalid or legacy header, skipping load",
-                    savePath
-                );
+            if (magic != MAGIC
+                    || capacity < 1
+                    || Long.bitCount(capacity) != 1
+                    || capacity > OffHeapLongTable.MAX_CAPACITY) {
+                log.warn("State file {} has an invalid or legacy header, skipping load", savePath);
                 return;
             }
 
@@ -173,40 +131,28 @@ public class OffHeapFileScribe {
             // chunked so the segment can exceed the 2 GiB ByteBuffer limit
             var segment = table.getSegment();
             for (var offset = 0L; offset < segment.byteSize(); offset += CHUNK_BYTES) {
-                var chunk = Math.min(
-                    CHUNK_BYTES,
-                    segment.byteSize() - offset
-                );
+                var chunk = Math.min(CHUNK_BYTES, segment.byteSize() - offset);
                 var buffer = segment.asSlice(offset, chunk).asByteBuffer();
                 if (!readFully(channel, buffer)) {
-                    log.warn(
-                        "State file {} is truncated, some slots left empty",
-                        savePath
-                    );
+                    log.warn("State file {} is truncated, some slots left empty", savePath);
                     return;
                 }
             }
 
             log.info(
-                "State of {} slots loaded from {} in {}ms",
-                capacity,
-                savePath,
-                System.currentTimeMillis() - start
-            );
+                    "State of {} slots loaded from {} in {}ms", capacity, savePath, System.currentTimeMillis() - start);
         } catch (IOException e) {
             log.error("Failed to load state", e);
         }
     }
 
-    private static void writeFully(FileChannel channel, ByteBuffer buffer)
-        throws IOException {
+    private static void writeFully(FileChannel channel, ByteBuffer buffer) throws IOException {
         while (buffer.hasRemaining()) {
             channel.write(buffer);
         }
     }
 
-    private static boolean readFully(FileChannel channel, ByteBuffer buffer)
-        throws IOException {
+    private static boolean readFully(FileChannel channel, ByteBuffer buffer) throws IOException {
         while (buffer.hasRemaining()) {
             if (channel.read(buffer) == -1) {
                 return false;

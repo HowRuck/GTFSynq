@@ -34,18 +34,9 @@ public class KafkaProducerConfig {
         Map<String, Object> configProps = new HashMap<>();
 
         // Initialize Kafka producer configuration properties
-        configProps.put(
-            ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
-            bootstrapServers
-        );
-        configProps.put(
-            ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
-            StringSerializer.class
-        );
-        configProps.put(
-            ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
-            ByteArraySerializer.class
-        );
+        configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class);
 
         // Performance optimizations for batching and compression
         configProps.put(ProducerConfig.LINGER_MS_CONFIG, 20);

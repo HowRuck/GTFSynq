@@ -49,11 +49,7 @@ public class GtfsKafkaConsumer {
 
             var feedEntity = FeedEntity.parseFrom(typedEntity.bytes());
 
-            return new FeedEntityWithMetadata(
-                feedEntity,
-                typedEntity.type(),
-                Instant.ofEpochSecond(typedEntity.ts())
-            );
+            return new FeedEntityWithMetadata(feedEntity, typedEntity.type(), Instant.ofEpochSecond(typedEntity.ts()));
         } catch (InvalidProtocolBufferException e) {
             log.error("Failed to parse FeedEntity", e);
             return null;
@@ -87,14 +83,11 @@ public class GtfsKafkaConsumer {
      */
     @Autowired
     public void consume(StreamsBuilder builder) {
-        var messageStream = builder.stream(
-            topic,
-            Consumed.with(keySerde, valueSerde)
-        );
+        var messageStream = builder.stream(topic, Consumed.with(keySerde, valueSerde));
 
         messageStream
-            .mapValues(this::parseFeedEntity)
-            .filter((key, value) -> Objects.nonNull(value))
-            .foreach(this::routeToSink);
+                .mapValues(this::parseFeedEntity)
+                .filter((key, value) -> Objects.nonNull(value))
+                .foreach(this::routeToSink);
     }
 }

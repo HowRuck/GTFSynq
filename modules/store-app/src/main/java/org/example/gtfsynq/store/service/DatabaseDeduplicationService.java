@@ -52,14 +52,11 @@ public class DatabaseDeduplicationService {
         }
 
         var changedStopTimeUpdates = new ArrayList<TripStopTimeUpdateDto>(
-            feedEntity.stopTimeUpdates().size()
-        );
+                feedEntity.stopTimeUpdates().size());
 
         for (var stopUpdate : feedEntity.stopTimeUpdates()) {
             // Create a unique key for this stop in the trip
-            var keyBytes = (tripKey + ":" + stopUpdate.stopSequence()).getBytes(
-                StandardCharsets.UTF_8
-            );
+            var keyBytes = (tripKey + ":" + stopUpdate.stopSequence()).getBytes(StandardCharsets.UTF_8);
             var keyHash = FeedHashing.hashBytes(keyBytes);
 
             // Get the metadata hash (excluding delays) for comparison
@@ -68,27 +65,13 @@ public class DatabaseDeduplicationService {
             var existingMetaHash = existingHashData[0];
 
             // Handle null delays by treating them as 0
-            var currentArrivalDelay =
-                stopUpdate.arrivalDelay() != null
-                    ? stopUpdate.arrivalDelay()
-                    : 0;
-            var currentDepartureDelay =
-                stopUpdate.departureDelay() != null
-                    ? stopUpdate.departureDelay()
-                    : 0;
+            var currentArrivalDelay = stopUpdate.arrivalDelay() != null ? stopUpdate.arrivalDelay() : 0;
+            var currentDepartureDelay = stopUpdate.departureDelay() != null ? stopUpdate.departureDelay() : 0;
 
             // If metadata has changed or this is a new stop, keep the update
-            if (
-                existingMetaHash == OffHeapLongTable.EMPTY_VALUE ||
-                currentHash != existingMetaHash
-            ) {
+            if (existingMetaHash == OffHeapLongTable.EMPTY_VALUE || currentHash != existingMetaHash) {
                 changedStopTimeUpdates.add(stopUpdate);
-                stateStore.put(
-                    keyHash,
-                    currentHash,
-                    currentArrivalDelay,
-                    currentDepartureDelay
-                );
+                stateStore.put(keyHash, currentHash, currentArrivalDelay, currentDepartureDelay);
                 continue;
             }
 
@@ -99,18 +82,12 @@ public class DatabaseDeduplicationService {
             // Compare delay differences - if either delay differs by more than 60 seconds,
             // consider this a significant change and keep the update
             var largestDelayDiff = Math.max(
-                Math.abs(currentArrivalDelay - existingArrivalDelay),
-                Math.abs(currentDepartureDelay - existingDepartureDelay)
-            );
+                    Math.abs(currentArrivalDelay - existingArrivalDelay),
+                    Math.abs(currentDepartureDelay - existingDepartureDelay));
 
             if (largestDelayDiff > 60) {
                 changedStopTimeUpdates.add(stopUpdate);
-                stateStore.put(
-                    keyHash,
-                    currentHash,
-                    currentArrivalDelay,
-                    currentDepartureDelay
-                );
+                stateStore.put(keyHash, currentHash, currentArrivalDelay, currentDepartureDelay);
             }
         }
 
@@ -119,8 +96,7 @@ public class DatabaseDeduplicationService {
 
         // Return a new TripUpdateDto, using null for unchanged components
         return new TripUpdateDto(
-            tripDescriptorChanged ? tripDescriptor : null,
-            changedStopTimeUpdates.isEmpty() ? null : changedStopTimeUpdates
-        );
+                tripDescriptorChanged ? tripDescriptor : null,
+                changedStopTimeUpdates.isEmpty() ? null : changedStopTimeUpdates);
     }
 }

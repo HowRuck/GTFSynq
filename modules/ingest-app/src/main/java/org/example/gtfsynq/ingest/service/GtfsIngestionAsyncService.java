@@ -14,10 +14,7 @@ public class GtfsIngestionAsyncService {
     private final GtfsKafkaProducer gtfsKafkaProducer;
 
     @Async
-    public CompletableFuture<Void> processFeedUrlAsync(
-        String feedId,
-        String feedUrl
-    ) {
+    public CompletableFuture<Void> processFeedUrlAsync(String feedId, String feedUrl) {
         var entities = gtfsPollingService.pollStream(feedId, feedUrl);
 
         gtfsKafkaProducer.sendTripUpdates(feedId, entities);

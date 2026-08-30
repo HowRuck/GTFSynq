@@ -24,9 +24,7 @@ public class GtfsKafkaStreamsConfig {
     @Value("${spring.application.name:gtfs-stream-app}")
     private String applicationName;
 
-    @Bean(
-        name = KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_CONFIG_BEAN_NAME
-    )
+    @Bean(name = KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_CONFIG_BEAN_NAME)
     public KafkaStreamsConfiguration defaultKafkaStreamsConfig() {
         var props = new HashMap<String, Object>();
 
@@ -36,13 +34,11 @@ public class GtfsKafkaStreamsConfig {
 
         // Default Serdes for the stream
         props.put(
-            StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG,
-            Serdes.String().getClass().getName()
-        );
+                StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG,
+                Serdes.String().getClass().getName());
         props.put(
-            StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG,
-            Serdes.ByteArray().getClass().getName()
-        );
+                StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG,
+                Serdes.ByteArray().getClass().getName());
 
         return new KafkaStreamsConfiguration(props);
     }

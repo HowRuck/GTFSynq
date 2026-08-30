@@ -44,29 +44,30 @@ public final class SizeFormat {
     public static String formatNumber(long value) {
         long abs = Math.abs(value);
 
-        int magnitude = switch (abs == 0 ? 0 : (int) Math.log10(abs) / 3) {
-            case 0 -> 0; // < 1K
-            case 1 -> 1; // K
-            case 2 -> 2; // M
-            default -> 3; // B+
-        };
+        int magnitude =
+                switch (abs == 0 ? 0 : (int) Math.log10(abs) / 3) {
+                    case 0 -> 0; // < 1K
+                    case 1 -> 1; // K
+                    case 2 -> 2; // M
+                    default -> 3; // B+
+                };
 
-        double scaled = switch (magnitude) {
-            case 1 -> value / 1_000.0;
-            case 2 -> value / 1_000_000.0;
-            case 3 -> value / 1_000_000_000.0;
-            default -> value;
-        };
+        double scaled =
+                switch (magnitude) {
+                    case 1 -> value / 1_000.0;
+                    case 2 -> value / 1_000_000.0;
+                    case 3 -> value / 1_000_000_000.0;
+                    default -> value;
+                };
 
-        String suffix = switch (magnitude) {
-            case 1 -> "K";
-            case 2 -> "M";
-            case 3 -> "B";
-            default -> "";
-        };
+        String suffix =
+                switch (magnitude) {
+                    case 1 -> "K";
+                    case 2 -> "M";
+                    case 3 -> "B";
+                    default -> "";
+                };
 
-        return magnitude == 0
-            ? String.valueOf(value)
-            : String.format("%.1f%s", scaled, suffix);
+        return magnitude == 0 ? String.valueOf(value) : String.format("%.1f%s", scaled, suffix);
     }
 }

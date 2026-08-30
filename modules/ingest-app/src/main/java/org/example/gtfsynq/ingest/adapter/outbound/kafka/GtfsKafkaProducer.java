@@ -36,10 +36,7 @@ public class GtfsKafkaProducer {
      * @param entities the entities to send
      */
     @Async
-    public void sendTripUpdates(
-        String feedId,
-        List<BinaryFeedEntityWithMetadata> entities
-    ) {
+    public void sendTripUpdates(String feedId, List<BinaryFeedEntityWithMetadata> entities) {
         var startTime = System.currentTimeMillis();
 
         if (entities == null || entities.isEmpty()) {
@@ -53,11 +50,7 @@ public class GtfsKafkaProducer {
         }
 
         var endTime = System.currentTimeMillis();
-        log.debug(
-            "Sent {} trip updates to Kafka in {}ms",
-            entities.size(),
-            endTime - startTime
-        );
+        log.debug("Sent {} trip updates to Kafka in {}ms", entities.size(), endTime - startTime);
     }
 
     /**

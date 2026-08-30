@@ -17,16 +17,12 @@ public class DatabaseMaintenanceService {
     private final TripUpdateRepository tripUpdateRepository;
     private final HotDataRetentionConfig hotDataRetentionConfig;
 
-    @Scheduled(
-        fixedDelayString = "${gtfsynq.retention.rate-minutes:15}",
-        timeUnit = TimeUnit.MINUTES
-    )
+    @Scheduled(fixedDelayString = "${gtfsynq.retention.rate-minutes:15}", timeUnit = TimeUnit.MINUTES)
     public void cleanHotData() {
         log.info("Cleaning hot data...");
 
         var deletedCount = tripUpdateRepository.deleteAllByLastSeenAtBefore(
-            LocalDateTime.now().minus(hotDataRetentionConfig.hours())
-        );
+                LocalDateTime.now().minus(hotDataRetentionConfig.hours()));
 
         log.info("Deleted {} hot data records.", deletedCount);
     }
