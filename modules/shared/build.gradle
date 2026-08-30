@@ -20,6 +20,13 @@ dependencies {
     compileOnly libs.jspecify
     compileOnly libs.spring.context
     compileOnly libs.slf4j.api
+
+    testImplementation libs.spring.boot.starter.test
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
 }
 
 protobuf {
