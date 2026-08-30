@@ -1,6 +1,5 @@
 # Stage 1: Build
-FROM docker.io/eclipse-temurin:26-jdk-alpine AS builder
-RUN apk add --no-cache libc6-compat libstdc++
+FROM container-registry.oracle.com/graalvm/jdk:25i3 AS builder
 
 WORKDIR /app
 
@@ -11,7 +10,7 @@ COPY . .
 RUN ./gradlew :api-app:bootJar -x test --no-daemon --no-build-cache --no-configuration-cache
 
 # Stage 2: Runtime
-FROM docker.io/eclipse-temurin:26-jre-alpine
+FROM container-registry.oracle.com/graalvm/jdk:25i3
 
 WORKDIR /app
 
