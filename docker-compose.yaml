@@ -2,7 +2,9 @@ services:
     api-app:
         build:
             context: .
-            dockerfile: docker/api-app/Dockerfile
+            dockerfile: docker/Dockerfile
+            args:
+                MODULE: api-app
         container_name: gtfsynq-api-app
         depends_on:
             kafka:
@@ -35,7 +37,9 @@ services:
     ingest-app:
         build:
             context: .
-            dockerfile: docker/ingest-app/Dockerfile
+            dockerfile: docker/Dockerfile
+            args:
+                MODULE: ingest-app
         container_name: gtfsynq-ingest-app
         depends_on:
             kafka:
@@ -69,7 +73,9 @@ services:
     store-app:
         build:
             context: .
-            dockerfile: docker/store-app/Dockerfile
+            dockerfile: docker/Dockerfile
+            args:
+                MODULE: store-app
         container_name: gtfsynq-store-app
         depends_on:
             kafka:
