@@ -5,7 +5,7 @@ RUN apk add --no-cache libc6-compat libstdc++
 WORKDIR /app
 
 # Copy the full multi-module repository
-COPY .. .
+COPY . .
 
 # Build only the store-app module
 RUN ./gradlew :store-app:bootJar -x test --no-daemon --no-build-cache --no-configuration-cache
@@ -17,7 +17,7 @@ WORKDIR /app
 
 # Copy the generated JAR from the store-app module
 COPY --from=builder /app/modules/store-app/build/libs/app.jar ./app.jar
-COPY ../docker/entrypoint.sh .
+COPY docker/store-app/entrypoint.sh .
 RUN chmod +x entrypoint.sh
 
 ENTRYPOINT ["./entrypoint.sh"]

@@ -1,28 +1,26 @@
 plugins {
-    id 'org.springframework.boot'
-    id 'io.spring.dependency-management'
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
     id 'java'
 }
 
 dependencies {
     implementation project(':shared')
 
-    implementation 'org.springframework.boot:spring-boot-starter'
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'org.springframework.boot:spring-boot-starter-kafka'
-    implementation 'org.apache.kafka:kafka-streams'
-    implementation 'org.springframework.boot:spring-boot-starter-flyway'
+    implementation libs.spring.boot.starter
+    implementation libs.spring.boot.starter.actuator
+    implementation libs.bundles.kafka
+    implementation libs.spring.boot.starter.flyway
 
-    runtimeOnly 'org.flywaydb:flyway-database-postgresql'
+    runtimeOnly libs.flyway.database.postgresql
 
-    runtimeOnly 'org.postgresql:postgresql'
-    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+    runtimeOnly libs.postgresql
+    runtimeOnly libs.micrometer.registry.prometheus
 
-    compileOnly 'org.projectlombok:lombok'
-    annotationProcessor 'org.projectlombok:lombok'
+    compileOnly libs.bundles.lombok
+    annotationProcessor libs.bundles.lombok
 
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.springframework.kafka:spring-kafka-test'
+    testImplementation libs.bundles.integration.test
 }
 
 bootJar {

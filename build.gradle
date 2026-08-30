@@ -1,8 +1,8 @@
 plugins {
-    id 'org.springframework.boot' version '4.1.0' apply false
-    id 'io.spring.dependency-management' version '1.1.7' apply false
-    id 'com.google.protobuf' version '0.10.0' apply false
-    id 'org.sonarqube' version '7.3.1.8318'
+    alias(libs.plugins.spring.boot) apply false
+    alias(libs.plugins.spring.dependency.management) apply false
+    alias(libs.plugins.protobuf) apply false
+    alias(libs.plugins.sonarqube)
 }
 
 allprojects {
@@ -19,15 +19,17 @@ subprojects {
     apply plugin: 'io.spring.dependency-management'
     apply plugin: "org.springframework.boot.aot"
 
-    java {
-        toolchain {
-            languageVersion = JavaLanguageVersion.of(25)
+    dependencyManagement {
+        dependencies {
+            dependency "com.google.protobuf:protobuf-java:${libs.versions.protobuf.get()}"
+            dependency "com.google.protobuf:protobuf-kotlin:${libs.versions.protobuf.get()}"
+            dependency "com.google.protobuf:protobuf-java-util:${libs.versions.protobuf.get()}"
         }
     }
 
-    dependencyManagement {
-        imports {
-            mavenBom 'org.springframework.boot:spring-boot-dependencies:4.1.0'
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(26)
         }
     }
 

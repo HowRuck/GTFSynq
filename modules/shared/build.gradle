@@ -1,23 +1,29 @@
 plugins {
     id 'java-library'
-    id 'com.google.protobuf'
+    alias(libs.plugins.protobuf)
+}
+
+dependencyManagement {
+    imports {
+        mavenBom org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES
+    }
 }
 
 dependencies {
-    api 'com.google.protobuf:protobuf-java:4.35.0'
-    api 'io.arxila.javatuples:javatuples:2.0.1'
-    api 'net.openhft:zero-allocation-hashing:2026.0'
+    api libs.protobuf.java
+    api libs.javatuples
+    api libs.zero.allocation.hashing
 
-    compileOnly 'org.projectlombok:lombok'
-    annotationProcessor 'org.projectlombok:lombok'
+    compileOnly libs.bundles.lombok
+    annotationProcessor libs.bundles.lombok
 
-    compileOnly 'org.jspecify:jspecify:1.0.0'
-    compileOnly 'org.springframework:spring-context'
-    compileOnly 'org.slf4j:slf4j-api'
+    compileOnly libs.jspecify
+    compileOnly libs.spring.context
+    compileOnly libs.slf4j.api
 }
 
 protobuf {
     protoc {
-        artifact = 'com.google.protobuf:protoc:4.35.0'
+        artifact = "com.google.protobuf:protoc:${libs.versions.protobuf.get()}"
     }
 }

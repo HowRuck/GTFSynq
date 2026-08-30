@@ -39,3 +39,5 @@ out/
 .gradle/
 
 state_dump.bin
+
+.opencode
