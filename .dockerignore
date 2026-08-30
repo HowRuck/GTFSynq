@@ -1,0 +1,30 @@
+# VCS & CI
+.git
+.github
+.gitignore
+
+# IDE / editor
+.idea
+.zed
+.opencode
+
+# Gradle build outputs & caches
+.gradle
+build/
+**/build/
+bin/
+**/bin/
+
+# Docker (avoid recursive builds)
+docker/Dockerfile
+docker-compose*.yaml
+
+# Docs & metadata (not needed for the build)
+README.md
+SECURITY.md
+LICENSE
+
+# Local data & env
+data/
+.env
+state_dump.bin
