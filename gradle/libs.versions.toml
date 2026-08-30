@@ -8,6 +8,8 @@ grpc = "1.82.0"
 spring-boot = "4.2.0-M1"
 spring-dependency-management = "1.1.7"
 sonarqube = "7.4.0.8496"
+spotless = "8.10.1"
+palantir-java-format = "2.97.0"
 
 [libraries]
 protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
@@ -46,3 +48,4 @@ spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
 spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "spring-dependency-management" }
 protobuf = { id = "com.google.protobuf", version.ref = "protobufPlugin" }
 sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }

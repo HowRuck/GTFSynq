@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.spring.dependency.management) apply false
     alias(libs.plugins.protobuf) apply false
     alias(libs.plugins.sonarqube)
+    alias(libs.plugins.spotless) apply false
 }
 
 allprojects {
@@ -18,6 +19,16 @@ subprojects {
     apply plugin: 'java'
     apply plugin: 'io.spring.dependency-management'
     apply plugin: "org.springframework.boot.aot"
+    apply plugin: 'com.diffplug.spotless'
+
+    spotless {
+        java {
+            palantirJavaFormat(libs.versions.palantir.java.format.get())
+            removeUnusedImports()
+            importOrder()
+            formatAnnotations()
+        }
+    }
 
     dependencyManagement {
         dependencies {
