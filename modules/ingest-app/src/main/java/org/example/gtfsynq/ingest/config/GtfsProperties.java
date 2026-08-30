@@ -41,7 +41,15 @@ public record GtfsProperties(
 		 * Map of feed source configurations keyed by source name/identifier.
 		 * Each entry defines the static and realtime configuration for a GTFS feed.
 		 */
-		Map<String, @Valid FeedSource> sources) {
+		Map<String, @Valid FeedSource> sources,
+
+		/**
+		 * Per-feed timeout in seconds applied to each realtime feed poll.
+		 * If a single feed poll does not complete within this window, its future is
+		 * failed with a TimeoutException and the rest of the batch continues.
+		 * Defaults to 25 seconds.
+		 */
+		@DefaultValue("25") int feedTimeoutSeconds) {
 
 	/**
 	 * Feed source configuration for a GTFS feed.
