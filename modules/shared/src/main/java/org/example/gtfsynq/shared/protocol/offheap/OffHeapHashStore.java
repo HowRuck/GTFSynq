@@ -3,6 +3,8 @@ package org.example.gtfsynq.shared.protocol.offheap;
 import java.util.concurrent.locks.StampedLock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -23,8 +25,46 @@ public class OffHeapHashStore implements AutoCloseable {
 	};
 
 	private static final int TTL_MINUTES = 60;
+
+	/**
+	 * Percentage of occupied slots at which an auto-resize is attempted.
+	 */
+	private static final int RESIZE_TRIGGER_PERCENT = 70;
+
+	/**
+	 * A full maintenance scan is only worth it once at least this fraction of
+	 * capacity (1 in 2^shift) has been recycled by overwriting expired slots.
+	 * That signals the table is cluttered with dead entries worth compacting
+	 * or shrinking. Below the threshold {@link #autoTune()} stays cheap.
+	 */
+	private static final int STALE_OVERWRITE_SHIFT = 3;
+
 	public volatile int currentMinute = (int) (System.currentTimeMillis() /
 			60000);
+
+	/**
+	 * Number of occupied (non-empty) slots, including expired ones. Guarded by
+	 * the write lock.
+	 */
+	private volatile long size;
+
+	/**
+	 * Number of inserts that had to overwrite an expired slot. Signals that
+	 * the table is cluttered with dead entries worth compacting. Guarded by
+	 * the write lock.
+	 */
+	private long staleOverwrites;
+
+	private boolean resizeSaturated;
+
+	@EventListener(ContextRefreshedEvent.class)
+	public void init() {
+		size = binTable.countOccupied();
+		log.info(
+				"OffHeapHashStore initialized with {} occupied slots (capacity {})",
+				size,
+				binTable.capacity());
+	}
 
 	public long get(long key) {
 		return getAndTryOptimistic(key)[0];
@@ -50,20 +90,22 @@ public class OffHeapHashStore implements AutoCloseable {
 		}
 	}
 
-	public long[] getWithLock(long key, long stamp) {
-		var index = hash(key) & OffHeapLongTable.CAPACITY_MASK;
+	long[] getWithLock(long key, long stamp) {
+		var capacity = binTable.capacity();
+		var mask = binTable.capacityMask();
+		var index = OffHeapLongTable.hash(key) & mask;
 
-		for (var i = 0; i < OffHeapLongTable.CAPACITY; i++) {
+		for (var i = 0L; i < capacity; i++) {
 			var slotKey = binTable.getKey(index);
 
 			if (slotKey == OffHeapLongTable.EMPTY_VALUE) {
-				return OffHeapLongTable.EMPTY_VALUE_ARRAY;
+				return missWithValidation(stamp);
 			}
 
 			if (slotKey == key) {
 				var slotExpiry = binTable.getExpiry(index);
 				if (slotExpiry <= currentMinute) {
-					return OffHeapLongTable.EMPTY_VALUE_ARRAY;
+					return missWithValidation(stamp);
 				}
 
 				var data = new long[] {
@@ -81,10 +123,16 @@ public class OffHeapHashStore implements AutoCloseable {
 			}
 
 			// Move to the next slot in the chain
-			index = (index + 1) & OffHeapLongTable.CAPACITY_MASK;
+			index = (index + 1) & mask;
 		}
 
-		return OffHeapLongTable.EMPTY_VALUE_ARRAY;
+		return missWithValidation(stamp);
+	}
+
+	private long[] missWithValidation(long stamp) {
+		return lock.validate(stamp)
+				? OffHeapLongTable.EMPTY_VALUE_ARRAY
+				: PROHIBITED_WRITE_ARRAY;
 	}
 
 	public void put(long key, long value) {
@@ -118,16 +166,18 @@ public class OffHeapHashStore implements AutoCloseable {
 		}
 	}
 
-	public void insert(
+	void insert(
 			long key,
 			long value,
 			int expiry,
 			int customSlot1,
 			int customSlot2) {
-		var index = hash(key) & OffHeapLongTable.CAPACITY_MASK;
+		var capacity = binTable.capacity();
+		var mask = binTable.capacityMask();
+		var index = OffHeapLongTable.hash(key) & mask;
 		long firstAvailableIndex = -1;
 
-		for (var i = 0; i < OffHeapLongTable.CAPACITY; i++) {
+		for (var i = 0L; i < capacity; i++) {
 			var slotKey = binTable.getKey(index);
 
 			// If we hit an empty slot, the key is definitely not in the map.
@@ -143,6 +193,7 @@ public class OffHeapHashStore implements AutoCloseable {
 							expiry,
 							customSlot1,
 							customSlot2);
+					staleOverwrites++;
 				} else {
 					writeSlot(
 							index,
@@ -151,6 +202,8 @@ public class OffHeapHashStore implements AutoCloseable {
 							expiry,
 							customSlot1,
 							customSlot2);
+					size++;
+					maybeGrow();
 				}
 				return;
 			}
@@ -170,7 +223,7 @@ public class OffHeapHashStore implements AutoCloseable {
 			}
 
 			// Move to the next slot in the chain
-			index = (index + 1) & OffHeapLongTable.CAPACITY_MASK;
+			index = (index + 1) & mask;
 		}
 
 		// If we loop through the whole table and it's full:
@@ -183,9 +236,70 @@ public class OffHeapHashStore implements AutoCloseable {
 					expiry,
 					customSlot1,
 					customSlot2);
+			staleOverwrites++;
 		} else {
 			throw new IllegalStateException(
 					"OffHeapHashStore is completely full!");
+		}
+	}
+
+	/**
+	 * Asks the off-heap table to grow/compact if the occupancy exceeds the
+	 * resize trigger. Must be called under the write lock.
+	 */
+	private void maybeGrow() {
+		var capacity = binTable.capacity();
+
+		if (size * 100 < capacity * RESIZE_TRIGGER_PERCENT) {
+			resizeSaturated = false;
+			return;
+		}
+
+		if (capacity >= OffHeapLongTable.MAX_CAPACITY && resizeSaturated) {
+			// Table cannot grow any further; avoid rescanning on every insert.
+			return;
+		}
+
+		size = binTable.autoResize(currentMinute);
+		staleOverwrites = 0;
+		resizeSaturated =
+				size * 100 >= binTable.capacity() * RESIZE_TRIGGER_PERCENT;
+	}
+
+	/**
+	 * Periodic maintenance pass that rebalances the table based on the *live*
+	 * entry count, so shrink and expired-clutter compaction happen even when
+	 * raw occupancy is below the grow trigger (expired entries are only
+	 * lazily overwritten, so occupancy itself never drops on its own).
+	 *
+	 * <p>
+	 * The O(capacity) scan runs under the write lock, so it stalls readers
+	 * and writers for its duration. It is therefore skipped unless enough
+	 * expired-slot overwrites have accumulated to justify the pause.
+	 */
+	@Scheduled(fixedRate = 60_000)
+	public void autoTune() {
+		var stamp = lock.writeLock();
+		try {
+			var capacity = binTable.capacity();
+
+			// Occupied slots bound the live count from above, so occupancy
+			// below the shrink watermark guarantees a shrink will apply —
+			// no expired-slot overwrite pressure is needed to detect it.
+			var shrinkable =
+					size * 100 <= capacity * OffHeapLongTable.SHRINK_LOW_WATERMARK_PERCENT;
+
+			if (!shrinkable && staleOverwrites < (capacity >>> STALE_OVERWRITE_SHIFT)) {
+				return;
+			}
+
+			size = binTable.autoResize(currentMinute);
+			staleOverwrites = 0;
+			resizeSaturated =
+					binTable.capacity() >= OffHeapLongTable.MAX_CAPACITY &&
+					size * 100 >= binTable.capacity() * RESIZE_TRIGGER_PERCENT;
+		} finally {
+			lock.unlockWrite(stamp);
 		}
 	}
 
@@ -198,10 +312,8 @@ public class OffHeapHashStore implements AutoCloseable {
 		binTable.setCustomSlot2(index, c2);
 	}
 
-	private static long hash(long key) {
-		key = (key ^ (key >>> 30)) * 0xbf58476d1ce4e5b9L;
-		key = (key ^ (key >>> 27)) * 0x94d049bb133111ebL;
-		return key ^ (key >>> 31);
+	public long size() {
+		return size;
 	}
 
 	@Override
@@ -216,27 +328,14 @@ public class OffHeapHashStore implements AutoCloseable {
 
 	@Scheduled(fixedRate = 60000)
 	public void printLoadPercentage() {
-		var stamp = lock.readLock();
-		var occupied = 0;
-
-		try {
-			for (var i = 0; i < OffHeapLongTable.CAPACITY; i++) {
-				var key = binTable.getKey(i);
-				if (key != OffHeapLongTable.EMPTY_VALUE &&
-						binTable.getExpiry(i) > currentMinute) {
-					occupied++;
-				}
-			}
-		} finally {
-			lock.unlockRead(stamp);
-		}
-
-		var loadPercentage = ((double) occupied / OffHeapLongTable.CAPACITY) * 100;
+		var occupied = size;
+		var capacity = binTable.capacity();
+		var loadPercentage = ((double) occupied / capacity) * 100;
 		log.info(
 				String.format(
 						"[OffHeapHashStore] Load: %.2f%% (%d/%d)",
 						loadPercentage,
 						occupied,
-						OffHeapLongTable.CAPACITY));
+						capacity));
 	}
 }
