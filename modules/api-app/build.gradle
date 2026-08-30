@@ -9,6 +9,7 @@ dependencies {
 
     implementation libs.bundles.web
     implementation libs.spring.boot.starter.data.jpa
+    implementation libs.datafusion.java
 
     runtimeOnly libs.postgresql
     runtimeOnly libs.micrometer.registry.prometheus

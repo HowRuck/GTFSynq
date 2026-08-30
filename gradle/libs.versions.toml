@@ -10,6 +10,7 @@ spring-dependency-management = "1.1.7"
 sonarqube = "7.4.0.8496"
 spotless = "8.10.1"
 palantir-java-format = "2.97.0"
+datafusion-java = "0.1.0"
 
 [libraries]
 protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
@@ -36,6 +37,7 @@ micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-p
 httpclient5 = { module = "org.apache.httpcomponents.client5:httpclient5" }
 flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql" }
 postgresql = { module = "org.postgresql:postgresql" }
+datafusion-java = { module = "org.apache.arrow:datafusion-java" }
 
 [bundles]
 lombok = ["lombok"]
