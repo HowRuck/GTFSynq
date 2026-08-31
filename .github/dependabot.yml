@@ -1,13 +1,9 @@
 version: 2
 updates:
-  # Gradle - Version Catalog
+  # Gradle - Standard Version Catalog
   - package-ecosystem: gradle
     directories:
       - /
-      - /modules/api-app
-      - /modules/ingest-app
-      - /modules/shared
-      - /modules/store-app
     schedule:
       interval: daily
     commit-message:
