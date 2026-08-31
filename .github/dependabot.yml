@@ -1,37 +1,49 @@
 version: 2
 updates:
-    # Gradle
-    - package-ecosystem: gradle
-      directories:
-          - /
-          - /modules/api-app
-          - /modules/ingest-app
-          - /modules/shared
-          - /modules/store-app
-      schedule:
-          interval: daily
-      commit-message:
-          prefix: chore
-          include: scope
+  # Gradle - Version Catalog
+  - package-ecosystem: gradle
+    directories:
+      - /
+      - /modules/api-app
+      - /modules/ingest-app
+      - /modules/shared
+      - /modules/store-app
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "build"
+      prefix-development: "build"
+      include: scope
+    pull-request-branch-name:
+      separator: "/"
+    allow:
+      - dependency-type: "all"
+    versioning-strategy: "auto"
 
-    # Docker
-    - package-ecosystem: docker
-      directories:
-          - /docker/api-app
-          - /docker/ingest-app
-          - /docker/store-app
-      schedule:
-          interval: daily
-      commit-message:
-          prefix: chore
-          include: scope
+  # Docker
+  - package-ecosystem: docker
+    directories:
+      - /docker/api-app
+      - /docker/ingest-app
+      - /docker/store-app
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "build"
+      prefix-development: "build"
+      include: scope
+    pull-request-branch-name:
+      separator: "/"
 
-    # Docker Compose
-    - package-ecosystem: docker-compose
-      directories:
-          - /
-      schedule:
-          interval: daily
-      commit-message:
-          prefix: chore
-          include: scope
+  # Docker Compose
+  - package-ecosystem: docker-compose
+    directories:
+      - /
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "build"
+      prefix-development: "build"
+      include: scope
+    pull-request-branch-name:
+      separator: "/"
