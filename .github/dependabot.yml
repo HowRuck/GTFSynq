@@ -1,43 +1,24 @@
 version: 2
 updates:
-  # Gradle - Standard Version Catalog
   - package-ecosystem: gradle
-    directories:
-      - /
-    schedule:
+    directories: ["/"]
+    schedule: &default-schedule
       interval: daily
-    commit-message:
+    commit-message: &default-commit
       prefix: "build"
       prefix-development: "build"
       include: scope
-    pull-request-branch-name:
+    pull-request-branch-name: &default-branch
       separator: "/"
     allow:
       - dependency-type: "all"
-    versioning-strategy: "auto"
-
-  # Docker
   - package-ecosystem: docker
-    directories:
-      - /docker
-    schedule:
-      interval: daily
-    commit-message:
-      prefix: "build"
-      prefix-development: "build"
-      include: scope
-    pull-request-branch-name:
-      separator: "/"
-
-  # Docker Compose
+    directories: ["/docker"]
+    schedule: *default-schedule
+    commit-message: *default-commit
+    pull-request-branch-name: *default-branch
   - package-ecosystem: docker-compose
-    directories:
-      - /
-    schedule:
-      interval: daily
-    commit-message:
-      prefix: "build"
-      prefix-development: "build"
-      include: scope
-    pull-request-branch-name:
-      separator: "/"
+    directories: ["/"]
+    schedule: *default-schedule
+    commit-message: *default-commit
+    pull-request-branch-name: *default-branch
