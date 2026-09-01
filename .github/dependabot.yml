@@ -19,9 +19,7 @@ updates:
   # Docker
   - package-ecosystem: docker
     directories:
-      - /docker/api-app
-      - /docker/ingest-app
-      - /docker/store-app
+      - /docker
     schedule:
       interval: daily
     commit-message:
