@@ -2,23 +2,20 @@ version: 2
 updates:
   - package-ecosystem: gradle
     directories: ["/"]
-    schedule: &default-schedule
-      interval: daily
-    commit-message: &default-commit
-      prefix: "build"
-      prefix-development: "build"
-      include: scope
-    pull-request-branch-name: &default-branch
-      separator: "/"
-    allow:
-      - dependency-type: "all"
+    schedule: { interval: daily }
+    commit-message:
+      { prefix: "build", prefix-development: "build", include: scope }
+    pull-request-branch-name: { separator: "/" }
+    allow: [{ dependency-type: "all" }]
   - package-ecosystem: docker
     directories: ["/docker"]
-    schedule: *default-schedule
-    commit-message: *default-commit
-    pull-request-branch-name: *default-branch
+    schedule: { interval: daily }
+    commit-message:
+      { prefix: "build", prefix-development: "build", include: scope }
+    pull-request-branch-name: { separator: "/" }
   - package-ecosystem: docker-compose
     directories: ["/"]
-    schedule: *default-schedule
-    commit-message: *default-commit
-    pull-request-branch-name: *default-branch
+    schedule: { interval: daily }
+    commit-message:
+      { prefix: "build", prefix-development: "build", include: scope }
+    pull-request-branch-name: { separator: "/" }
