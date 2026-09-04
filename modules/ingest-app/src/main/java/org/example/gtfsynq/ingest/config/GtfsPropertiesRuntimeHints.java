@@ -7,8 +7,9 @@ import org.springframework.aot.hint.RuntimeHintsRegistrar;
 public class GtfsPropertiesRuntimeHints implements RuntimeHintsRegistrar {
     @Override
     public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
+        // Note: MemberCategory.DECLARED_FIELDS is deprecated for removal in Spring Framework 7
+        // and not needed here: GtfsProperties records bind via their canonical constructors.
         MemberCategory[] memberCategories = {
-            MemberCategory.DECLARED_FIELDS,
             MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
             MemberCategory.INVOKE_DECLARED_METHODS
         };
