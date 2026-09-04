@@ -39,6 +39,8 @@ subprojects {
     }
 
     java {
+        targetCompatibility = JavaVersion.VERSION_25
+        sourceCompatibility = JavaVersion.VERSION_25
         toolchain {
             languageVersion = JavaLanguageVersion.of(25)
         }
@@ -46,6 +48,17 @@ subprojects {
 
     tasks.withType(Test).configureEach {
         useJUnitPlatform()
+    }
+
+    plugins.withId('org.springframework.boot') {
+        tasks.named('bootBuildImage') {
+            imageName = "gtfsynq-${project.name}:${project.version}"
+            // JVM version is derived automatically from the java toolchain above (25).
+            environment = [
+                    "BPL_JVM_THREAD_COUNT": "50",
+                    "JAVA_TOOL_OPTIONS"   : "--add-opens=java.base/java.nio=ALL-UNNAMED -XX:+ExitOnOutOfMemoryError"
+            ]
+        }
     }
 }
 

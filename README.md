@@ -87,32 +87,38 @@ The application listens on:
 
 The repository includes a Docker Compose setup that starts:
 
-- the application
+- `api-app` (port 8080)
+- `ingest-app` (port 8081)
+- `store-app` (port 8082)
 - Kafka
 - TimescaleDB
 
-To build and start everything:
+App images are built with Spring Boot's `bootBuildImage` (Paketo buildpacks, no Dockerfile),
+then Compose starts everything from those prebuilt images:
 
 ```bash
-docker compose -f docker/docker-compose.yaml up -d --build
+./gradlew :api-app:bootBuildImage :ingest-app:bootBuildImage :store-app:bootBuildImage
+docker compose up -d
 ```
 
-The app is exposed on:
+The apps are exposed on:
 
 ```bash
-http://localhost:8888
+http://localhost:8080 # api-app
+http://localhost:8081 # ingest-app
+http://localhost:8082 # store-app
 ```
 
 ### Stopping the stack
 
 ```bash
-docker compose -f docker/docker-compose.yaml down
+docker compose down
 ```
 
 ### Viewing logs
 
 ```bash
-docker compose -f docker/docker-compose.yaml logs -f app
+docker compose logs -f api-app
 ```
 
 ## Local Development Flow
@@ -132,10 +138,8 @@ If you want to run only the infrastructure containers and keep the app on your h
 GTFSynq/
 ├── build.gradle
 ├── settings.gradle
-├── docker/
-│   ├── Dockerfile
-│   ├── docker-compose.yaml
-│   └── entrypoint.sh
+├── docker-compose.yaml
+├── docker-compose.dev.yaml
 ├── modules/
 │   ├── shared/
 │   ├── ingest-app/
@@ -255,14 +259,25 @@ Migrations are applied automatically on startup when Flyway is enabled.
 ./gradlew bootRun
 ```
 
-## Docker Image Build
+## Container Image Build
 
-The Docker image is built in two stages:
+Container images are built with Spring Boot's `bootBuildImage` (Paketo buildpacks) —
+no Dockerfile needed:
 
-1. Build the application with the Gradle wrapper inside a Gradle/JDK 26 container.
-2. Copy the generated JAR into a lightweight Java 26 runtime image.
+```bash
+# All three apps
+./gradlew :api-app:bootBuildImage :ingest-app:bootBuildImage :store-app:bootBuildImage
 
-This means the container image always reflects the current Gradle build output from `build/libs/app.jar`.
+# Or a single app
+./gradlew :api-app:bootBuildImage
+```
+
+This produces local images named `gtfsynq-<app>:0.0.1-SNAPSHOT`
+(e.g. `gtfsynq-api-app:0.0.1-SNAPSHOT`), which `docker-compose.yaml` references directly.
+The JVM version is derived automatically from the Java toolchain in `build.gradle`,
+and the shared `bootBuildImage` config there (image name, `BPL_JVM_THREAD_COUNT`,
+`JAVA_TOOL_OPTIONS` with the `--add-opens` flag required by Arrow/DataFusion)
+applies to all three apps — `:shared` is skipped since it has no Boot plugin.
 
 ## Monitoring
 

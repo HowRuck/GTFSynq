@@ -15,8 +15,7 @@ build/
 bin/
 **/bin/
 
-# Docker (avoid recursive builds)
-docker/Dockerfile
+# Buildpacks (bootBuildImage needs full build context; only exclude outputs & local data)
 docker-compose*.yaml
 
 # Docs & metadata (not needed for the build)

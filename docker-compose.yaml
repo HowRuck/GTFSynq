@@ -1,10 +1,6 @@
 services:
     api-app:
-        build:
-            context: .
-            dockerfile: docker/Dockerfile
-            args:
-                MODULE: api-app
+        image: gtfsynq-api-app:0.0.1-SNAPSHOT
         container_name: gtfsynq-api-app
         depends_on:
             kafka:
@@ -35,11 +31,7 @@ services:
             start_period: 20s
 
     ingest-app:
-        build:
-            context: .
-            dockerfile: docker/Dockerfile
-            args:
-                MODULE: ingest-app
+        image: gtfsynq-ingest-app:0.0.1-SNAPSHOT
         container_name: gtfsynq-ingest-app
         depends_on:
             kafka:
@@ -71,11 +63,7 @@ services:
             start_period: 20s
 
     store-app:
-        build:
-            context: .
-            dockerfile: docker/Dockerfile
-            args:
-                MODULE: store-app
+        image: gtfsynq-store-app:0.0.1-SNAPSHOT
         container_name: gtfsynq-store-app
         depends_on:
             kafka:

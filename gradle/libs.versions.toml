@@ -50,7 +50,7 @@ httpclient5 = { module = "org.apache.httpcomponents.client5:httpclient5" }
 # Data formats & serialization
 protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
 grpc-all = { module = "io.grpc:grpc-all", version.ref = "grpc" }
-datafusion-java = { module = "org.apache.arrow:datafusion-java" }
+datafusion-java = { module = "org.apache.datafusion:datafusion-java", version.ref = "datafusion-java" }
 
 # Misc libraries
 javatuples = { module = "io.arxila.javatuples:javatuples", version.ref = "javatuples" }
