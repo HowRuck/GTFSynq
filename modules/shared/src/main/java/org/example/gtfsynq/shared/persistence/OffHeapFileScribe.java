@@ -156,7 +156,10 @@ public class OffHeapFileScribe {
 
     private static void writeFully(FileChannel channel, ByteBuffer buffer) throws IOException {
         while (buffer.hasRemaining()) {
-            channel.write(buffer);
+            int written = channel.write(buffer);
+            if (written < 0) {
+                throw new IOException("Unexpected end of channel while writing state file");
+            }
         }
     }
 
