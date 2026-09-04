@@ -1,6 +1,7 @@
 package org.example.gtfsynq.ingest.adapter.inbound.protobuf;
 
 import com.google.protobuf.CodedInputStream;
+import com.google.protobuf.WireFormat;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,7 +12,6 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.openhft.hashing.LongHashFunction;
-import org.apache.kafka.shaded.com.google.protobuf.WireFormat;
 import org.example.gtfsynq.shared.protocol.BinaryFeedEntityWithMetadata;
 import org.example.gtfsynq.shared.protocol.offheap.OffHeapHashStore;
 import org.example.gtfsynq.shared.protocol.offheap.OffHeapLongTable;
