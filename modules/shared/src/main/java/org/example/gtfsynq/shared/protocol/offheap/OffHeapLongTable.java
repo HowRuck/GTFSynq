@@ -52,7 +52,7 @@ public final class OffHeapLongTable implements AutoCloseable {
      * this watermark (occupancy is an upper bound on the live load, so below
      * this a shrink is guaranteed to apply).
      */
-    public static final int SHRINK_LOW_WATERMARK_PERCENT = 17;
+    public static final int SHRINK_LOW_WATERMARK_PERCENT = 25;
 
     /**
      * Compact at the same capacity when the live load drops below this
@@ -64,7 +64,7 @@ public final class OffHeapLongTable implements AutoCloseable {
      * How long retired arenas are kept alive after a resize so in-flight
      * optimistic readers can finish safely
      */
-    private static final long ARENA_RETENTION_NANOS = 5 * 60 * 1_000_000_000L;
+    private static final long ARENA_RETENTION_NANOS = 1 * 60 * 1_000_000_000L;
 
     /**
      * Row size in bytes.
