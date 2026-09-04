@@ -6,12 +6,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Represents a trip update, including the trip descriptor and stop time updates
+ * Represents a trip update, including the trip descriptor and stop time updates.
+ *
+ * @param tripDescriptor the trip descriptor
+ * @param stopTimeUpdates the stop time updates
  */
 public record TripUpdateDto(
-        /** The trip descriptor */
         TripDescriptorDto tripDescriptor,
-        /** The stop time updates */
         List<TripStopTimeUpdateDto> stopTimeUpdates) {
     /**
      * Converts a FeedEntity to a TripUpdateDto

@@ -32,7 +32,7 @@ public class GtfsKafkaConsumer {
      *
      * <p>Only GTFS TripUpdate entities are accepted. Other entity types are ignored.
      *
-     * @param value encoded Kafka value
+     * @param bytes encoded Kafka value
      * @return parsed feed entity, or {@code null} if the payload is invalid or not a TripUpdate
      */
     public FeedEntityWithMetadata parseFeedEntity(byte[] bytes) {

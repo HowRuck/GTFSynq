@@ -8,30 +8,31 @@ import org.example.gtfsynq.shared.util.FeedHashing;
 import org.example.gtfsynq.shared.util.GtfsFeedFormatter;
 
 /**
- * DTO for a GTFS trip descriptor, including its hash for deduplication
+ * DTO for a GTFS trip descriptor, including its hash for deduplication.
+ *
+ * @param id the stable ID of this trip descriptor
+ * @param entityId the entity ID of this trip descriptor
+ * @param feedId the feed ID of this trip descriptor
+ * @param feedTs the timestamp when this trip descriptor was received
+ * @param tripId the trip ID of this trip descriptor
+ * @param routeId the route ID of this trip descriptor
+ * @param directionId the direction ID of this trip descriptor
+ * @param startDate the start date of this trip descriptor
+ * @param startTime the start time of this trip descriptor
+ * @param startTimeOverflowDays the overflow days for the start time of this trip descriptor
+ * @param hash the hash of this trip descriptor for deduplication
  */
 public record TripDescriptorDto(
-        /** The stable ID of this trip descriptor */
         long id,
-        /** The entity ID of this trip descriptor */
         String entityId,
-        /** The feed ID of this trip descriptor */
         String feedId,
-        /** The timestamp when this trip descriptor was received */
         Instant feedTs,
-        /** The trip ID of this trip descriptor */
         String tripId,
-        /** The route ID of this trip descriptor */
         String routeId,
-        /** The direction ID of this trip descriptor */
         Integer directionId,
-        /** The start date of this trip descriptor */
         LocalDate startDate,
-        /** The start time of this trip descriptor */
         LocalTime startTime,
-        /** The overflow days for the start time of this trip descriptor */
         Short startTimeOverflowDays,
-        /** The hash of this trip descriptor for deduplication */
         long hash) {
     /**
      * Creates a TripDescriptorDto from a TripDescriptor entity

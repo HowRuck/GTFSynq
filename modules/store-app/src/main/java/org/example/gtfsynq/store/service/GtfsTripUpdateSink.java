@@ -54,7 +54,7 @@ public class GtfsTripUpdateSink {
      * Accepts a feed entity and buffers it for later batch persistence.
      *
      * @param feedId feed identifier from Kafka key
-     * @param entity decoded GTFS-RT feed entity
+     * @param entityWithMeta decoded GTFS-RT feed entity with metadata
      */
     public void accept(String feedId, FeedEntityWithMetadata entityWithMeta) {
         var entity = entityWithMeta.entity();

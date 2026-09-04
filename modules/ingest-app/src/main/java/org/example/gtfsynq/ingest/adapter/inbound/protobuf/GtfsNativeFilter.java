@@ -21,11 +21,11 @@ import org.example.gtfsynq.shared.util.SizeFormat;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-@Component
-@Slf4j
 /**
  * A filter that parses native GTFS feeds from input streams
  */
+@Component
+@Slf4j
 public class GtfsNativeFilter {
 
     private final OffHeapHashStore stateStore;
@@ -52,8 +52,6 @@ public class GtfsNativeFilter {
      * @param buffer  The buffer containing the feed header
      *
      * @return true if the header has changed, false otherwise
-     *
-     * @throws IOException If an error occurs while reading the buffer
      */
     private boolean checkHeaderChanged(String feedId, String feedUrl, byte[] buffer) {
         var headerKey =

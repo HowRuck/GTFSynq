@@ -9,36 +9,37 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 /**
- * DTO for a GTFS trip stop time update, including its hash for deduplication
+ * DTO for a GTFS trip stop time update, including its hash for deduplication.
+ *
+ * @param tripKey the trip key of this stop time update
+ * @param feedId the feed ID of this stop time update
+ * @param feedTs the timestamp when this stop time update was received
+ * @param stopSequence the stop sequence of this stop time update
+ * @param stopId the stop ID of this stop time update
+ * @param arrivalTime the arrival time of this stop time update
+ * @param arrivalDelay the arrival delay of this stop time update
+ * @param scheduledArrivalTime the scheduled arrival time of this stop time update
+ * @param departureTime the departure time of this stop time update
+ * @param departureDelay the departure delay of this stop time update
+ * @param scheduledDepartureTime the scheduled departure time of this stop time update
+ * @param scheduleRelationship the schedule relationship of this stop time update
+ * @param assignedStopId the assigned stop ID of this stop time update
+ * @param hash the hash of this stop time update for deduplication
  */
 public record TripStopTimeUpdateDto(
-        /** The trip key of this stop time update */
         long tripKey,
-        /** The feed ID of this stop time update */
         @NonNull String feedId,
-        /** The timestamp when this stop time update was received */
         @NonNull Instant feedTs,
-        /** The stop sequence of this stop time update */
         @NonNull Integer stopSequence,
-        /** The stop ID of this stop time update */
         @NonNull String stopId,
-        /** The arrival time of this stop time update */
         @Nullable Instant arrivalTime,
-        /** The arrival delay of this stop time update */
         @Nullable Integer arrivalDelay,
-        /** The scheduled arrival time of this stop time update */
         @Nullable Instant scheduledArrivalTime,
-        /** The departure time of this stop time update */
         @Nullable Instant departureTime,
-        /** The departure delay of this stop time update */
         @Nullable Integer departureDelay,
-        /** The scheduled departure time of this stop time update */
         @Nullable Instant scheduledDepartureTime,
-        /** The schedule relationship of this stop time update */
         @Nullable ScheduleRelationship scheduleRelationship,
-        /** The assigned stop ID of this stop time update */
         @Nullable String assignedStopId,
-        /** The hash of this stop time update for deduplication */
         long hash) {
     /**
      * Creates a TripStopTimeUpdateDto from a StopTimeUpdate protobuf message
@@ -80,15 +81,13 @@ public record TripStopTimeUpdateDto(
         var scheduleRelationship = stu.getScheduleRelationship();
         var assignedStopId = GtfsFeedFormatter.nullableString(stu.hasStopId(), stu.getStopId());
 
-        /**
-         * Creates a hash of metadata fields.
-         *
-         * Delays (and their associated arrival/departure times) are explicitly excluded
-         * from this hash to ensure stability during deduplication, as these values are
-         * compared separately against their previous values.
-         *
-         * This hashes everything in the object EXEPT the delays and directly associated values in order to keep hash stable
-         */
+        // Creates a hash of metadata fields.
+        //
+        // Delays (and their associated arrival/departure times) are explicitly excluded
+        // from this hash to ensure stability during deduplication, as these values are
+        // compared separately against their previous values.
+        //
+        // This hashes everything in the object EXCEPT the delays and directly associated values in order to keep hash stable.
         var hash = hashMetaFields(
                 feedId,
                 stopSequence,
