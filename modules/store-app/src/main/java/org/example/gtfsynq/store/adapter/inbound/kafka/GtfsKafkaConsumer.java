@@ -3,17 +3,14 @@ package org.example.gtfsynq.store.adapter.inbound.kafka;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.transit.realtime.GtfsRealtime.FeedEntity;
 import java.time.Instant;
-import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.common.serialization.Serde;
-import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.kstream.Consumed;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.example.gtfsynq.shared.model.FeedEntityWithMetadata;
 import org.example.gtfsynq.shared.protocol.BinaryFeedEntityWithMetadata;
 import org.example.gtfsynq.store.service.GtfsTripUpdateSink;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
@@ -28,12 +25,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class GtfsKafkaConsumer {
 
-    private final Serde<String> keySerde;
-    private final Serde<byte[]> valueSerde;
     private final GtfsTripUpdateSink tripUpdateSink;
-
-    @Value("${spring.kafka.topic:gtfs-trip-updates}")
-    private String topic;
 
     /**
      * Parses a raw Kafka payload into a GTFS feed entity.
@@ -74,20 +66,18 @@ public class GtfsKafkaConsumer {
     }
 
     /**
-     * Configure the Kafka Streams topology.
+     * Consume raw Kafka records (plain listener — native-friendly, no Kafka Streams).
      *
-     * <p>The stream parses raw values, filters out non-TripUpdate entities, and forwards the
-     * result to the sink for batching.
-     *
-     * @param builder Kafka Streams topology builder
+     * @param feedId Kafka key / feed identifier
+     * @param value raw Kafka value
      */
-    @Autowired
-    public void consume(StreamsBuilder builder) {
-        var messageStream = builder.stream(topic, Consumed.with(keySerde, valueSerde));
-
-        messageStream
-                .mapValues(this::parseFeedEntity)
-                .filter((key, value) -> Objects.nonNull(value))
-                .foreach(this::routeToSink);
+    @KafkaListener(topics = "${spring.kafka.topic:gtfs-trip-updates}")
+    public void consume(
+            @Header(value = "kafka_receivedMessageKey", required = false) String feedId,
+            @Payload(required = false) byte[] value) {
+        if (value == null) {
+            return;
+        }
+        routeToSink(feedId, parseFeedEntity(value));
     }
 }

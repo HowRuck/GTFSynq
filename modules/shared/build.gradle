@@ -1,6 +1,7 @@
 plugins {
     id 'java-library'
     alias(libs.plugins.protobuf)
+    alias(libs.plugins.graalvm.native)
 }
 
 dependencyManagement {

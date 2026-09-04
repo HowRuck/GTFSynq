@@ -3,12 +3,12 @@ package org.example.gtfsynq.store;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
-import org.springframework.kafka.annotation.EnableKafkaStreams;
+import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication(scanBasePackages = "org.example.gtfsynq")
 @EnableScheduling
-@EnableKafkaStreams
+@EnableKafka
 @ConfigurationPropertiesScan
 public class StoreApplication {
 

@@ -153,7 +153,6 @@ services:
             /opt/kafka/bin/kafka-topics.sh
             --bootstrap-server kafka:9092
             --create
-            --if-not-exists
             --topic gtfs-trip-updates
             --partitions 1
             --replication-factor 1

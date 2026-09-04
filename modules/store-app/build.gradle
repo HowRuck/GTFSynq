@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.spring.boot)
+    alias(libs.plugins.graalvm.native)
     alias(libs.plugins.spring.dependency.management)
     id 'java'
 }
@@ -25,4 +26,17 @@ dependencies {
 
 bootJar {
     archiveFileName = 'app.jar'
+}
+
+graalvmNative {
+    binaries {
+        main {
+            buildArgs.add('--enable-url-protocols=https')
+        }
+    }
+}
+
+tasks.named('bootBuildImage') {
+    // Paketo does not read graalvmNative.buildArgs; pass explicitly
+    environment.put('BP_NATIVE_IMAGE_BUILD_ARGUMENTS', '--enable-url-protocols=https')
 }

@@ -265,7 +265,7 @@ Container images are built with Spring Boot's `bootBuildImage` (Paketo buildpack
 no Dockerfile needed:
 
 ```bash
-# All three apps
+# All three apps (JVM)
 ./gradlew :api-app:bootBuildImage :ingest-app:bootBuildImage :store-app:bootBuildImage
 
 # Or a single app
@@ -276,8 +276,36 @@ This produces local images named `gtfsynq-<app>:0.0.1-SNAPSHOT`
 (e.g. `gtfsynq-api-app:0.0.1-SNAPSHOT`), which `docker-compose.yaml` references directly.
 The JVM version is derived automatically from the Java toolchain in `build.gradle`,
 and the shared `bootBuildImage` config there (image name, `BPL_JVM_THREAD_COUNT`,
-`JAVA_TOOL_OPTIONS` with the `--add-opens` flag required by Arrow/DataFusion)
-applies to all three apps — `:shared` is skipped since it has no Boot plugin.
+`JAVA_TOOL_OPTIONS`) applies to all three apps — `:shared` is skipped since it has no Boot plugin.
+
+### GraalVM native images
+
+Each app also applies the GraalVM `org.graalvm.buildtools.native` plugin, so the
+same `bootBuildImage` task can produce a native image via buildpacks (no local
+GraalVM install needed, Docker daemon required). Pass `-PnativeImage`:
+
+```bash
+# All three apps (native, ~8 GB RAM recommended, first build takes 5-15 min per service)
+./gradlew -PnativeImage :api-app:bootBuildImage :ingest-app:bootBuildImage :store-app:bootBuildImage
+```
+
+This produces `gtfsynq-<app>:0.0.1-SNAPSHOT-native` images using the
+`paketobuildpacks/builder-jammy-tiny` builder with `BP_NATIVE_IMAGE=true` and AOT
+enabled. To run them, point Compose at the `-native` tags. Note the tiny run
+image has no shell/`wget`, so the `wget`-based Compose healthchecks need replacing
+(e.g. a Docker `httpGet`-style check or the `builder-jammy-base` builder).
+
+Verify AOT compatibility without building a full image:
+
+```bash
+./gradlew :api-app:processAot :ingest-app:processAot :store-app:processAot
+```
+
+For a local (non-container) native binary you need GraalVM JDK 25 on `PATH`:
+
+```bash
+./gradlew :api-app:nativeCompile
+```
 
 ## Monitoring
 
