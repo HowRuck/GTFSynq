@@ -1,0 +1,76 @@
+services:
+  postgres-exporter:
+    image: docker.io/prometheuscommunity/postgres-exporter:v0.20.1
+    container_name: postgres-exporter
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    environment:
+      DATA_SOURCE_NAME: postgresql://postgres:postgres@timescaledb:5432/gtfsynq?sslmode=disable
+    ports:
+      - "9187:9187"
+    restart: unless-stopped
+
+  kafka-exporter:
+    image: docker.io/danielqsj/kafka-exporter:v1.9.0
+    container_name: kafka-exporter
+    depends_on:
+      kafka:
+        condition: service_healthy
+    command:
+      - --kafka.server=kafka:9092
+    ports:
+      - "9308:9308"
+    # kafka-exporter Fatal-exits if the broker isn't reachable at startup;
+    # restart so it recovers from ordering races.
+    restart: unless-stopped
+
+  victoriametrics:
+    image: docker.io/victoriametrics/victoria-metrics:v1.151.0
+    container_name: victoriametrics
+    depends_on:
+      - ingest-app
+      - store-app
+      - postgres-exporter
+      - kafka-exporter
+    command:
+      - --storageDataPath=/victoria-metrics-data
+      - --httpListenAddr=:8428
+      - --promscrape.config=/etc/vm/vm-scrape.yml
+    ports:
+      - "8428:8428"
+    volumes:
+      - victoria-metrics-data:/victoria-metrics-data
+      - ./monitoring/vm:/etc/vm:ro
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget --spider -q http://localhost:8428/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  grafana:
+    image: docker.io/grafana/grafana:13.2.1
+    container_name: grafana
+    depends_on:
+      victoriametrics:
+        condition: service_started
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
+
+volumes:
+  victoria-metrics-data:
+  grafana-data:
+
+networks:
+  default:
+    driver: bridge

@@ -1,3 +1,6 @@
+include:
+    - docker-compose.monitoring.yaml
+
 services:
     api-app:
         image: gtfsynq-api-app:0.0.1-SNAPSHOT
@@ -19,16 +22,9 @@ services:
             - "8080:8080"
         volumes:
             - gtfsynq-api-data:/app/data
-        healthcheck:
-            test:
-                [
-                    "CMD-SHELL",
-                    "wget --spider -q http://localhost:8080/actuator/health || exit 1",
-                ]
-            interval: 30s
-            timeout: 5s
-            retries: 3
-            start_period: 20s
+        # NOTE: no healthcheck — Paketo run-tiny images contain no shell,
+        # wget or curl, so any CMD-SHELL probe can never succeed.
+        # Health is observable from the host via /actuator/health.
 
     ingest-app:
         image: gtfsynq-ingest-app:0.0.1-SNAPSHOT
@@ -51,16 +47,6 @@ services:
             - "8081:8081"
         volumes:
             - gtfsynq-ingest-data:/app/data
-        healthcheck:
-            test:
-                [
-                    "CMD-SHELL",
-                    "wget --spider -q http://localhost:8081/actuator/health || exit 1",
-                ]
-            interval: 30s
-            timeout: 5s
-            retries: 3
-            start_period: 20s
 
     store-app:
         image: gtfsynq-store-app:0.0.1-SNAPSHOT
@@ -83,16 +69,6 @@ services:
             - "8082:8082"
         volumes:
             - gtfsynq-store-data:/app/data
-        healthcheck:
-            test:
-                [
-                    "CMD-SHELL",
-                    "wget --spider -q http://localhost:8082/actuator/health || exit 1",
-                ]
-            interval: 30s
-            timeout: 5s
-            retries: 3
-            start_period: 20s
 
     kafka:
         image: docker.io/apache/kafka:4.3.1
@@ -171,8 +147,7 @@ services:
         volumes:
             - timescaledb-data:/var/lib/postgresql
         healthcheck:
-            test:
-                ["CMD-SHELL", "pg_isready -U postgres -d gtfsynq -h localhost"]
+            test: ["CMD-SHELL", "pg_isready -U postgres -d gtfsynq -h localhost"]
             interval: 10s
             timeout: 5s
             retries: 12

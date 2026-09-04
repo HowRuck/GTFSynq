@@ -1,0 +1,126 @@
+{
+  "title": "GTFSynq Domain",
+  "uid": "gtfsynq-domain",
+  "tags": ["gtfsynq", "domain"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Sink DB write rate (per op)",
+      "description": "gtfs.sink.db.write timer, tag op=upsert_descriptors|append_stop_times|upsert_hot_trips",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        {
+          "expr": "sum by (op) (rate(gtfs_sink_db_write_seconds_count[$__rate_interval]))",
+          "legendFormat": "{{op}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Sink DB write p95 (per op)",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (op, le) (rate(gtfs_sink_db_write_seconds_bucket[$__rate_interval])))",
+          "legendFormat": "{{op}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Flush duration p95",
+      "description": "gtfs.sink.flush.duration timer",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(gtfs_sink_flush_duration_seconds_bucket[$__rate_interval])))",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "sum by (instance) (rate(gtfs_sink_flush_duration_seconds_count[$__rate_interval]))",
+          "legendFormat": "flushes/s {{instance}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Entities per flush",
+      "description": "gtfs.sink.entities.count summary, tag type=descriptors|stop_times",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        {
+          "expr": "sum by (type) (rate(gtfs_sink_entities_count_sum[$__rate_interval])) / sum by (type) (rate(gtfs_sink_entities_count_count[$__rate_interval]))",
+          "legendFormat": "avg {{type}}"
+        },
+        {
+          "expr": "sum by (type) (gtfs_sink_entities_count_max)",
+          "legendFormat": "max {{type}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Dropped duplicates rate",
+      "description": "gtfs.sink.dropped counter, tag reason=duplicate",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        {
+          "expr": "sum by (reason) (rate(gtfs_sink_dropped_total[$__rate_interval]))",
+          "legendFormat": "{{reason}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Ingest skipped invalid rate",
+      "description": "gtfs.ingest.skipped.invalid counter",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        {
+          "expr": "sum by (instance) (rate(gtfs_ingest_skipped_invalid_total[$__rate_interval]))",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Off-heap store size / capacity",
+      "description": "offheap.store.size + offheap.store.capacity gauges (ingest + store)",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        { "expr": "offheap_store_size", "legendFormat": "size {{instance}}" },
+        {
+          "expr": "offheap_store_capacity",
+          "legendFormat": "capacity {{instance}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Off-heap load ratio",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        { "expr": "offheap_store_load_ratio", "legendFormat": "{{instance}}" }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 }
+    }
+  ]
+}
