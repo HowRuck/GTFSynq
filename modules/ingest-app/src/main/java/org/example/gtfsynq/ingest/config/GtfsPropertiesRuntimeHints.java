@@ -7,9 +7,13 @@ import org.springframework.aot.hint.RuntimeHintsRegistrar;
 public class GtfsPropertiesRuntimeHints implements RuntimeHintsRegistrar {
     @Override
     public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
-        // Note: MemberCategory.DECLARED_FIELDS is deprecated for removal in Spring Framework 7
-        // and not needed here: GtfsProperties records bind via their canonical constructors.
+        // Hibernate Validator reads @ConfigurationProperties record fields
+        // reflectively (Field.get) during cascading validation, so
+        // DECLARED_FIELDS is required in the native image despite the
+        // deprecation warning. Without it the ingest app fails at startup
+        // with MissingReflectionRegistrationError on FeedSource.staticConfig.
         MemberCategory[] memberCategories = {
+            MemberCategory.DECLARED_FIELDS,
             MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
             MemberCategory.INVOKE_DECLARED_METHODS
         };
