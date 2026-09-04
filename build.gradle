@@ -53,10 +53,11 @@ subprojects {
     plugins.withId('org.springframework.boot') {
         tasks.named('bootBuildImage') {
             imageName = "gtfsynq-${project.name}:${project.version}"
-            // JVM version is derived automatically from the java toolchain above (25).
             environment = [
                     "BPL_JVM_THREAD_COUNT": "50",
-                    "JAVA_TOOL_OPTIONS"   : "--add-opens=java.base/java.nio=ALL-UNNAMED -XX:+ExitOnOutOfMemoryError"
+                    "BP_SPRING_CLOUD_BINDINGS_DISABLED": "true",
+                    "BP_SPRING_AOT_ENABLED": "true",
+                    "JAVA_TOOL_OPTIONS": "--add-opens=java.base/java.nio=ALL-UNNAMED -XX:+ExitOnOutOfMemoryError"
             ]
         }
     }
