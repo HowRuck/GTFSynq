@@ -156,7 +156,7 @@ public class GtfsTripUpdateSink {
         metrics.recordTotal(totalNanos);
 
         log.info(
-                "Flushed {} buffered TripUpdate records ({} descriptors, {} stop-time updates) in {}ms"
+                "Flushed {} updates ({} descriptor upserts, {} stop-time rows) in {}ms"
                         + " (descriptors={}ms, stop-times={}ms, hot={}ms)",
                 flushSize,
                 tripDescriptors.size(),
