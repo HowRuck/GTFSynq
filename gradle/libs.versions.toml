@@ -9,7 +9,7 @@ spring-boot = "4.2.0-M1"
 spring-dependency-management = "1.1.7"
 graalvm-native = "0.11.3"
 grpc = "1.83.1"
-protobuf = "4.36.0"
+protobuf = "4.36.1"
 datafusion-java = "0.1.0"
 
 # Misc libraries
