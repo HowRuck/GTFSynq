@@ -65,6 +65,14 @@ public class OffHeapFileScribe {
 
         var tmpPath = savePath.resolveSibling(savePath.getFileName().toString() + ".tmp");
 
+        try {
+            var parent = tmpPath.toAbsolutePath().getParent();
+            if (parent != null) Files.createDirectories(parent);
+        } catch (IOException e) {
+            log.error("Failed to create state directory", e);
+            return;
+        }
+
         try (var channel = FileChannel.open(
                 tmpPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {
             var header = ByteBuffer.allocate(HEADER_SIZE).order(ByteOrder.BIG_ENDIAN);
