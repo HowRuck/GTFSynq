@@ -66,7 +66,7 @@ public class GtfsKafkaConsumer {
     }
 
     /**
-     * Consume raw Kafka records (plain listener — native-friendly, no Kafka Streams).
+     * Consume raw Kafka records
      *
      * @param feedId Kafka key / feed identifier
      * @param value raw Kafka value
