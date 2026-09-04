@@ -64,6 +64,9 @@ public class GtfsTripUpdateSink {
         }
 
         var rawUpdateDto = TripUpdateDto.fromEntity(entity, feedId, entityWithMeta.feedTs());
+        if (rawUpdateDto == null) {
+            return;
+        }
 
         bufferLock.lock();
         try {
