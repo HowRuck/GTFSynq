@@ -1,4 +1,4 @@
-name: SonarQube
+name: Qodana
 
 on:
   push:
