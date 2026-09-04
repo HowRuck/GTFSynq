@@ -13,6 +13,7 @@ import org.example.gtfsynq.store.service.metrics.GtfsSinkMetrics;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Buffers GTFS TripUpdate writes and flushes them to the database in batches.
@@ -76,6 +77,7 @@ public class GtfsTripUpdateSink {
      * Flushes the current buffer on a schedule.
      */
     @Scheduled(fixedDelayString = "${gtfsynq.sink.flush-interval-ms:10000}")
+    @Transactional
     public void scheduledFlush() {
         if (!enabled) {
             return;
@@ -92,6 +94,7 @@ public class GtfsTripUpdateSink {
     /**
      * Flushes any buffered updates immediately.
      */
+    @Transactional
     public void flushNow() {
         if (!enabled) {
             return;
@@ -131,24 +134,33 @@ public class GtfsTripUpdateSink {
 
         var start = System.nanoTime();
         tripUpdateRepository.upsertTripDescriptors(tripDescriptors);
-        metrics.recordDescriptors(System.nanoTime() - start);
+        var descriptorsNanos = System.nanoTime() - start;
+        metrics.recordDescriptors(descriptorsNanos);
 
         start = System.nanoTime();
         tripUpdateRepository.appendTripUpdates(stopTimeUpdates);
-        metrics.recordStopTimes(System.nanoTime() - start);
+        var stopTimesNanos = System.nanoTime() - start;
+        metrics.recordStopTimes(stopTimesNanos);
 
         start = System.nanoTime();
         tripUpdateRepository.upsertHotTrips(tripDescriptors, stopTimeUpdates);
-        metrics.recordHotTrips(System.nanoTime() - start);
+        var hotTripsNanos = System.nanoTime() - start;
+        metrics.recordHotTrips(hotTripsNanos);
 
         buffer.clear();
 
-        metrics.recordTotal(System.nanoTime() - methodStart);
+        var totalNanos = System.nanoTime() - methodStart;
+        metrics.recordTotal(totalNanos);
 
         log.info(
-                "Flushed {} buffered TripUpdate records ({} descriptors, {} stop-time updates)",
+                "Flushed {} buffered TripUpdate records ({} descriptors, {} stop-time updates) in {}ms"
+                        + " (descriptors={}ms, stop-times={}ms, hot={}ms)",
                 flushSize,
                 tripDescriptors.size(),
-                stopTimeUpdates.size());
+                stopTimeUpdates.size(),
+                totalNanos / 1_000_000,
+                descriptorsNanos / 1_000_000,
+                stopTimesNanos / 1_000_000,
+                hotTripsNanos / 1_000_000);
     }
 }
