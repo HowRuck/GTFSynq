@@ -28,3 +28,18 @@ dependencies {
 bootJar {
     archiveFileName = 'app.jar'
 }
+
+graalvmNative {
+    binaries {
+        main {
+            // OffHeapLongTable uses Arena.ofShared(); GraalVM disables
+            // shared arenas by default in native images.
+            buildArgs.add('-H:+SharedArenaSupport')
+        }
+    }
+}
+
+tasks.named('bootBuildImage') {
+    // Paketo does not read graalvmNative.buildArgs; pass explicitly
+    environment.put('BP_NATIVE_IMAGE_BUILD_ARGUMENTS', '-H:+SharedArenaSupport')
+}
