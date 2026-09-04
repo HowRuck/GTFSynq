@@ -45,8 +45,11 @@ public class OffHeapHashStore implements AutoCloseable {
 
     /**
      * Number of occupied (non-empty) slots, including expired ones. Guarded by
-     * the write lock.
+     * the write lock: all mutations run under {@link StampedLock#writeLock()},
+     * so the read-modify-write on this volatile field is mutually exclusive.
+     * Volatile is retained for visibility of lock-free readers (e.g. metrics).
      */
+    @SuppressWarnings("NonAtomicOperationOnVolatileField") // mutations are serialized by the write lock
     private volatile long size;
 
     /**
@@ -318,6 +321,6 @@ public class OffHeapHashStore implements AutoCloseable {
         var occupied = size;
         var capacity = binTable.capacity();
         var loadPercentage = ((double) occupied / capacity) * 100;
-        log.info(String.format("[OffHeapHashStore] Load: %.2f%% (%d/%d)", loadPercentage, occupied, capacity));
+        log.info("[OffHeapHashStore] Load: {}% ({}/{})", "%.2f".formatted(loadPercentage), occupied, capacity);
     }
 }
