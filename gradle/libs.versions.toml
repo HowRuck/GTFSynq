@@ -7,7 +7,7 @@ palantir-java-format = "2.97.0"
 # Frameworks & core dependencies
 spring-boot = "4.2.0-M1"
 spring-dependency-management = "1.1.7"
-grpc = "1.82.0"
+grpc = "1.83.1"
 protobuf = "4.36.0"
 datafusion-java = "0.1.0"
 
