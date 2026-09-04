@@ -34,6 +34,7 @@ graalvmNative {
         main {
             // OffHeapLongTable uses Arena.ofShared(); GraalVM disables
             // shared arenas by default in native images.
+            buildArgs.add('-H:+UnlockExperimentalVMOptions')
             buildArgs.add('-H:+SharedArenaSupport')
         }
     }
@@ -41,5 +42,5 @@ graalvmNative {
 
 tasks.named('bootBuildImage') {
     // Paketo does not read graalvmNative.buildArgs; pass explicitly
-    environment.put('BP_NATIVE_IMAGE_BUILD_ARGUMENTS', '-H:+SharedArenaSupport')
+    environment.put('BP_NATIVE_IMAGE_BUILD_ARGUMENTS', '-H:+UnlockExperimentalVMOptions -H:+SharedArenaSupport')
 }

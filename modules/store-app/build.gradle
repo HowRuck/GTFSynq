@@ -35,6 +35,7 @@ graalvmNative {
             buildArgs.add('--enable-url-protocols=https')
             // OffHeapLongTable uses Arena.ofShared(); GraalVM disables
             // shared arenas in native images unless enabled.
+            buildArgs.add('-H:+UnlockExperimentalVMOptions')
             buildArgs.add('-H:+SharedArenaSupport')
         }
     }
@@ -42,5 +43,5 @@ graalvmNative {
 
 tasks.named('bootBuildImage') {
     // Paketo does not read graalvmNative.buildArgs; pass explicitly
-    environment.put('BP_NATIVE_IMAGE_BUILD_ARGUMENTS', '--enable-url-protocols=https -H:+SharedArenaSupport')
+    environment.put('BP_NATIVE_IMAGE_BUILD_ARGUMENTS', '--enable-url-protocols=https -H:+UnlockExperimentalVMOptions -H:+SharedArenaSupport')
 }
