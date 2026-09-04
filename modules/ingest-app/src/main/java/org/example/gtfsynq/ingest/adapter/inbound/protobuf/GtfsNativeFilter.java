@@ -38,10 +38,6 @@ public class GtfsNativeFilter {
                 .register(registry);
     }
 
-    GtfsNativeFilter(OffHeapHashStore stateStore) {
-        this(stateStore, new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
-    }
-
     private final LongHashFunction hashFunction = LongHashFunction.xx3();
     private int lastUpdateCount = 10_000;
 
