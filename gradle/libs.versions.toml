@@ -43,6 +43,7 @@ postgresql = { module = "org.postgresql:postgresql" }
 kafka-streams = { module = "org.apache.kafka:kafka-streams" }
 
 # Observability
+micrometer-core = { module = "io.micrometer:micrometer-core" }
 micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus" }
 
 # HTTP client

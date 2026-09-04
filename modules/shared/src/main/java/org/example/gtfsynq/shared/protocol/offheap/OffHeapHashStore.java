@@ -1,12 +1,17 @@
 package org.example.gtfsynq.shared.protocol.offheap;
 
-import java.util.concurrent.locks.StampedLock;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.StampedLock;
 
 @Component
 @Slf4j
@@ -53,6 +58,31 @@ public class OffHeapHashStore implements AutoCloseable {
     private long staleOverwrites;
 
     private boolean resizeSaturated;
+
+    private final AtomicBoolean metricsBound = new AtomicBoolean(false);
+
+    /**
+     * Binds Micrometer gauges lazily so plain unit-test construction
+     * ({@code new OffHeapHashStore(table)}) keeps working without a registry.
+     */
+    @Autowired(required = false)
+    public void bindMetrics(MeterRegistry registry) {
+        if (registry == null || !metricsBound.compareAndSet(false, true)) {
+            return;
+        }
+        Gauge.builder("offheap.store.size", this, OffHeapHashStore::size)
+                .description("Occupied off-heap hash store slots, including expired ones")
+                .register(registry);
+        Gauge.builder("offheap.store.capacity", binTable, OffHeapLongTable::capacity)
+                .description("Total off-heap hash store slots")
+                .register(registry);
+        Gauge.builder("offheap.store.load.ratio", this, store -> {
+                    var capacity = binTable.capacity();
+                    return capacity == 0 ? 0.0 : (double) store.size() / capacity;
+                })
+                .description("Occupied / capacity ratio of the off-heap hash store")
+                .register(registry);
+    }
 
     @EventListener(ContextRefreshedEvent.class)
     public void init() {
