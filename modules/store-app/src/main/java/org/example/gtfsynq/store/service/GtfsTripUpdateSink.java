@@ -1,12 +1,14 @@
 package org.example.gtfsynq.store.service;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.locks.ReentrantLock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gtfsynq.shared.model.FeedEntityWithMetadata;
+import org.example.gtfsynq.shared.model.dto.TripDescriptorDto;
+import org.example.gtfsynq.shared.model.dto.TripStopTimeUpdateDto;
 import org.example.gtfsynq.shared.model.dto.TripUpdateDto;
 import org.example.gtfsynq.store.adapter.outbound.database.TripUpdateRepository;
 import org.example.gtfsynq.store.service.metrics.GtfsSinkMetrics;
@@ -42,6 +44,13 @@ public class GtfsTripUpdateSink {
     private boolean enabled;
 
     /**
+     * Hard cap on buffered updates. When the buffer reaches this size the
+     * overflow triggers an early flush
+     */
+    @Value("${gtfsynq.sink.max-buffer-size:20000}")
+    private int maxBufferSize;
+
+    /**
      * Accepts a feed entity and buffers it for later batch persistence.
      *
      * @param feedId feed identifier from Kafka key
@@ -72,6 +81,15 @@ public class GtfsTripUpdateSink {
                             : null,
                     feedId,
                     buffer.size());
+
+            // Backpressure: flush early on the producer thread instead of
+            // letting the buffer grow unbounded when intake outpaces the
+            // scheduled flush. Runs without the scheduled-flush transaction,
+            // so it commits per batch — slower, but correct and self-draining.
+            if (buffer.size() >= maxBufferSize) {
+                log.info("Buffer reached {} buffered updates, flushing early", buffer.size());
+                flushBufferLocked();
+            }
         } finally {
             bufferLock.unlock();
         }
@@ -122,17 +140,23 @@ public class GtfsTripUpdateSink {
 
         var flushSize = buffer.size();
 
-        var tripDescriptors = buffer.stream()
-                .map(TripUpdateDto::tripDescriptor)
-                .filter(Objects::nonNull)
-                .toList();
-
-        var stopTimeUpdates = buffer.stream()
-                .map(TripUpdateDto::stopTimeUpdates)
-                .filter(Objects::nonNull)
-                .flatMap(List::stream)
-                .filter(u -> u.stopSequence() != null)
-                .toList();
+        var tripDescriptors = new ArrayList<TripDescriptorDto>(flushSize);
+        var stopTimeUpdates = new ArrayList<TripStopTimeUpdateDto>(flushSize);
+        for (var dto : buffer) {
+            if (dto.tripDescriptor() != null) {
+                tripDescriptors.add(dto.tripDescriptor());
+            }
+            var rows = dto.stopTimeUpdates();
+            if (rows != null) {
+                for (var row : rows) {
+                    if (row.stopSequence() != null) {
+                        stopTimeUpdates.add(row);
+                    }
+                }
+            }
+        }
+        tripDescriptors.trimToSize();
+        stopTimeUpdates.trimToSize();
 
         metrics.recordEntities(tripDescriptors.size(), stopTimeUpdates.size());
 

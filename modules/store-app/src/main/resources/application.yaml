@@ -29,6 +29,7 @@ gtfsynq:
     sink:
         enabled: true
         flush-interval-ms: 10000
+        max-buffer-size: 20000
 
     retention:
         hours: 1h
