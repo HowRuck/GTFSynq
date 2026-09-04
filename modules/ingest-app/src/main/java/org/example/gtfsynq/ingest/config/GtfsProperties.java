@@ -25,76 +25,62 @@ import org.springframework.validation.annotation.Validated;
  *   sources:
  *     my-agency:
  *       static-config:
- *         url: https://example.com/gtfs.zip
+ *         url: {@code https://example.com/gtfs.zip}
  *       realtime-config:
  *         urls:
- *           - https://example.com/trip-updates
- *           - https://example.com/vehicle-positions
+ *           - {@code https://example.com/trip-updates}
+ *           - {@code https://example.com/vehicle-positions}
  *         poll-interval-seconds: 60
  * </pre>
+ *
+ * @param sources map of feed source configurations keyed by source name/identifier.
+ *        Each entry defines the static and realtime configuration for a GTFS feed.
+ * @param feedTimeoutSeconds per-feed timeout in seconds applied to each realtime feed poll.
+ *        If a single feed poll does not complete within this window, its future is
+ *        failed with a TimeoutException and the rest of the batch continues.
+ *        Defaults to 25 seconds.
  */
 @Validated
 @ConfigurationProperties("gtfs")
 @ImportRuntimeHints(GtfsPropertiesRuntimeHints.class)
 public record GtfsProperties(
-        /**
-         * Map of feed source configurations keyed by source name/identifier.
-         * Each entry defines the static and realtime configuration for a GTFS feed.
-         */
         Map<String, @Valid FeedSource> sources,
 
-        /**
-         * Per-feed timeout in seconds applied to each realtime feed poll.
-         * If a single feed poll does not complete within this window, its future is
-         * failed with a TimeoutException and the rest of the batch continues.
-         * Defaults to 25 seconds.
-         */
         @DefaultValue("25") int feedTimeoutSeconds) {
 
     /**
      * Feed source configuration for a GTFS feed.
      * Contains separate configurations for static data and realtime updates.
+     *
+     * @param staticConfig configuration for static GTFS feed data (routes, stops, schedules, etc.)
+     * @param realtimeConfig configuration for realtime GTFS feed data (vehicle positions, trip updates,
+     *        etc.)
      */
     public record FeedSource(
-            /**
-             * Configuration for static GTFS feed data (routes, stops, schedules, etc.)
-             */
             @Valid StaticConfig staticConfig,
 
-            /**
-             * Configuration for realtime GTFS feed data (vehicle positions, trip updates,
-             * etc.)
-             */
             @Valid RealtimeConfig realtimeConfig) {}
 
     /**
      * Static configuration for a GTFS feed source.
      * Only ZIP format is supported.
+     *
+     * @param url URL to the GTFS static feed ZIP file. Must be a valid URL.
+     * @param fileUrls map of GTFS static feed files to their respective URLs.
+     *        Allows specifying custom URLs for individual GTFS files.
+     * @param nameMappings custom name mappings for GTFS files.
+     *        Maps custom filenames to standard GTFS file types.
+     * @param supportedFiles list of GTFS static feed files that are supported/expected.
+     *        If not specified, defaults to the core GTFS files:
+     *        AGENCY, STOPS, ROUTES, TRIPS, STOP_TIMES.
      */
     public record StaticConfig(
-            /**
-             * URL to the GTFS static feed ZIP file
-             * Must be a valid URL
-             */
             @URL String url,
 
-            /**
-             * Map of GTFS static feed files to their respective URLs
-             * Allows specifying custom URLs for individual GTFS files
-             */
             Map<GtfsStaticFeedFile, @URL String> fileUrls,
 
-            /**
-             * Custom name mappings for GTFS files
-             * Maps custom filenames to standard GTFS file types
-             */
             Map<String, GtfsStaticFeedFile> nameMappings,
 
-            /**
-             * List of GTFS static feed files that are supported/expected
-             * If not specified, defaults to the core GTFS files:
-             * AGENCY, STOPS, ROUTES, TRIPS, STOP_TIMES
-             */
             List<GtfsStaticFeedFile> supportedFiles) {
 
         /**
@@ -113,30 +99,22 @@ public record GtfsProperties(
     }
 
     /**
-     * Realtime configuration for a GTFS feed source
-     * Uses a list of URLs for all realtime feeds regardless of message type
+     * Realtime configuration for a GTFS feed source.
+     * Uses a list of URLs for all realtime feeds regardless of message type.
+     *
+     * @param urls list of URLs for GTFS-RT feeds. Can include TripUpdates, VehiclePositions, Alerts, etc.
+     * @param authHeaderName name of the HTTP header to use for authentication.
+     * @param apiKey API key for authenticating with the GTFS-RT feed provider.
+     * @param pollIntervalSeconds interval in seconds between polls for realtime updates.
+     *        Defaults to 30 seconds if not specified.
      */
     public record RealtimeConfig(
-            /**
-             * List of URLs for GTFS-RT feeds
-             * Can include TripUpdates, VehiclePositions, Alerts, etc.
-             */
             List<@URL String> urls,
 
-            /**
-             * Name of the HTTP header to use for authentication
-             */
             String authHeaderName,
 
-            /**
-             * API key for authenticating with the GTFS-RT feed provider
-             */
             String apiKey,
 
-            /**
-             * Interval in seconds between polls for realtime updates.
-             * Defaults to 30 seconds if not specified.
-             */
             @DefaultValue("30") int pollIntervalSeconds) {
 
         /**
