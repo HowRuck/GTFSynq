@@ -5,6 +5,7 @@ import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gtfsynq.shared.persistence.OffHeapFileScribe;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,7 +65,7 @@ public final class OffHeapLongTable implements AutoCloseable {
      * How long retired arenas are kept alive after a resize so in-flight
      * optimistic readers can finish safely
      */
-    private static final long ARENA_RETENTION_NANOS = 1 * 60 * 1_000_000_000L;
+    private static final long ARENA_RETENTION_NANOS = 60 * 1_000_000_000L;
 
     /**
      * Row size in bytes.
@@ -100,6 +101,7 @@ public final class OffHeapLongTable implements AutoCloseable {
     private final OffHeapFileScribe scribe;
 
     private volatile Arena arena;
+    @Getter
     private volatile MemorySegment segment;
     private volatile long capacity;
     private volatile long capacityMask;
@@ -434,10 +436,6 @@ public final class OffHeapLongTable implements AutoCloseable {
             }
             retiredArenas.clear();
         }
-    }
-
-    public MemorySegment getSegment() {
-        return segment;
     }
 
     public long byteSize() {
