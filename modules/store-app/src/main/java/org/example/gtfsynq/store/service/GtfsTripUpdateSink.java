@@ -59,6 +59,9 @@ public class GtfsTripUpdateSink {
         bufferLock.lock();
         try {
             var cleanedUpdate = deduplicationService.cleanState(rawUpdateDto);
+            if (cleanedUpdate == null) {
+                return;
+            }
             buffer.add(cleanedUpdate);
 
             log.debug(
