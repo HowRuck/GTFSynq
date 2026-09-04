@@ -1,6 +1,7 @@
 plugins {
     id 'java-library'
     alias(libs.plugins.protobuf)
+    alias(libs.plugins.graalvm.native)
 }
 
 dependencyManagement {
@@ -13,6 +14,7 @@ dependencies {
     api libs.protobuf.java
     api libs.javatuples
     api libs.zero.allocation.hashing
+    api libs.micrometer.core
 
     compileOnly libs.bundles.lombok
     annotationProcessor libs.bundles.lombok

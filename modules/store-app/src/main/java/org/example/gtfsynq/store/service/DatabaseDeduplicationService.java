@@ -94,6 +94,12 @@ public class DatabaseDeduplicationService {
         // Trim the list to its actual size
         changedStopTimeUpdates.trimToSize();
 
+        // Fully-duplicate entity: nothing changed, signal with null so the
+        // caller can drop it before buffering
+        if (!tripDescriptorChanged && changedStopTimeUpdates.isEmpty()) {
+            return null;
+        }
+
         // Return a new TripUpdateDto, using null for unchanged components
         return new TripUpdateDto(
                 tripDescriptorChanged ? tripDescriptor : null,

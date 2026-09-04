@@ -25,7 +25,7 @@ import org.springframework.stereotype.Repository;
 @Slf4j
 public class TripUpdateRepository {
 
-    private static final int BATCH_SIZE = 512;
+    private static final int BATCH_SIZE = 5000;
 
     private final JdbcTemplate jdbcTemplate;
 
