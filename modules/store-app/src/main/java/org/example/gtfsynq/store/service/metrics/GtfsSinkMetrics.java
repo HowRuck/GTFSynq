@@ -1,5 +1,6 @@
 package org.example.gtfsynq.store.service.metrics;
 
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -18,6 +19,8 @@ public class GtfsSinkMetrics {
 
     private final DistributionSummary descriptorCountSummary;
     private final DistributionSummary stopTimeCountSummary;
+
+    private final Counter droppedDuplicatesCounter;
 
     public GtfsSinkMetrics(MeterRegistry registry) {
         this.descriptorTimer = Timer.builder(GTFS_SINK_DB_WRITE)
@@ -43,6 +46,11 @@ public class GtfsSinkMetrics {
                 .description("Number of stop time updates processed in a batch")
                 .tag("type", "stop_times")
                 .register(registry);
+
+        this.droppedDuplicatesCounter = Counter.builder("gtfs.sink.dropped")
+                .description("Fully-duplicate trip updates dropped before buffering")
+                .tag("reason", "duplicate")
+                .register(registry);
     }
 
     public void recordDescriptors(long nanos) {
@@ -64,5 +72,9 @@ public class GtfsSinkMetrics {
     public void recordEntities(int descriptorCount, int stopTimeCount) {
         descriptorCountSummary.record(descriptorCount);
         stopTimeCountSummary.record(stopTimeCount);
+    }
+
+    public void recordDroppedDuplicate() {
+        droppedDuplicatesCounter.increment();
     }
 }

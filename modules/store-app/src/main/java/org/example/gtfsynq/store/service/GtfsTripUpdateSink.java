@@ -60,6 +60,7 @@ public class GtfsTripUpdateSink {
         try {
             var cleanedUpdate = deduplicationService.cleanState(rawUpdateDto);
             if (cleanedUpdate == null) {
+                metrics.recordDroppedDuplicate();
                 return;
             }
             buffer.add(cleanedUpdate);
