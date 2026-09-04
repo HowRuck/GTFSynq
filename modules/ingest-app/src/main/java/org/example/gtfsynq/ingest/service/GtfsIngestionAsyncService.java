@@ -17,7 +17,11 @@ public class GtfsIngestionAsyncService {
     public CompletableFuture<Void> processFeedUrlAsync(String feedId, String feedUrl) {
         var entities = gtfsPollingService.pollStream(feedId, feedUrl);
 
+        if (entities == null || entities.isEmpty()) {
+            return CompletableFuture.completedFuture(null);
+        }
         gtfsKafkaProducer.sendTripUpdates(feedId, entities);
+
         return CompletableFuture.completedFuture(null);
     }
 }
