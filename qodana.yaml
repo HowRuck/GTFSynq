@@ -4,3 +4,14 @@ profile:
   name: qodana.recommended
 
 linter: qodana-jvm-community
+
+exclude:
+  - name: Exclude generated sources
+    paths:
+      - modules/shared/build/generated/sources/proto
+      - modules/shared/build/extracted-protos
+      - modules/shared/build/extracted-include-protos
+      - modules/shared/build/generated/proto-resources
+      - "**/build/generated/**"
+      - "**/build/extracted-protos/**"
+      - "**/build/extracted-include-protos/**"
