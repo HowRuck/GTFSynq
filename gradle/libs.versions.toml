@@ -15,7 +15,7 @@ datafusion-java = "0.1.0"
 # Misc libraries
 javatuples = "2.0.1"
 zero-allocation-hashing = "2026.0"
-jspecify = "1.0.0"
+jspecify = "1.0.1"
 
 [libraries]
 spring-boot-configuration-processor = { module = "org.springframework.boot:spring-boot-configuration-processor" }
