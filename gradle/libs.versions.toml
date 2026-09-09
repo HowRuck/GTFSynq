@@ -1,6 +1,6 @@
 [versions]
 protobufPlugin = "0.10.0"
-sonarqube = "7.4.0.8496"
+sonarqube = "7.5.0.8588"
 spotless = "8.10.1"
 palantir-java-format = "2.97.0"
 
