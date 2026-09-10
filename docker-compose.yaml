@@ -3,7 +3,7 @@ include:
 
 services:
     api-app:
-        image: gtfsynq-api-app:0.0.1-SNAPSHOT
+        image: ghcr.io/howruck/gtfsynq-api-app:0.0.1-SNAPSHOT
         container_name: gtfsynq-api-app
         depends_on:
             kafka:
@@ -27,7 +27,7 @@ services:
         # Health is observable from the host via /actuator/health.
 
     ingest-app:
-        image: gtfsynq-ingest-app:0.0.1-SNAPSHOT
+        image: ghcr.io/howruck/gtfsynq-ingest-app:0.0.1-SNAPSHOT
         container_name: gtfsynq-ingest-app
         depends_on:
             kafka:
@@ -49,7 +49,7 @@ services:
             - gtfsynq-ingest-data:/app/data
 
     store-app:
-        image: gtfsynq-store-app:0.0.1-SNAPSHOT
+        image: ghcr.io/howruck/gtfsynq-store-app:0.0.1-SNAPSHOT
         container_name: gtfsynq-store-app
         depends_on:
             kafka:
