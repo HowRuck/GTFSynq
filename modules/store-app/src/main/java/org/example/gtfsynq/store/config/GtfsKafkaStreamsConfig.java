@@ -5,6 +5,7 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.ImportRuntimeHints;
 
 /**
  * Configuration class for setting up plain Kafka consumer for GTFS data processing.
@@ -15,6 +16,7 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 @EnableConfigurationProperties(HotDataRetentionConfig.class)
+@ImportRuntimeHints(KafkaConsumerRuntimeHints.class)
 public class GtfsKafkaStreamsConfig {
 
     @Bean
