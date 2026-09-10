@@ -59,7 +59,7 @@ subprojects {
             def registry = findProperty('imageRegistry') ?: 'ghcr.io/howruck'
             def tag = findProperty('imageTag') ?: project.version
             imageName = "${registry}/gtfsynq-${project.name}:${tag}"
-            publish = hasProperty('publishImage')
+            publish = project.hasProperty('publishImage')
             environment.putAll([
                     "BPL_JVM_THREAD_COUNT": "50",
                     "BP_SPRING_CLOUD_BINDINGS_DISABLED": "true",
