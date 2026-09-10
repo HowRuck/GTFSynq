@@ -3,6 +3,13 @@ name: Images
 on:
   push:
     branches: ["main"]
+    paths:
+      - "modules/**"
+      - "build.gradle"
+      - "settings.gradle"
+      - "gradle.properties"
+      - "gradle/**"
+      - ".github/workflows/images.yml"
   workflow_dispatch:
 
 permissions:
