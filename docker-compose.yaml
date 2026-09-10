@@ -123,16 +123,18 @@ services:
         depends_on:
             kafka:
                 condition: service_healthy
-        entrypoint:
-            - /bin/sh
-            - -c
-        command: >
-            /opt/kafka/bin/kafka-topics.sh
-            --bootstrap-server kafka:9092
-            --create
-            --topic gtfs-trip-updates
-            --partitions 1
-            --replication-factor 1
+        command:
+            - /opt/kafka/bin/kafka-topics.sh
+            - --bootstrap-server
+            - kafka:9092
+            - --create
+            - --if-not-exists
+            - --topic
+            - gtfs-trip-updates
+            - --partitions
+            - "1"
+            - --replication-factor
+            - "1"
         restart: "no"
 
     timescaledb:
