@@ -15,6 +15,7 @@ server:
     port: ${SERVER_PORT:8081}
 
 gtfs:
+    feed-timeout-seconds: 55
     sources:
         gtfs-de:
             static-config:
@@ -61,7 +62,7 @@ gtfs:
 gtfsynq:
     # Polling configuration
     polling:
-        interval-ms: 30000
+        interval-ms: 60000
         enabled: true
 
     # Source configuration
