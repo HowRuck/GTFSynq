@@ -83,6 +83,9 @@ public class GtfsPollingService {
         } catch (RestClientException | GtfsIngestionException e) {
             log.error("Failed to poll feed {} due to: {}", feedId, e.getMessage());
             return null;
+        } catch (RuntimeException e) {
+            log.error("Unexpected error polling feed {}: {}", feedId, e.getMessage(), e);
+            return null;
         }
     }
 

@@ -1,6 +1,8 @@
 package org.example.gtfsynq.ingest.service;
 
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.AllArgsConstructor;
@@ -20,6 +22,7 @@ public class GtfsIngestionService {
     private final GtfsProperties gtfsConfig;
     private final GtfsIngestionAsyncService ingestionAsyncService;
     private final AtomicBoolean isRunning = new AtomicBoolean(false);
+    private final Set<String> inFlight = ConcurrentHashMap.newKeySet();
 
     /**
      * Scheduled task to process GTFS feeds at regular intervals.
@@ -65,12 +68,18 @@ public class GtfsIngestionService {
      * @return a future that completes when the feed was processed or failed
      */
     private CompletableFuture<Void> submitFeed(String feedId, String url) {
-        return ingestionAsyncService
-                .processFeedUrlAsync(feedId, url)
-                .orTimeout(gtfsConfig.feedTimeoutSeconds(), TimeUnit.SECONDS)
-                .exceptionally(ex -> {
-                    log.error("Feed {} ({}) failed", feedId, url, ex);
-                    return null;
-                });
+        var key = feedId + "\0" + url;
+
+        if (!inFlight.add(key)) {
+            log.warn("Feed {} ({}) is still processing from a previous poll, skipping this iteration", feedId, url);
+            return CompletableFuture.completedFuture(null);
+        }
+
+        var work = ingestionAsyncService.processFeedUrlAsync(feedId, url).whenComplete((_, _) -> inFlight.remove(key));
+
+        return work.orTimeout(gtfsConfig.feedTimeoutSeconds(), TimeUnit.SECONDS).exceptionally(ex -> {
+            log.error("Feed {} ({}) failed", feedId, url, ex);
+            return null;
+        });
     }
 }
