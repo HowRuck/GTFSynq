@@ -37,12 +37,12 @@ graalvmNative {
             // shared arenas in native images unless enabled.
             buildArgs.add('-H:+UnlockExperimentalVMOptions')
             buildArgs.add('-H:+SharedArenaSupport')
-            buildArgs.add('--gc=G1')
+            buildArgs.add('--gc=parallel')
         }
     }
 }
 
 tasks.named('bootBuildImage') {
     // Paketo does not read graalvmNative.buildArgs; pass explicitly
-    environment.put('BP_NATIVE_IMAGE_BUILD_ARGUMENTS', '--enable-url-protocols=https -H:+UnlockExperimentalVMOptions -H:+SharedArenaSupport --gc=G1')
+    environment.put('BP_NATIVE_IMAGE_BUILD_ARGUMENTS', '--enable-url-protocols=https -H:+UnlockExperimentalVMOptions -H:+SharedArenaSupport --gc=parallel')
 }
