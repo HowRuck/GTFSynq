@@ -18,6 +18,7 @@ services:
             SPRING_DATASOURCE_PASSWORD: postgres
             SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
             SERVER_PORT: 8080
+            STATE_SAVE_PATH: /app/data
         ports:
             - "8080:8080"
         volumes:
