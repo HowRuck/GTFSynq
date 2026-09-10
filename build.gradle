@@ -53,7 +53,13 @@ subprojects {
 
     plugins.withId('org.springframework.boot') {
         tasks.named('bootBuildImage') {
-            imageName = "gtfsynq-${project.name}:${project.version}"
+            // Build:  ./gradlew bootBuildImage
+            // Push:   docker login ghcr.io -u <user> # once
+            //         ./gradlew bootBuildImage -PpublishImage -PimageTag=latest
+            def registry = findProperty('imageRegistry') ?: 'ghcr.io/howruck'
+            def tag = findProperty('imageTag') ?: project.version
+            imageName = "${registry}/gtfsynq-${project.name}:${tag}"
+            publish = hasProperty('publishImage')
             environment.putAll([
                     "BPL_JVM_THREAD_COUNT": "50",
                     "BP_SPRING_CLOUD_BINDINGS_DISABLED": "true",
