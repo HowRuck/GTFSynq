@@ -90,15 +90,20 @@ services:
 
   # Host-level metrics (CPU, memory, disk, filesystem, network, load).
   # pid: host + / mounted read-only is the standard node-exporter pattern.
+  # security_opt label=disable matches Vector (line 62) so the read-only
+  # bind of / works on SELinux-enforcing hosts (CentOS / RHEL) without
+  # needing recursive :Z relabels, which podman refuses for /.
   node-exporter:
     image: docker.io/prom/node-exporter:v1.12.1
     container_name: node-exporter
     pid: host
+    security_opt:
+      - label=disable
     command:
       - --path.rootfs=/host
       - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
     volumes:
-      - /:/host:ro,rslave,Z
+      - /:/host:ro,rslave
     ports:
       - "9100:9100"
     restart: unless-stopped
