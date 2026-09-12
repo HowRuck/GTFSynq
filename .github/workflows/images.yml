@@ -30,7 +30,7 @@ jobs:
           java-version: 25
       - uses: gradle/actions/setup-gradle@v6
       - name: Cache buildpack layers
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .cnb-cache/${{ matrix.app }}
           key: cnb-${{ runner.os }}-${{ matrix.app }}-${{ hashFiles('gradle/libs.versions.toml', 'build.gradle', 'gradle.properties', 'modules/${{ matrix.app }}/build.gradle') }}
