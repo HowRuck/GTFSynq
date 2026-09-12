@@ -59,6 +59,7 @@ services:
   vector:
     image: docker.io/timberio/vector:0.58.0-debian
     container_name: vector
+    privileged: true
     depends_on:
       - victorialogs
     volumes:
