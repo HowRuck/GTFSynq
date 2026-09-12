@@ -37,6 +37,7 @@ out/
 .env
 .idea/
 .gradle/
+.cnb-cache/
 
 state_dump.bin
 

@@ -66,6 +66,25 @@ subprojects {
                     "BP_SPRING_AOT_ENABLED": "true",
                     "JAVA_TOOL_OPTIONS": "--add-opens=java.base/java.nio=ALL-UNNAMED -XX:+ExitOnOutOfMemoryError"
             ])
+            // Persist buildpack layers/tooling (JDK, GraalVM, ...) to a host
+            // directory instead of a Docker named volume so CI can cache it
+            // with actions/cache across ephemeral runners.
+            def cnbCacheDir = rootProject.file(".cnb-cache/${project.name}")
+            buildWorkspace {
+                bind {
+                    source = new File(cnbCacheDir, 'workspace').absolutePath
+                }
+            }
+            buildCache {
+                bind {
+                    source = new File(cnbCacheDir, 'build').absolutePath
+                }
+            }
+            launchCache {
+                bind {
+                    source = new File(cnbCacheDir, 'launch').absolutePath
+                }
+            }
         }
     }
 }
