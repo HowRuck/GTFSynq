@@ -83,6 +83,10 @@ services:
     container_name: prometheus-podman-exporter
     security_opt:
       - label=disable
+    # The image runs as nobody (65534), which cannot open the rootless socket
+    # (owned by the host user, mode 0660). Running as root in the container maps
+    # to the host uid via the rootless user namespace, granting access to it.
+    user: "0:0"
     command:
       - --collector.enable-all
       - --web.listen-address=:9882
