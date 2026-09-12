@@ -11,9 +11,7 @@ import java.util.List;
  * @param tripDescriptor the trip descriptor
  * @param stopTimeUpdates the stop time updates
  */
-public record TripUpdateDto(
-        TripDescriptorDto tripDescriptor,
-        List<TripStopTimeUpdateDto> stopTimeUpdates) {
+public record TripUpdateDto(TripDescriptorDto tripDescriptor, List<TripStopTimeUpdateDto> stopTimeUpdates) {
     /**
      * Converts a FeedEntity to a TripUpdateDto
      *

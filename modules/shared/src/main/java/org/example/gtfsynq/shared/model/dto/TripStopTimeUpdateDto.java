@@ -85,7 +85,8 @@ public record TripStopTimeUpdateDto(
         // from this hash to ensure stability during deduplication, as these values are
         // compared separately against their previous values.
         //
-        // This hashes everything in the object EXCEPT the delays and directly associated values in order to keep hash stable.
+        // This hashes everything in the object EXCEPT the delays and directly associated values in order to keep hash
+        // stable.
         var hash = hashMetaFields(
                 feedId,
                 stopSequence,

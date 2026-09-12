@@ -57,9 +57,7 @@ public record GtfsProperties(
      *        etc.)
      */
     public record FeedSource(
-            @Valid StaticConfig staticConfig,
-
-            @Valid RealtimeConfig realtimeConfig) {}
+            @Valid StaticConfig staticConfig, @Valid RealtimeConfig realtimeConfig) {}
 
     /**
      * Static configuration for a GTFS feed source.

@@ -19,7 +19,6 @@ public class ProtobufRuntimeHints implements RuntimeHintsRegistrar {
 
     @Override
     public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
-        hints.reflection()
-                .registerType(ExtensionRegistry.class, MemberCategory.INVOKE_DECLARED_METHODS);
+        hints.reflection().registerType(ExtensionRegistry.class, MemberCategory.INVOKE_DECLARED_METHODS);
     }
 }

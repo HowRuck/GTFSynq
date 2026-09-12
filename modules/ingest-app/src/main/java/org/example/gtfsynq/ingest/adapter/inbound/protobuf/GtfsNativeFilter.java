@@ -54,8 +54,7 @@ public class GtfsNativeFilter {
      * @return true if the header has changed, false otherwise
      */
     private boolean checkHeaderChanged(String feedId, String feedUrl, byte[] buffer) {
-        var headerKey =
-                hashFunction.hashBytes((feedId + "\0" + feedUrl).getBytes(StandardCharsets.UTF_8));
+        var headerKey = hashFunction.hashBytes((feedId + "\0" + feedUrl).getBytes(StandardCharsets.UTF_8));
         var headerHash = hashFunction.hashBytes(buffer);
 
         var existingHeaderHash = stateStore.get(headerKey);

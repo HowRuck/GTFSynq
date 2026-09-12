@@ -101,8 +101,10 @@ public final class OffHeapLongTable implements AutoCloseable {
     private final OffHeapFileScribe scribe;
 
     private volatile Arena arena;
+
     @Getter
     private volatile MemorySegment segment;
+
     private volatile long capacity;
     private volatile long capacityMask;
 
