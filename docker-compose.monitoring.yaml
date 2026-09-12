@@ -60,7 +60,7 @@ services:
     image: docker.io/timberio/vector:0.58.0-debian
     container_name: vector
     security_opt:
-          - label=disable
+      - label=disable
     depends_on:
       - victorialogs
     volumes:
@@ -81,6 +81,8 @@ services:
   prometheus-podman-exporter:
     image: quay.io/navidys/prometheus-podman-exporter:v1.21.2
     container_name: prometheus-podman-exporter
+    security_opt:
+      - label=disable
     command:
       - --collector.enable-all
       - --web.listen-address=:9882
