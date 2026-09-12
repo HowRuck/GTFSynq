@@ -72,6 +72,37 @@ services:
       - "8686:8686"
     restart: unless-stopped
 
+  # Per-container + Podman-specific metrics (pods, images, volumes, networks,
+  # container cgroup stats). Talks to the host's Podman over the socket.
+  # Uses the same rootless socket path as Vector; override DOCKER_SOCKET for
+  # Docker (/var/run/docker.sock) or rootful Podman.
+  prometheus-podman-exporter:
+    image: quay.io/navidys/prometheus-podman-exporter:v1.21.2
+    container_name: prometheus-podman-exporter
+    command:
+      - --collector.enable-all
+      - --web.listen-address=:9882
+    volumes:
+      - /run/user/1000/podman/podman.sock:/run/user/1000/podman/podman.sock
+    ports:
+      - "9882:9882"
+    restart: unless-stopped
+
+  # Host-level metrics (CPU, memory, disk, filesystem, network, load).
+  # pid: host + / mounted read-only is the standard node-exporter pattern.
+  node-exporter:
+    image: docker.io/prom/node-exporter:v1.12.1
+    container_name: node-exporter
+    pid: host
+    command:
+      - --path.rootfs=/host
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    volumes:
+      - /:/host:ro,rslave,Z
+    ports:
+      - "9100:9100"
+    restart: unless-stopped
+
   victoriametrics:
     image: docker.io/victoriametrics/victoria-metrics:v1.151.0
     container_name: victoriametrics
@@ -80,6 +111,8 @@ services:
       - store-app
       - postgres-exporter
       - kafka-exporter
+      - prometheus-podman-exporter
+      - node-exporter
     command:
       - --storageDataPath=/victoria-metrics-data
       - --httpListenAddr=:8428
