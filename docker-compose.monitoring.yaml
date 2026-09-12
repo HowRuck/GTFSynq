@@ -68,11 +68,6 @@ services:
       # (/var/run/docker.sock) or a different setup.
       - /run/user/1000/podman/podman.sock:/var/run/docker.sock
       - ./monitoring/vector:/etc/vector:ro,Z
-    # Do NOT add :z/:Z to the socket mount. On SELinux hosts this disables
-    # confinement for this container so it can reach the socket; it is
-    # narrower than privileged: true.
-    security_opt:
-      - label=disable
     ports:
       - "8686:8686"
     restart: unless-stopped
