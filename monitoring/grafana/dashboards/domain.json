@@ -4,123 +4,418 @@
   "tags": ["gtfsynq", "domain"],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 3,
+  "editable": true,
+  "refresh": "30s",
+  "graphTooltip": 1,
+  "templating": {
+    "list": [
+      {
+        "name": "instance",
+        "label": "Instance",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "query": {
+          "query": "label_values(up{job=\"gtfsynq-apps\"}, instance)",
+          "refId": "VictoriaMetrics"
+        },
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "sort": 1,
+        "current": { "text": "All", "value": "$__all" }
+      }
+    ]
+  },
   "panels": [
     {
       "id": 1,
-      "type": "timeseries",
-      "title": "Sink DB write rate (per op)",
-      "description": "gtfs.sink.db.write timer, tag op=upsert_descriptors|append_stop_times|upsert_hot_trips",
+      "type": "stat",
+      "title": "Application availability",
       "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
       "targets": [
         {
-          "expr": "sum by (op) (rate(gtfs_sink_db_write_seconds_count[$__rate_interval]))",
-          "legendFormat": "{{op}}"
+          "expr": "up{job=\"gtfsynq-apps\", instance=~\"$instance\"}",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
         }
       ],
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": { "text": "DOWN", "color": "red" },
+                "1": { "text": "UP", "color": "green" }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        }
+      },
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 0 }
     },
     {
       "id": 2,
-      "type": "timeseries",
-      "title": "Sink DB write p95 (per op)",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
-      "targets": [
-        {
-          "expr": "histogram_quantile(0.95, sum by (op, le) (rate(gtfs_sink_db_write_seconds_bucket[$__rate_interval])))",
-          "legendFormat": "{{op}}"
-        }
-      ],
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+      "type": "row",
+      "title": "Ingest",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 4 }
     },
     {
       "id": 3,
       "type": "timeseries",
-      "title": "Flush duration p95",
-      "description": "gtfs.sink.flush.duration timer",
+      "title": "Invalid feed entities skipped",
+      "description": "Invalid feed entities skipped per second because they have no ID or entity type.",
       "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(gtfs_sink_flush_duration_seconds_bucket[$__rate_interval])))",
-          "legendFormat": "p95"
-        },
-        {
-          "expr": "sum by (instance) (rate(gtfs_sink_flush_duration_seconds_count[$__rate_interval]))",
-          "legendFormat": "flushes/s {{instance}}"
+          "expr": "sum by (instance) (rate(gtfs_ingest_skipped_invalid_total{instance=~\"$instance\"}[$__rate_interval]))",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
         }
       ],
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 }
     },
     {
       "id": 4,
-      "type": "timeseries",
-      "title": "Entities per flush",
-      "description": "gtfs.sink.entities.count summary, tag type=descriptors|stop_times",
+      "type": "stat",
+      "title": "Invalid entities skipped",
+      "description": "Total invalid feed entities skipped during the selected time range.",
       "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
       "targets": [
         {
-          "expr": "sum by (type) (rate(gtfs_sink_entities_count_sum[$__rate_interval])) / sum by (type) (rate(gtfs_sink_entities_count_count[$__rate_interval]))",
-          "legendFormat": "avg {{type}}"
-        },
-        {
-          "expr": "sum by (type) (gtfs_sink_entities_count_max)",
-          "legendFormat": "max {{type}}"
+          "expr": "sum by (instance) (increase(gtfs_ingest_skipped_invalid_total{instance=~\"$instance\"}[$__range]))",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
         }
       ],
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value_and_name",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 }
     },
     {
       "id": 5,
-      "type": "timeseries",
-      "title": "Dropped duplicates rate",
-      "description": "gtfs.sink.dropped counter, tag reason=duplicate",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
-      "targets": [
-        {
-          "expr": "sum by (reason) (rate(gtfs_sink_dropped_total[$__rate_interval]))",
-          "legendFormat": "{{reason}}"
-        }
-      ],
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 }
+      "type": "row",
+      "title": "Sink / Store",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 13 }
     },
     {
       "id": 6,
       "type": "timeseries",
-      "title": "Ingest skipped invalid rate",
-      "description": "gtfs.ingest.skipped.invalid counter",
+      "title": "Database write rate",
+      "description": "Database writes completed per second, broken down by operation.",
       "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
       "targets": [
         {
-          "expr": "sum by (instance) (rate(gtfs_ingest_skipped_invalid_total[$__rate_interval]))",
-          "legendFormat": "{{instance}}"
+          "expr": "sum by (op) (rate(gtfs_sink_db_write_seconds_count{instance=~\"$instance\"}[$__rate_interval]))",
+          "legendFormat": "{{op}}",
+          "refId": "A"
         }
       ],
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 }
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 }
     },
     {
       "id": 7,
       "type": "timeseries",
-      "title": "Off-heap store size / capacity",
-      "description": "offheap.store.size + offheap.store.capacity gauges (ingest + store)",
+      "title": "Database write latency (95th percentile)",
+      "description": "95% of database writes finish within this time; the remaining 5% take longer.",
       "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
       "targets": [
-        { "expr": "offheap_store_size", "legendFormat": "size {{instance}}" },
         {
-          "expr": "offheap_store_capacity",
-          "legendFormat": "capacity {{instance}}"
+          "expr": "histogram_quantile(0.95, sum by (op, le) (rate(gtfs_sink_db_write_seconds_bucket{instance=~\"$instance\"}[$__rate_interval])))",
+          "legendFormat": "{{op}}",
+          "refId": "A"
         }
       ],
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 }
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 }
     },
     {
       "id": 8,
       "type": "timeseries",
-      "title": "Off-heap load ratio",
+      "title": "Database write latency (99th percentile)",
+      "description": "99% of database writes finish within this time; the slowest 1% take longer.",
       "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
       "targets": [
-        { "expr": "offheap_store_load_ratio", "legendFormat": "{{instance}}" }
+        {
+          "expr": "histogram_quantile(0.99, sum by (op, le) (rate(gtfs_sink_db_write_seconds_bucket{instance=~\"$instance\"}[$__rate_interval])))",
+          "legendFormat": "{{op}}",
+          "refId": "A"
+        }
       ],
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 }
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 22 }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Database write latency (recent maximum)",
+      "description": "Longest database write observed in the recent rolling window, approximately two minutes. This is not the maximum since startup.",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        {
+          "expr": "max by (op) (gtfs_sink_db_write_seconds_max{instance=~\"$instance\"})",
+          "legendFormat": "{{op}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 22 }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Flush duration percentiles",
+      "description": "Typical, slower, and slowest recent flush durations. p50 is the median, p95 covers 95% of flushes, and p99 covers 99%.",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(gtfs_sink_flush_duration_seconds_bucket{instance=~\"$instance\"}[$__rate_interval])))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(gtfs_sink_flush_duration_seconds_bucket{instance=~\"$instance\"}[$__rate_interval])))",
+          "legendFormat": "p95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(gtfs_sink_flush_duration_seconds_bucket{instance=~\"$instance\"}[$__rate_interval])))",
+          "legendFormat": "p99",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 30 }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Flushes per second",
+      "description": "Number of buffer flushes completed per second.",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        {
+          "expr": "sum by (instance) (rate(gtfs_sink_flush_duration_seconds_count{instance=~\"$instance\"}[$__rate_interval]))",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 30 }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Entities per flush",
+      "description": "Average and recent maximum number of descriptors or stop-time updates processed in each flush. Values can be absent when no flushes occur; the maximum covers a rolling window of approximately two minutes.",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        {
+          "expr": "sum by (type) (rate(gtfs_sink_entities_count_sum{instance=~\"$instance\"}[$__rate_interval])) / sum by (type) (rate(gtfs_sink_entities_count_count{instance=~\"$instance\"}[$__rate_interval]))",
+          "legendFormat": "avg {{type}}",
+          "refId": "A"
+        },
+        {
+          "expr": "max by (type) (gtfs_sink_entities_count_max{instance=~\"$instance\"})",
+          "legendFormat": "max {{type}}",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "spanNulls": true }
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 38 }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Entities processed per second",
+      "description": "Descriptors and stop-time updates processed per second.",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        {
+          "expr": "sum by (type) (rate(gtfs_sink_entities_count_sum{instance=~\"$instance\"}[$__rate_interval]))",
+          "legendFormat": "{{type}} per second",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 38 }
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Duplicate updates dropped per second",
+      "description": "Duplicate trip updates discarded per second before they are buffered.",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        {
+          "expr": "sum by (reason, instance) (rate(gtfs_sink_dropped_total{instance=~\"$instance\"}[$__rate_interval]))",
+          "legendFormat": "{{reason}} {{instance}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 46 }
+    },
+    {
+      "id": 15,
+      "type": "stat",
+      "title": "Duplicate updates dropped",
+      "description": "Total duplicate trip updates discarded during the selected time range.",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        {
+          "expr": "sum by (reason, instance) (increase(gtfs_sink_dropped_total{instance=~\"$instance\"}[$__range]))",
+          "legendFormat": "{{reason}} {{instance}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value_and_name",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 46 }
+    },
+    {
+      "id": 16,
+      "type": "row",
+      "title": "Off-heap store",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 54 }
+    },
+    {
+      "id": 17,
+      "type": "timeseries",
+      "title": "Off-heap store usage",
+      "description": "Occupied and total off-heap store slots for each application instance.",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        {
+          "expr": "offheap_store_size{instance=~\"$instance\"}",
+          "legendFormat": "size {{instance}}",
+          "refId": "A"
+        },
+        {
+          "expr": "offheap_store_capacity{instance=~\"$instance\"}",
+          "legendFormat": "capacity {{instance}}",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 55 }
+    },
+    {
+      "id": 18,
+      "type": "timeseries",
+      "title": "Free off-heap slots",
+      "description": "Unused off-heap store slots. A value near zero means the store is close to its current capacity and may need to grow.",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        {
+          "expr": "offheap_store_capacity{instance=~\"$instance\"} - offheap_store_size{instance=~\"$instance\"}",
+          "legendFormat": "free {{instance}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 55 }
+    },
+    {
+      "id": 19,
+      "type": "timeseries",
+      "title": "Off-heap store usage",
+      "description": "Percentage of off-heap store capacity currently occupied. Automatic resizing starts at 70% usage.",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        {
+          "expr": "offheap_store_load_ratio{instance=~\"$instance\"}",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "custom": {
+            "thresholdsStyle": { "mode": "dashed" }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.7 },
+              { "color": "red", "value": 0.9 }
+            ]
+          }
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 63 }
+    },
+    {
+      "id": 20,
+      "type": "stat",
+      "title": "Current off-heap store usage",
+      "description": "Current percentage of off-heap store capacity occupied by each application instance.",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        {
+          "expr": "offheap_store_load_ratio{instance=~\"$instance\"}",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.7 },
+              { "color": "red", "value": 0.9 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value_and_name",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 63 }
     }
   ]
 }
