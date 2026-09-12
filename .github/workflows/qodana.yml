@@ -3,12 +3,24 @@ name: Qodana
 on:
   push:
     branches: ["main"]
-    paths-ignore:
-      - "**/*.md"
+    paths:
+      - "modules/**"
+      - "build.gradle"
+      - "settings.gradle"
+      - "gradle.properties"
+      - "gradle/**"
+      - "qodana.yaml"
+      - ".github/workflows/qodana.yml"
   pull_request:
     branches: ["main"]
-    paths-ignore:
-      - "**/*.md"
+    paths:
+      - "modules/**"
+      - "build.gradle"
+      - "settings.gradle"
+      - "gradle.properties"
+      - "gradle/**"
+      - "qodana.yaml"
+      - ".github/workflows/qodana.yml"
   workflow_dispatch:
 
 permissions:
