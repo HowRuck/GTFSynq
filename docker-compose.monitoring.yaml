@@ -74,16 +74,22 @@ services:
 
   # Per-container + Podman-specific metrics (pods, images, volumes, networks,
   # container cgroup stats). Talks to the host's Podman over the socket.
-  # Uses the same rootless socket path as Vector; override DOCKER_SOCKET for
-  # Docker (/var/run/docker.sock) or rootful Podman.
+  # The host's rootless Podman socket is bind-mounted to /var/run/docker.sock
+  # inside the container, mirroring how Vector is configured in this file.
+  # Override the host path via a .env file (PODMAN_SOCKET) for rootful Podman
+  # (/run/podman/podman.sock) or Docker (/var/run/docker.sock).
   prometheus-podman-exporter:
     image: quay.io/navidys/prometheus-podman-exporter:v1.21.2
     container_name: prometheus-podman-exporter
     command:
       - --collector.enable-all
       - --web.listen-address=:9882
+    environment:
+      # Tell the exporter the socket path inside the container. PODMAN_URI is
+      # the upstream-recognized variable; uri-scheme must be unix://.
+      - CONTAINER_HOST=unix:///var/run/docker.sock
     volumes:
-      - /run/user/1000/podman/podman.sock:/run/user/1000/podman/podman.sock
+      - ${PODMAN_SOCKET:-/run/user/1000/podman/podman.sock}:/var/run/docker.sock
     ports:
       - "9882:9882"
     restart: unless-stopped
