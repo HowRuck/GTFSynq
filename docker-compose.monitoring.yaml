@@ -59,14 +59,20 @@ services:
   vector:
     image: docker.io/timberio/vector:0.58.0-debian
     container_name: vector
-    privileged: true
+    security_opt:
+          - label=disable
     depends_on:
       - victorialogs
     volumes:
       # Rootless Podman socket by default; override DOCKER_SOCKET for Docker
       # (/var/run/docker.sock) or a different setup.
-      - ${DOCKER_SOCKET:-/run/user/1000/podman/podman.sock}:/var/run/docker.sock:ro
+      - /run/user/1000/podman/podman.sock:/var/run/docker.sock
       - ./monitoring/vector:/etc/vector:ro,Z
+    # Do NOT add :z/:Z to the socket mount. On SELinux hosts this disables
+    # confinement for this container so it can reach the socket; it is
+    # narrower than privileged: true.
+    security_opt:
+      - label=disable
     ports:
       - "8686:8686"
     restart: unless-stopped
