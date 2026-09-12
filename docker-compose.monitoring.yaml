@@ -25,6 +25,49 @@ services:
     # restart so it recovers from ordering races.
     restart: unless-stopped
 
+  victorialogs:
+    image: docker.io/victoriametrics/victoria-logs:v1.52.0
+    container_name: victorialogs
+    command:
+      - -storageDataPath=/victoria-logs-data
+      - -retentionPeriod=1w
+    ports:
+      - "9428:9428"
+    volumes:
+      - victoria-logs-data:/victoria-logs-data
+    restart: unless-stopped
+
+  # Loki-compatible read API in front of VictoriaLogs so Grafana's built-in
+  # Loki datasource, Explore and Logs Drilldown work without running Loki.
+  loki-vl-proxy:
+    image: docker.io/reliablyobserve/loki-vl-proxy:1.64.0
+    container_name: loki-vl-proxy
+    depends_on:
+      - victorialogs
+    command:
+      - -listen=:3100
+      - -backend=http://victorialogs:9428
+      - -label-style=underscores
+      - -metadata-field-mode=translated
+      - -emit-structured-metadata=true
+      - -patterns-enabled=true
+      - -stream-fields=service_name,source_type
+    ports:
+      - "3100:3100"
+    restart: unless-stopped
+
+  vector:
+    image: docker.io/timberio/vector:0.58.0-debian
+    container_name: vector
+    depends_on:
+      - victorialogs
+    volumes:
+      - ${DOCKER_SOCKET:-${XDG_RUNTIME_DIR:-/run/user/1000}/podman/podman.sock}:/var/run/docker.sock:ro
+      - ./monitoring/vector:/etc/vector:ro,Z
+    ports:
+      - "8686:8686"
+    restart: unless-stopped
+
   victoriametrics:
     image: docker.io/victoriametrics/victoria-metrics:v1.151.0
     container_name: victoriametrics
@@ -56,10 +99,15 @@ services:
     depends_on:
       victoriametrics:
         condition: service_started
+      victorialogs:
+        condition: service_started
+      loki-vl-proxy:
+        condition: service_started
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
       GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_INSTALL_PLUGINS: victoriametrics-logs-datasource
     ports:
       - "3000:3000"
     volumes:
@@ -69,6 +117,7 @@ services:
 
 volumes:
   victoria-metrics-data:
+  victoria-logs-data:
   grafana-data:
 
 networks:

@@ -1,0 +1,34 @@
+api:
+  enabled: true
+  address: 0.0.0.0:8686
+
+sources:
+  docker:
+    type: docker_logs
+    docker_host: unix:///var/run/docker.sock
+
+transforms:
+  normalize:
+    type: remap
+    inputs:
+      - docker
+    source: |
+      .service_name = .label."com.docker.compose.service" || .container_name || "unknown"
+
+sinks:
+  victorialogs:
+    type: elasticsearch
+    inputs:
+      - normalize
+    endpoints:
+      - http://victorialogs:9428/insert/elasticsearch/
+    mode: bulk
+    api_version: v8
+    compression: gzip
+    healthcheck:
+      enabled: false
+    request:
+      headers:
+        VL-Stream-Fields: source_type,service_name
+        VL-Time-Field: timestamp
+        VL-Msg-Field: message

@@ -1,0 +1,15 @@
+apiVersion: 1
+
+datasources:
+  - name: Loki
+    uid: Loki
+    type: loki
+    access: proxy
+    url: http://loki-vl-proxy:3100
+    editable: true
+    jsonData:
+      maxLines: 1000
+      httpHeaderName1: X-Scope-OrgID
+    secureJsonData:
+      # "0" resolves to VictoriaLogs' built-in default tenant (0:0).
+      httpHeaderValue1: "0"

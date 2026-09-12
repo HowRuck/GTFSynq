@@ -117,6 +117,11 @@ docker compose down
 
 ### Viewing logs
 
+Container logs are shipped by Vector to VictoriaLogs and are queryable in Grafana
+under the **GTFSynq Logs** dashboard and **Drilldown > Logs** (Logs Drilldown),
+which is backed by the Loki-compatible `loki-vl-proxy` in front of VictoriaLogs
+(`http://localhost:3000`, `admin`/`admin`). You can also still tail them directly:
+
 ```bash
 docker compose logs -f api-app
 ```
@@ -308,6 +313,25 @@ For a local (non-container) native binary you need GraalVM JDK 25 on `PATH`:
 ```
 
 ## Monitoring
+
+The `docker-compose.monitoring.yaml` stack provides metrics and logs:
+
+| Component | URL | Purpose |
+|---|---|---|
+| Grafana | http://localhost:3000 | Dashboards for metrics and logs (`admin`/`admin`) |
+| VictoriaMetrics | http://localhost:8428 | Metrics storage (Prometheus-compatible) |
+| VictoriaLogs | http://localhost:9428 | Log storage (LogsQL) |
+| Loki-VL-proxy | http://localhost:3100 | Loki-compatible read API for Explore/Logs Drilldown |
+| Vector | http://localhost:8686 | Collects container logs into VictoriaLogs |
+
+Vector reads container logs through the engine's Docker-compatible API. The
+socket defaults to the rootless Podman socket; override `DOCKER_SOCKET` for
+other setups:
+
+```bash
+DOCKER_SOCKET=/var/run/docker.sock docker compose up -d          # Docker
+DOCKER_SOCKET=/run/podman/podman.sock docker compose up -d       # rootful Podman
+```
 
 The application exposes Actuator endpoints for health and metrics.
 
