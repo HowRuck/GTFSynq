@@ -41,7 +41,7 @@ services:
       - "8428:8428"
     volumes:
       - victoria-metrics-data:/victoria-metrics-data
-      - ./monitoring/vm:/etc/vm:ro
+      - ./monitoring/vm:/etc/vm:ro,Z
     healthcheck:
       test:
         ["CMD-SHELL", "wget --spider -q http://localhost:8428/health || exit 1"]
@@ -64,8 +64,8 @@ services:
       - "3000:3000"
     volumes:
       - grafana-data:/var/lib/grafana
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro,Z
+      - ./monitoring/grafana/dashboards:/etc/grafana/dashboards:ro,Z
 
 volumes:
   victoria-metrics-data:
