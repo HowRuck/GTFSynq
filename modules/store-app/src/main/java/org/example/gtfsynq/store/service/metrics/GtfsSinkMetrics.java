@@ -25,16 +25,22 @@ public class GtfsSinkMetrics {
     public GtfsSinkMetrics(MeterRegistry registry) {
         this.descriptorTimer = Timer.builder(GTFS_SINK_DB_WRITE)
                 .tag("op", "upsert_descriptors")
+                .publishPercentileHistogram()
                 .register(registry);
 
-        this.stopTimeTimer =
-                Timer.builder(GTFS_SINK_DB_WRITE).tag("op", "append_stop_times").register(registry);
+        this.stopTimeTimer = Timer.builder(GTFS_SINK_DB_WRITE)
+                .tag("op", "append_stop_times")
+                .publishPercentileHistogram()
+                .register(registry);
 
-        this.hotTripsTimer =
-                Timer.builder(GTFS_SINK_DB_WRITE).tag("op", "upsert_hot_trips").register(registry);
+        this.hotTripsTimer = Timer.builder(GTFS_SINK_DB_WRITE)
+                .tag("op", "upsert_hot_trips")
+                .publishPercentileHistogram()
+                .register(registry);
 
         this.totalFlushTimer = Timer.builder("gtfs.sink.flush.duration")
                 .description("Total time for mapping and all DB operations")
+                .publishPercentileHistogram()
                 .register(registry);
 
         this.descriptorCountSummary = DistributionSummary.builder("gtfs.sink.entities.count")
