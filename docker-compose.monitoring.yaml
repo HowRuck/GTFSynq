@@ -62,7 +62,9 @@ services:
     depends_on:
       - victorialogs
     volumes:
-      - ${DOCKER_SOCKET:-${XDG_RUNTIME_DIR:-/run/user/1000}/podman/podman.sock}:/var/run/docker.sock:ro
+      # Rootless Podman socket by default; override DOCKER_SOCKET for Docker
+      # (/var/run/docker.sock) or a different setup.
+      - ${DOCKER_SOCKET:-/run/user/1000/podman/podman.sock}:/var/run/docker.sock:ro
       - ./monitoring/vector:/etc/vector:ro,Z
     ports:
       - "8686:8686"
