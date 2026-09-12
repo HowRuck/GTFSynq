@@ -16,7 +16,7 @@ import org.springframework.context.annotation.ImportRuntimeHints;
  */
 @Configuration
 @EnableConfigurationProperties(HotDataRetentionConfig.class)
-@ImportRuntimeHints(KafkaConsumerRuntimeHints.class)
+@ImportRuntimeHints({KafkaConsumerRuntimeHints.class, ProtobufRuntimeHints.class})
 public class GtfsKafkaStreamsConfig {
 
     @Bean
