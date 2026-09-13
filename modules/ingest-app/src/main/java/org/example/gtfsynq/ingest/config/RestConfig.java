@@ -12,6 +12,12 @@ import org.springframework.web.client.RestClient;
 @Configuration
 public class RestConfig {
 
+    private final GtfsProperties gtfsProperties;
+
+    public RestConfig(GtfsProperties gtfsProperties) {
+        this.gtfsProperties = gtfsProperties;
+    }
+
     /**
      * The read timeout in seconds for the RestClient request factory
      * <p>
@@ -36,8 +42,10 @@ public class RestConfig {
      */
     @Bean
     public RestClient restClient() {
-        var connectTimeoutMs = connectTimeoutSeconds * 1000;
-        var readTimeoutMs = readTimeoutSeconds * 1000;
+        var feedTimeoutMs = gtfsProperties.feedTimeoutSeconds() * 1000;
+
+        var connectTimeoutMs = Math.min(connectTimeoutSeconds * 1000, feedTimeoutMs);
+        var readTimeoutMs = Math.min(readTimeoutSeconds * 1000, feedTimeoutMs);
 
         var clientHttpRequestFactory = new HttpComponentsClientHttpRequestFactory();
         clientHttpRequestFactory.setConnectionRequestTimeout(connectTimeoutMs);

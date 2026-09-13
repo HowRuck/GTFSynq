@@ -75,11 +75,13 @@ public class GtfsIngestionService {
             return CompletableFuture.completedFuture(null);
         }
 
-        var work = ingestionAsyncService.processFeedUrlAsync(feedId, url).whenComplete((_, _) -> inFlight.remove(key));
-
-        return work.orTimeout(gtfsConfig.feedTimeoutSeconds(), TimeUnit.SECONDS).exceptionally(ex -> {
-            log.error("Feed {} ({}) failed", feedId, url, ex);
-            return null;
-        });
+        return ingestionAsyncService
+                .processFeedUrlAsync(feedId, url)
+                .orTimeout(gtfsConfig.feedTimeoutSeconds(), TimeUnit.SECONDS)
+                .whenComplete((_, _) -> inFlight.remove(key))
+                .exceptionally(ex -> {
+                    log.error("Feed {} ({}) failed", feedId, url, ex);
+                    return null;
+                });
     }
 }
