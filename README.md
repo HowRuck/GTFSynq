@@ -94,20 +94,29 @@ The repository includes a Docker Compose setup that starts:
 - TimescaleDB
 
 App images are built with Spring Boot's `bootBuildImage` (Paketo buildpacks, no Dockerfile),
-then Compose starts everything from those prebuilt images:
+then Compose starts everything from those prebuilt images. First create a `.env`
+with strong secrets (Compose refuses to start without them):
 
 ```bash
+cp .env.template .env
+# edit .env and set POSTGRES_PASSWORD and GF_SECURITY_ADMIN_PASSWORD
+openssl rand -base64 32   # use this to generate each password
+
 ./gradlew :api-app:bootBuildImage :ingest-app:bootBuildImage :store-app:bootBuildImage
 docker compose up -d
 ```
 
-The apps are exposed on:
+All published ports bind to `127.0.0.1` only. The apps are reachable locally on:
 
 ```bash
 http://localhost:8080 # api-app
 http://localhost:8081 # ingest-app
 http://localhost:8082 # store-app
 ```
+
+To expose a service to the internet, put a reverse proxy (Pangolin/Newt, Caddy,
+nginx) in front of it or use an SSH tunnel — never republish these ports on
+`0.0.0.0`.
 
 ### Stopping the stack
 
@@ -120,7 +129,7 @@ docker compose down
 Container logs are shipped by Vector to VictoriaLogs and are queryable in Grafana
 under the **GTFSynq Logs** dashboard and **Drilldown > Logs** (Logs Drilldown),
 which is backed by the Loki-compatible `loki-vl-proxy` in front of VictoriaLogs
-(`http://localhost:3000`, `admin`/`admin`). You can also still tail them directly:
+(`http://localhost:3000`, credentials from `GF_SECURITY_ADMIN_*` in your `.env`). You can also still tail them directly:
 
 ```bash
 docker compose logs -f api-app
@@ -318,19 +327,19 @@ The `docker-compose.monitoring.yaml` stack provides metrics and logs:
 
 | Component | URL | Purpose |
 |---|---|---|
-| Grafana | http://localhost:3000 | Dashboards for metrics and logs (`admin`/`admin`) |
+| Grafana | http://localhost:3000 | Dashboards for metrics and logs (credentials from `GF_SECURITY_ADMIN_*` in `.env`) |
 | VictoriaMetrics | http://localhost:8428 | Metrics storage (Prometheus-compatible) |
 | VictoriaLogs | http://localhost:9428 | Log storage (LogsQL) |
 | Loki-VL-proxy | http://localhost:3100 | Loki-compatible read API for Explore/Logs Drilldown |
 | Vector | http://localhost:8686 | Collects container logs into VictoriaLogs |
 
 Vector reads container logs through the engine's Docker-compatible API. The
-socket defaults to the rootless Podman socket; override `DOCKER_SOCKET` for
-other setups:
+socket defaults to the rootless Podman socket; override `PODMAN_SOCKET` in `.env`
+for other setups:
 
 ```bash
-DOCKER_SOCKET=/var/run/docker.sock docker compose up -d          # Docker
-DOCKER_SOCKET=/run/podman/podman.sock docker compose up -d       # rootful Podman
+PODMAN_SOCKET=/var/run/docker.sock docker compose up -d          # Docker
+PODMAN_SOCKET=/run/podman/podman.sock docker compose up -d       # rootful Podman
 ```
 
 The application exposes Actuator endpoints for health and metrics.

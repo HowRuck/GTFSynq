@@ -6,9 +6,9 @@ services:
       timescaledb:
         condition: service_healthy
     environment:
-      DATA_SOURCE_NAME: postgresql://postgres:postgres@timescaledb:5432/gtfsynq?sslmode=disable
+      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set (see .env.template)}@timescaledb:5432/${POSTGRES_DB:-gtfsynq}?sslmode=disable
     ports:
-      - "9187:9187"
+      - "127.0.0.1:9187:9187"
     restart: unless-stopped
 
   kafka-exporter:
@@ -20,7 +20,7 @@ services:
     command:
       - --kafka.server=kafka:9092
     ports:
-      - "9308:9308"
+      - "127.0.0.1:9308:9308"
     # kafka-exporter Fatal-exits if the broker isn't reachable at startup;
     # restart so it recovers from ordering races.
     restart: unless-stopped
@@ -32,7 +32,7 @@ services:
       - -storageDataPath=/victoria-logs-data
       - -retentionPeriod=1w
     ports:
-      - "9428:9428"
+      - "127.0.0.1:9428:9428"
     volumes:
       - victoria-logs-data:/victoria-logs-data
     restart: unless-stopped
@@ -53,7 +53,7 @@ services:
       - -patterns-enabled=true
       - -stream-fields=service_name,source_type
     ports:
-      - "3100:3100"
+      - "127.0.0.1:3100:3100"
     restart: unless-stopped
 
   vector:
@@ -64,12 +64,12 @@ services:
     depends_on:
       - victorialogs
     volumes:
-      # Rootless Podman socket by default; override DOCKER_SOCKET for Docker
-      # (/var/run/docker.sock) or a different setup.
-      - /run/user/1000/podman/podman.sock:/var/run/docker.sock
+      # Rootless Podman socket by default; override PODMAN_SOCKET for Docker
+      # (/var/run/docker.sock) or a different setup (see .env.template).
+      - ${PODMAN_SOCKET:-/run/user/1000/podman/podman.sock}:/var/run/docker.sock
       - ./monitoring/vector:/etc/vector:ro,Z
     ports:
-      - "8686:8686"
+      - "127.0.0.1:8686:8686"
     restart: unless-stopped
 
   # Per-container + Podman-specific metrics (pods, images, volumes, networks,
@@ -97,7 +97,7 @@ services:
     volumes:
       - ${PODMAN_SOCKET:-/run/user/1000/podman/podman.sock}:/var/run/docker.sock
     ports:
-      - "9882:9882"
+      - "127.0.0.1:9882:9882"
     restart: unless-stopped
 
   # Host-level metrics (CPU, memory, disk, filesystem, network, load).
@@ -117,7 +117,7 @@ services:
     volumes:
       - /:/host:ro,rslave
     ports:
-      - "9100:9100"
+      - "127.0.0.1:9100:9100"
     restart: unless-stopped
 
   victoriametrics:
@@ -135,7 +135,7 @@ services:
       - --httpListenAddr=:8428
       - --promscrape.config=/etc/vm/vm-scrape.yml
     ports:
-      - "8428:8428"
+      - "127.0.0.1:8428:8428"
     volumes:
       - victoria-metrics-data:/victoria-metrics-data
       - ./monitoring/vm:/etc/vm:ro,Z
@@ -158,12 +158,12 @@ services:
       loki-vl-proxy:
         condition: service_started
     environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_SECURITY_ADMIN_USER: ${GF_SECURITY_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD:?GF_SECURITY_ADMIN_PASSWORD must be set (see .env.template)}
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_INSTALL_PLUGINS: victoriametrics-logs-datasource
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     volumes:
       - grafana-data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro,Z
