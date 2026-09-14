@@ -16,6 +16,7 @@ datafusion-java = "0.1.0"
 javatuples = "2.0.1"
 zero-allocation-hashing = "2026.0"
 jspecify = "1.0.1"
+micrometer-jvm-extras = "0.3.0"
 
 [libraries]
 spring-boot-configuration-processor = { module = "org.springframework.boot:spring-boot-configuration-processor" }
@@ -45,7 +46,7 @@ kafka-streams = { module = "org.apache.kafka:kafka-streams" }
 # Observability
 micrometer-core = { module = "io.micrometer:micrometer-core" }
 micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus" }
-micrometer-registry-jmx = { module = "io.micrometer:micrometer-registry-jmx" }
+micrometer-jvm-extras = { module = "io.github.mweirauch:micrometer-jvm-extras", version.ref = "micrometer-jvm-extras" }
 
 # HTTP client
 httpclient5 = { module = "org.apache.httpcomponents.client5:httpclient5" }

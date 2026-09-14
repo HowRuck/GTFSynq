@@ -13,7 +13,6 @@ dependencies {
     implementation libs.spring.boot.starter.validation
 
     runtimeOnly libs.micrometer.registry.prometheus
-    runtimeOnly libs.micrometer.registry.jmx
     runtimeOnly libs.httpclient5
 
     compileOnly libs.grpc.all

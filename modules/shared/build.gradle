@@ -15,6 +15,7 @@ dependencies {
     api libs.javatuples
     api libs.zero.allocation.hashing
     api libs.micrometer.core
+    api libs.micrometer.jvm.extras
 
     compileOnly libs.bundles.lombok
     annotationProcessor libs.bundles.lombok
