@@ -163,7 +163,7 @@ services:
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_INSTALL_PLUGINS: victoriametrics-logs-datasource
     ports:
-      - "127.0.0.1:3000:3000"
+      - "3000:3000"
     volumes:
       - grafana-data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro,Z
