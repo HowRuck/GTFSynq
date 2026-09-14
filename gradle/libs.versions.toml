@@ -45,6 +45,7 @@ kafka-streams = { module = "org.apache.kafka:kafka-streams" }
 # Observability
 micrometer-core = { module = "io.micrometer:micrometer-core" }
 micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus" }
+micrometer-registry-jmx = { module = "io.micrometer:micrometer-registry-jmx" }
 
 # HTTP client
 httpclient5 = { module = "org.apache.httpcomponents.client5:httpclient5" }

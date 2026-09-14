@@ -13,6 +13,7 @@ dependencies {
 
     runtimeOnly libs.postgresql
     runtimeOnly libs.micrometer.registry.prometheus
+    runtimeOnly libs.micrometer.registry.jmx
 
     compileOnly libs.bundles.lombok
     annotationProcessor libs.bundles.lombok
