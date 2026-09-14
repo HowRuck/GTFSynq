@@ -40,7 +40,7 @@ services:
   # Loki-compatible read API in front of VictoriaLogs so Grafana's built-in
   # Loki datasource, Explore and Logs Drilldown work without running Loki.
   loki-vl-proxy:
-    image: docker.io/reliablyobserve/loki-vl-proxy:1.64.0
+    image: docker.io/reliablyobserve/loki-vl-proxy:1.66.1
     container_name: loki-vl-proxy
     depends_on:
       - victorialogs
@@ -79,7 +79,7 @@ services:
   # Override the host path via a .env file (PODMAN_SOCKET) for rootful Podman
   # (/run/podman/podman.sock) or Docker (/var/run/docker.sock).
   prometheus-podman-exporter:
-    image: quay.io/navidys/prometheus-podman-exporter:v1.21.2
+    image: quay.io/navidys/prometheus-podman-exporter:v2.0.0
     container_name: prometheus-podman-exporter
     security_opt:
       - label=disable
@@ -121,7 +121,7 @@ services:
     restart: unless-stopped
 
   victoriametrics:
-    image: docker.io/victoriametrics/victoria-metrics:v1.151.0
+    image: docker.io/victoriametrics/victoria-metrics:v1.152.0
     container_name: victoriametrics
     depends_on:
       - ingest-app
