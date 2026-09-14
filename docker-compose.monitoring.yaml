@@ -121,7 +121,7 @@ services:
     restart: unless-stopped
 
   victoriametrics:
-    image: docker.io/victoriametrics/victoria-metrics:v1.151.0
+    image: docker.io/victoriametrics/victoria-metrics:v1.152.0
     container_name: victoriametrics
     depends_on:
       - ingest-app
