@@ -9,6 +9,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gtfsynq.shared.persistence.OffHeapFileScribe;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -30,6 +31,7 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
+@ConditionalOnProperty(prefix = "gtfsynq.state", name = "enabled", havingValue = "true")
 public final class OffHeapLongTable implements AutoCloseable {
 
     /**
@@ -117,7 +119,7 @@ public final class OffHeapLongTable implements AutoCloseable {
     private final Deque<RetiredArena> retiredArenas = new ArrayDeque<>();
     private final Object retireLock = new Object();
 
-    private record RetiredArena(Arena arena, long retiredAtNanos) {}
+    private record RetiredArena(Arena arena, long byteSize, long retiredAtNanos) {}
 
     @Autowired
     public OffHeapLongTable(OffHeapFileScribe scribe) {
@@ -383,6 +385,7 @@ public final class OffHeapLongTable implements AutoCloseable {
 
     private void swapSegment(Arena newArena, MemorySegment newSegment, long newCapacity) {
         var oldArena = this.arena;
+        var oldSize = this.segment != null ? this.segment.byteSize() : 0L;
         this.arena = newArena;
         this.capacity = newCapacity;
         this.capacityMask = newCapacity - 1;
@@ -393,7 +396,7 @@ public final class OffHeapLongTable implements AutoCloseable {
 
         if (oldArena != null) {
             synchronized (retireLock) {
-                retiredArenas.addLast(new RetiredArena(oldArena, System.nanoTime()));
+                retiredArenas.addLast(new RetiredArena(oldArena, oldSize, System.nanoTime()));
             }
         }
     }
@@ -442,6 +445,30 @@ public final class OffHeapLongTable implements AutoCloseable {
 
     public long byteSize() {
         return segment.byteSize();
+    }
+
+    /**
+     * Total native bytes currently reserved: live segment plus retired arenas
+     * still within the reader grace period.
+     */
+    public long nativeBytes() {
+        var total = segment.byteSize();
+        synchronized (retireLock) {
+            for (var retired : retiredArenas) {
+                total += retired.byteSize();
+            }
+        }
+        return total;
+    }
+
+    public long retiredBytes() {
+        var total = 0L;
+        synchronized (retireLock) {
+            for (var retired : retiredArenas) {
+                total += retired.byteSize();
+            }
+        }
+        return total;
     }
 
     @Scheduled(fixedRate = 60_000)

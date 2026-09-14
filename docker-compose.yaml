@@ -18,7 +18,6 @@ services:
             SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set (see .env.template)}
             SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
             SERVER_PORT: 8080
-            STATE_SAVE_PATH: /app/data
         ports:
             # Host-only by default. Expose externally via a reverse proxy
             # (Pangolin/Newt, Caddy, nginx) or an SSH tunnel, never 0.0.0.0.

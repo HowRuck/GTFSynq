@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.gtfsynq.shared.protocol.offheap.OffHeapLongTable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(prefix = "gtfsynq.state", name = "enabled", havingValue = "true")
 public class OffHeapFileScribe {
 
     private static final long MAGIC = 0x47544653594E5101L;
