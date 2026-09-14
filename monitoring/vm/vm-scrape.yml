@@ -5,34 +5,35 @@ global:
 scrape_configs:
   - job_name: gtfsynq-apps
     metrics_path: /actuator/prometheus
+    scrape_interval: 5s
     static_configs:
-      - targets:
-          - api-app:8080
-          - ingest-app:8081
-          - store-app:8082
+      - targets: ["api-app:8080"]
+        labels:
+          application: "api-app"
+      - targets: ["ingest-app:8081"]
+        labels:
+          application: "ingest-app"
+      - targets: ["store-app:8082"]
+        labels:
+          application: "store-app"
 
   - job_name: postgres
     static_configs:
-      - targets:
-          - postgres-exporter:9187
+      - targets: ["postgres-exporter:9187"]
 
   - job_name: kafka
     static_configs:
-      - targets:
-          - kafka-exporter:9308
+      - targets: ["kafka-exporter:9308"]
 
   - job_name: victoriametrics
     static_configs:
-      - targets:
-          - victoriametrics:8428
+      - targets: ["victoriametrics:8428"]
 
   - job_name: podman
     metrics_path: /metrics
     static_configs:
-      - targets:
-          - prometheus-podman-exporter:9882
+      - targets: ["prometheus-podman-exporter:9882"]
 
   - job_name: node
     static_configs:
-      - targets:
-          - node-exporter:9100
+      - targets: ["node-exporter:9100"]
