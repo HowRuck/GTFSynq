@@ -8,10 +8,7 @@ import java.util.Deque;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gtfsynq.shared.persistence.OffHeapFileScribe;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
 
 /**
  * Shared off-heap memory helper for a packed {@code long -> long -> long} table
@@ -30,8 +27,6 @@ import org.springframework.stereotype.Component;
  * readers never touch freed memory.
  */
 @Slf4j
-@Component
-@ConditionalOnProperty(prefix = "gtfsynq.state", name = "enabled", havingValue = "true")
 public final class OffHeapLongTable implements AutoCloseable {
 
     /**
@@ -121,7 +116,6 @@ public final class OffHeapLongTable implements AutoCloseable {
 
     private record RetiredArena(Arena arena, long byteSize, long retiredAtNanos) {}
 
-    @Autowired
     public OffHeapLongTable(OffHeapFileScribe scribe) {
         this.scribe = scribe;
         this.arena = Arena.ofShared();

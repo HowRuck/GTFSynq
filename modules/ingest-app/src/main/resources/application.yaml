@@ -60,10 +60,6 @@ gtfs:
 
 # GTFSynq-specific configuration
 gtfsynq:
-    # Off-heap dedup state store
-    state:
-        enabled: true
-
     # Polling configuration
     polling:
         interval-ms: 60000

@@ -22,7 +22,6 @@ dependencies {
 
     compileOnly libs.jspecify
     compileOnly libs.spring.context
-    compileOnly libs.spring.boot.autoconfigure
     compileOnly libs.slf4j.api
 
     testImplementation libs.spring.boot.starter.test

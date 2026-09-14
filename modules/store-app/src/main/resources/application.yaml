@@ -26,9 +26,6 @@ spring:
             auto-offset-reset: earliest
 
 gtfsynq:
-    state:
-        enabled: true
-
     sink:
         enabled: true
         flush-interval-ms: 10000

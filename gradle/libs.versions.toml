@@ -24,7 +24,6 @@ lombok = { module = "org.projectlombok:lombok" }
 
 # Spring Boot starters
 spring-boot-starter = { module = "org.springframework.boot:spring-boot-starter" }
-spring-boot-autoconfigure = { module = "org.springframework.boot:spring-boot-autoconfigure" }
 spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
 spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
 spring-boot-starter-kafka = { module = "org.springframework.boot:spring-boot-starter-kafka" }

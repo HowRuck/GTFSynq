@@ -8,13 +8,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gtfsynq.shared.protocol.offheap.OffHeapLongTable;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Component;
 
 /**
  * Saves and loads {@link OffHeapLongTable} state to/from a file.
@@ -24,9 +19,6 @@ import org.springframework.stereotype.Component;
  * the raw off-heap memory, so a resized table can be restored correctly.
  */
 @Slf4j
-@Component
-@RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "gtfsynq.state", name = "enabled", havingValue = "true")
 public class OffHeapFileScribe {
 
     private static final long MAGIC = 0x47544653594E5101L;
@@ -45,8 +37,7 @@ public class OffHeapFileScribe {
      */
     private final Path savePath;
 
-    @Autowired
-    public OffHeapFileScribe(@Value("${state.save.path:state_dump.bin}") String path) {
+    public OffHeapFileScribe(String path) {
         this.savePath = Path.of(path);
         log.info("State Scribe initialized with path: {}", this.savePath.toAbsolutePath());
     }

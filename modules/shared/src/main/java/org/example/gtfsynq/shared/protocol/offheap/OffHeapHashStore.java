@@ -7,16 +7,12 @@ import java.util.concurrent.locks.StampedLock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
 
-@Component
 @Slf4j
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "gtfsynq.state", name = "enabled", havingValue = "true")
 public class OffHeapHashStore implements AutoCloseable {
 
     private final OffHeapLongTable binTable;
