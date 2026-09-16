@@ -174,7 +174,7 @@ services:
   # then the GTFSynq server is already listed — enter POSTGRES_PASSWORD
   # on first connect.
   pgadmin:
-    image: docker.io/dpage/pgadmin4:9.10
+    image: docker.io/dpage/pgadmin4:9.17
     container_name: pgadmin
     depends_on:
       timescaledb:
