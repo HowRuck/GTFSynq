@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "GTFSynq TimescaleDB",
+      "Group": "Servers",
+      "Host": "timescaledb",
+      "Port": 5432,
+      "MaintenanceDB": "gtfsynq",
+      "Username": "postgres",
+      "SSLMode": "prefer",
+      "Comment": "Preconfigured local TimescaleDB (enter POSTGRES_PASSWORD on first connect)"
+    }
+  }
+}

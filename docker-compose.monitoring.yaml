@@ -169,10 +169,33 @@ services:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro,Z
       - ./monitoring/grafana/dashboards:/etc/grafana/dashboards:ro,Z
 
+  # Database admin UI with preconfigured TimescaleDB connection
+  # (see ./monitoring/pgadmin/servers.json). Login with PGADMIN_DEFAULT_*,
+  # then the GTFSynq server is already listed — enter POSTGRES_PASSWORD
+  # on first connect.
+  pgadmin:
+    image: docker.io/dpage/pgadmin4:9.10
+    container_name: pgadmin
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:?PGADMIN_DEFAULT_PASSWORD must be set (see .env.template)}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+      - ./monitoring/pgadmin/servers.json:/pgadmin4/servers.json:ro,Z
+    restart: unless-stopped
+
 volumes:
   victoria-metrics-data:
   victoria-logs-data:
   grafana-data:
+  pgadmin-data:
 
 networks:
   default:
