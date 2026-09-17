@@ -140,7 +140,7 @@ services:
         restart: "no"
 
     timescaledb:
-        image: docker.io/timescale/timescaledb:2.30.0-pg18
+        image: docker.io/timescale/timescaledb:2.30.1-pg18
         container_name: timescaledb
         ports:
             # Never publish the database publicly: it was the intrusion vector.
