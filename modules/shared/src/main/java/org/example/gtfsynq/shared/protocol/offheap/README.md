@@ -85,17 +85,21 @@ sequenceDiagram
 
 ### Why every return path validates
 
-Each memory accessor re-reads the volatile `segment` field. A concurrent
-resize can therefore swap the segment _mid-probe_, producing mixed reads from
-the old and new memory. Any read taken without the lock is untrustworthy
-unless the stamp still validates — including "not found" answers. Failing
-that, the reader gets the `PROHIBITED_WRITE` sentinel and retries under the
-read lock, which is guaranteed to see a consistent table.
+A read first snapshots the table view, including its segment, capacity, and
+capacity mask. Every accessor used by that probe receives the same snapshot
+segment, so a concurrent resize cannot make one probe mix old and new
+segments. The old segment remains valid while its retired arena is kept alive.
+
+Stamp validation is still required because writers can update matching slots
+in place under the write lock. A writer may change a slot after the reader
+observes it but before the reader returns, so every hit and miss validates the
+optimistic stamp. An invalid stamp returns the `PROHIBITED_WRITE` sentinel and
+the reader retries under the read lock, which observes a consistent table.
 
 ### Memory safety during resize
 
 A resize allocates a brand-new segment and retires the old one. The old
-arena is **not freed immediately**: retired arenas are kept for a 5-minute
+arena is **not freed immediately**: retired arenas are kept for a 1-minute
 grace period (purged by a scheduled task) so any in-flight optimistic reader
 that still references the old segment can finish safely instead of touching
 freed memory.
@@ -147,7 +151,7 @@ flowchart TD
     E --> F{"more slots?"}
     F -- yes --> C
     F -- no --> G["swap segment reference\n(publish last, volatile)"]
-    G --> H["retire old arena\n(freed after 5 min grace)"]
+    G --> H["retire old arena\n(freed after 1 min grace)"]
 ```
 
 Because the whole rehash runs under the write lock, readers see either the
@@ -190,7 +194,7 @@ All tasks run on Spring's scheduler (single-threaded by default):
 | `tickMinute`         | 60 s | Refresh the cached "current minute"                         |
 | `autoTune`           | 60 s | Maintenance resize scan (gated by stale-overwrite pressure) |
 | `backup`             | 60 s | Snapshot to disk                                            |
-| `purgeRetiredArenas` | 60 s | Free arenas retired ≥ 5 min ago                             |
+| `purgeRetiredArenas` | 60 s | Free arenas retired ≥ 1 min ago                             |
 
 ## Known trade-offs
 
