@@ -63,8 +63,16 @@ public final class OffHeapLongTable implements AutoCloseable {
      */
     private static final long ARENA_RETENTION_NANOS = 60 * 1_000_000_000L;
 
+    private static final int KEY_OFFSET = 0;
+    private static final int VALUE_OFFSET = KEY_OFFSET + Long.BYTES;
+    private static final int EXPIRY_OFFSET = VALUE_OFFSET + Long.BYTES;
+    private static final int PSL_OFFSET = EXPIRY_OFFSET + Integer.BYTES;
+    private static final int CUSTOM_SLOT1_OFFSET = PSL_OFFSET + Integer.BYTES;
+    private static final int CUSTOM_SLOT2_OFFSET = CUSTOM_SLOT1_OFFSET + Integer.BYTES;
+
     /**
-     * Row size in bytes.
+     * Row size in bytes. Derived from the field offsets above so it cannot
+     * drift.
      *
      * <p>
      * Layout:
@@ -76,18 +84,10 @@ public final class OffHeapLongTable implements AutoCloseable {
      * <li>customSlot1: 4 bytes</li>
      * <li>customSlot2: 4 bytes</li>
      * </ul>
-     *
-     * <p>
-     * Total: 32 bytes.
      */
-    public static final int SLOT_SIZE = 32;
+    public static final int SLOT_SIZE = CUSTOM_SLOT2_OFFSET + Integer.BYTES;
 
-    private static final int KEY_OFFSET = 0;
-    private static final int VALUE_OFFSET = KEY_OFFSET + Long.BYTES;
-    private static final int EXPIRY_OFFSET = VALUE_OFFSET + Long.BYTES;
-    private static final int PSL_OFFSET = EXPIRY_OFFSET + Integer.BYTES;
-    private static final int CUSTOM_SLOT1_OFFSET = PSL_OFFSET + Integer.BYTES;
-    private static final int CUSTOM_SLOT2_OFFSET = CUSTOM_SLOT1_OFFSET + Integer.BYTES;
+    private static final long SEGMENT_ALIGNMENT = 64;
 
     public static final long EMPTY_VALUE = 0L;
     public static final long[] EMPTY_VALUE_ARRAY = new long[] {
@@ -101,40 +101,54 @@ public final class OffHeapLongTable implements AutoCloseable {
     private volatile TableView view;
 
     /**
-     * {@link #close()} is invoked both through the owning store's lifecycle
-     * and this bean's own lifecycle. State is guarded by {@link #retireLock};
-     * closing must be idempotent.
+     * Guards {@link #view} publication, {@link #closed}, and
+     * {@link #retiredArenas}. Reads of {@link #view} remain lock-free.
      */
-    private boolean closed;
+    private volatile boolean closed;
+    private boolean initializationComplete;
 
     private final Deque<RetiredArena> retiredArenas = new ArrayDeque<>();
-    private final Object retireLock = new Object();
+    private final Object lifecycleLock = new Object();
+    private final Object backupLock = new Object();
 
     private record RetiredArena(Arena arena, long byteSize, long retiredAtNanos) {}
 
     public OffHeapLongTable(OffHeapFileScribe scribe) {
         this.scribe = scribe;
-        var initialArena = Arena.ofShared();
-        var initialSegment = initialArena.allocate(INITIAL_CAPACITY * SLOT_SIZE, 64);
-        this.view = new TableView(initialArena, initialSegment, INITIAL_CAPACITY, INITIAL_CAPACITY - 1);
+        this.view = allocate(INITIAL_CAPACITY);
 
-        scribe.load(this);
+        try {
+            scribe.load(this);
+        } finally {
+            synchronized (lifecycleLock) {
+                initializationComplete = true;
+            }
+        }
+    }
+
+    private static TableView allocate(long capacity) {
+        var arena = Arena.ofShared();
+        try {
+            return new TableView(
+                    arena, arena.allocate(capacity * SLOT_SIZE, SEGMENT_ALIGNMENT), capacity, capacity - 1);
+        } catch (Throwable t) {
+            arena.close();
+            throw t;
+        }
     }
 
     TableView snapshot() {
+        if (closed) throw new IllegalStateException("OffHeap table is closed");
         return view;
     }
 
     public MemorySegment getSegment() {
+        if (closed) throw new IllegalStateException("OffHeap table is closed");
         return view.segment();
     }
 
     public long capacity() {
         return view.capacity();
-    }
-
-    public long capacityMask() {
-        return view.capacityMask();
     }
 
     long getKey(MemorySegment source, long index) {
@@ -145,15 +159,19 @@ public final class OffHeapLongTable implements AutoCloseable {
         return source.get(ValueLayout.JAVA_LONG, slotOffset(index) + VALUE_OFFSET);
     }
 
-    long getExpiry(MemorySegment source, long index) {
+    int getExpiry(MemorySegment source, long index) {
         return source.get(ValueLayout.JAVA_INT, slotOffset(index) + EXPIRY_OFFSET);
     }
 
-    long getCustomSlot1(MemorySegment source, long index) {
+    int getPsl(MemorySegment source, long index) {
+        return source.get(ValueLayout.JAVA_INT, slotOffset(index) + PSL_OFFSET);
+    }
+
+    int getCustomSlot1(MemorySegment source, long index) {
         return source.get(ValueLayout.JAVA_INT, slotOffset(index) + CUSTOM_SLOT1_OFFSET);
     }
 
-    long getCustomSlot2(MemorySegment source, long index) {
+    int getCustomSlot2(MemorySegment source, long index) {
         return source.get(ValueLayout.JAVA_INT, slotOffset(index) + CUSTOM_SLOT2_OFFSET);
     }
 
@@ -165,30 +183,6 @@ public final class OffHeapLongTable implements AutoCloseable {
 
     private static long slotOffset(long index) {
         return index * SLOT_SIZE;
-    }
-
-    private static long keyAt(MemorySegment seg, long index) {
-        return seg.get(ValueLayout.JAVA_LONG, slotOffset(index) + KEY_OFFSET);
-    }
-
-    private static long valueAt(MemorySegment seg, long index) {
-        return seg.get(ValueLayout.JAVA_LONG, slotOffset(index) + VALUE_OFFSET);
-    }
-
-    private static int expiryAt(MemorySegment seg, long index) {
-        return seg.get(ValueLayout.JAVA_INT, slotOffset(index) + EXPIRY_OFFSET);
-    }
-
-    private static int pslAt(MemorySegment seg, long index) {
-        return seg.get(ValueLayout.JAVA_INT, slotOffset(index) + PSL_OFFSET);
-    }
-
-    private static int customSlot1At(MemorySegment seg, long index) {
-        return seg.get(ValueLayout.JAVA_INT, slotOffset(index) + CUSTOM_SLOT1_OFFSET);
-    }
-
-    private static int customSlot2At(MemorySegment seg, long index) {
-        return seg.get(ValueLayout.JAVA_INT, slotOffset(index) + CUSTOM_SLOT2_OFFSET);
     }
 
     static void putSlot(
@@ -215,13 +209,13 @@ public final class OffHeapLongTable implements AutoCloseable {
      * @param currentMinute the current minute epoch used for expiry checks
      * @return the number of live entries
      */
-    public long countLiveEntries(int currentMinute) {
+    private long countLiveEntries(int currentMinute) {
         var current = view;
         var cap = current.capacity();
         var seg = current.segment();
         var live = 0L;
         for (var i = 0L; i < cap; i++) {
-            if (keyAt(seg, i) != EMPTY_VALUE && expiryAt(seg, i) > currentMinute) {
+            if (getKey(seg, i) != EMPTY_VALUE && getExpiry(seg, i) > currentMinute) {
                 live++;
             }
         }
@@ -233,13 +227,13 @@ public final class OffHeapLongTable implements AutoCloseable {
      *
      * @return the number of occupied slots
      */
-    public long countOccupied() {
+    long countOccupied() {
         var current = view;
         var cap = current.capacity();
         var seg = current.segment();
         var occupied = 0L;
         for (var i = 0L; i < cap; i++) {
-            if (keyAt(seg, i) != EMPTY_VALUE) {
+            if (getKey(seg, i) != EMPTY_VALUE) {
                 occupied++;
             }
         }
@@ -253,8 +247,8 @@ public final class OffHeapLongTable implements AutoCloseable {
      * @param currentMinute the current minute epoch used for expiry checks
      * @return the number of live entries after the operation
      */
-    public long autoResize(int currentMinute) {
-        synchronized (retireLock) {
+    long autoResize(int currentMinute) {
+        synchronized (lifecycleLock) {
             if (closed) throw new IllegalStateException("OffHeap table is closed");
 
             var cap = view.capacity();
@@ -284,51 +278,57 @@ public final class OffHeapLongTable implements AutoCloseable {
      * @param currentMinute the current minute epoch used for expiry checks
      * @return the number of live entries that were rehashed
      */
-    public long rehash(long newCapacity, int currentMinute) {
+    private long rehash(long newCapacity, int currentMinute) {
         if (newCapacity < 1 || Long.bitCount(newCapacity) != 1 || newCapacity > MAX_CAPACITY) {
             throw new IllegalArgumentException("New capacity must be a power of two in [1, " + MAX_CAPACITY + "]");
         }
 
-        synchronized (retireLock) {
+        synchronized (lifecycleLock) {
             if (closed) throw new IllegalStateException("OffHeap table is closed");
 
             var current = view;
             var oldCap = current.capacity();
             var oldSegment = current.segment();
             var newMask = newCapacity - 1;
-            var newArena = Arena.ofShared();
-            var newSegment = newArena.allocate(newCapacity * SLOT_SIZE, 64);
+            var newView = allocate(newCapacity);
+            var newSegment = newView.segment();
             var live = 0L;
+            var published = false;
 
-            for (var i = 0L; i < oldCap; i++) {
-                var key = keyAt(oldSegment, i);
-                if (key == EMPTY_VALUE) continue;
-                if (expiryAt(oldSegment, i) <= currentMinute) continue;
+            try {
+                for (var i = 0L; i < oldCap; i++) {
+                    var key = getKey(oldSegment, i);
+                    if (key == EMPTY_VALUE) continue;
+                    if (getExpiry(oldSegment, i) <= currentMinute) continue;
 
-                var home = hash(key) & newMask;
-                var index = home;
-                while (keyAt(newSegment, index) != EMPTY_VALUE) {
-                    index = (index + 1) & newMask;
-                    if (index == home) {
-                        // Should be impossible: caller guarantees live <
-                        // newCapacity via the autoResize watermarks.
-                        throw new IllegalStateException("Rehash probe exhausted at capacity " + newCapacity);
+                    var home = hash(key) & newMask;
+                    var index = home;
+                    while (getKey(newSegment, index) != EMPTY_VALUE) {
+                        index = (index + 1) & newMask;
+                        if (index == home) {
+                            // Should be impossible: caller guarantees live <
+                            // newCapacity via the autoResize watermarks.
+                            throw new IllegalStateException("Rehash probe exhausted at capacity " + newCapacity);
+                        }
                     }
+
+                    putSlot(
+                            newSegment,
+                            index,
+                            key,
+                            getValue(oldSegment, i),
+                            getExpiry(oldSegment, i),
+                            getPsl(oldSegment, i),
+                            getCustomSlot1(oldSegment, i),
+                            getCustomSlot2(oldSegment, i));
+                    live++;
                 }
 
-                putSlot(
-                        newSegment,
-                        index,
-                        key,
-                        valueAt(oldSegment, i),
-                        expiryAt(oldSegment, i),
-                        pslAt(oldSegment, i),
-                        customSlot1At(oldSegment, i),
-                        customSlot2At(oldSegment, i));
-                live++;
+                swapSegment(newView);
+                published = true;
+            } finally {
+                if (!published) newView.arena().close();
             }
-
-            swapSegment(newArena, newSegment, newCapacity);
 
             log.info(
                     "OffHeap table resized from {} to {} slots ({} live entries, {} bytes)",
@@ -352,29 +352,36 @@ public final class OffHeapLongTable implements AutoCloseable {
         if (newCapacity < 1 || Long.bitCount(newCapacity) != 1 || newCapacity > MAX_CAPACITY) {
             throw new IllegalArgumentException("New capacity must be a power of two in [1, " + MAX_CAPACITY + "]");
         }
+        synchronized (lifecycleLock) {
+            if (initializationComplete) {
+                throw new IllegalStateException("OffHeap table can only be reallocated during initialization");
+            }
+        }
 
-        var newArena = Arena.ofShared();
-        var newSegment = newArena.allocate(newCapacity * SLOT_SIZE, 64);
-        swapSegment(newArena, newSegment, newCapacity);
+        var newView = allocate(newCapacity);
+        var published = false;
+        try {
+            swapSegment(newView);
+            published = true;
+        } finally {
+            if (!published) newView.arena().close();
+        }
 
         log.info(
                 "OffHeap table reallocated to {} slots ({} bytes) for snapshot restore",
                 newCapacity,
-                newSegment.byteSize());
+                newView.segment().byteSize());
     }
 
-    private void swapSegment(Arena newArena, MemorySegment newSegment, long newCapacity) {
-        synchronized (retireLock) {
-            if (closed) {
-                newArena.close();
-                throw new IllegalStateException("OffHeap table is closed");
-            }
+    private void swapSegment(TableView newView) {
+        synchronized (lifecycleLock) {
+            if (closed) throw new IllegalStateException("OffHeap table is closed");
 
             var oldView = this.view;
-            var newView = new TableView(newArena, newSegment, newCapacity, newCapacity - 1);
+            var retired = new RetiredArena(
+                    oldView.arena(), oldView.segment().byteSize(), System.nanoTime());
+            retiredArenas.addLast(retired);
             this.view = newView;
-            retiredArenas.addLast(
-                    new RetiredArena(oldView.arena(), oldView.segment().byteSize(), System.nanoTime()));
         }
     }
 
@@ -384,44 +391,47 @@ public final class OffHeapLongTable implements AutoCloseable {
      */
     @Scheduled(fixedRate = 60_000)
     public void purgeRetiredArenas() {
-        var deadline = System.nanoTime() - ARENA_RETENTION_NANOS;
-        while (true) {
-            RetiredArena retired;
-            synchronized (retireLock) {
-                retired = retiredArenas.peekFirst();
-                if (retired == null || retired.retiredAtNanos() > deadline) {
-                    return;
+        synchronized (backupLock) {
+            var deadline = System.nanoTime() - ARENA_RETENTION_NANOS;
+            while (true) {
+                RetiredArena retired;
+                synchronized (lifecycleLock) {
+                    retired = retiredArenas.peekFirst();
+                    if (retired == null || retired.retiredAtNanos() > deadline) {
+                        return;
+                    }
+                    retiredArenas.pollFirst();
                 }
-                retiredArenas.pollFirst();
-            }
-            try {
-                retired.arena().close();
-            } catch (Throwable t) {
-                log.error("Failed to close retired off-heap arena", t);
-            }
-        }
-    }
-
-    @Override
-    public void close() {
-        synchronized (retireLock) {
-            if (closed) return;
-            closed = true;
-
-            view.arena().close();
-            for (var retired : retiredArenas) {
                 try {
                     retired.arena().close();
                 } catch (Throwable t) {
                     log.error("Failed to close retired off-heap arena", t);
                 }
             }
-            retiredArenas.clear();
         }
     }
 
-    public long byteSize() {
-        return getSegment().byteSize();
+    @Override
+    public void close() {
+        synchronized (backupLock) {
+            synchronized (lifecycleLock) {
+                if (closed) return;
+                closed = true;
+
+                try {
+                    view.arena().close();
+                } finally {
+                    for (var retired : retiredArenas) {
+                        try {
+                            retired.arena().close();
+                        } catch (Throwable t) {
+                            log.error("Failed to close retired off-heap arena", t);
+                        }
+                    }
+                    retiredArenas.clear();
+                }
+            }
+        }
     }
 
     /**
@@ -429,27 +439,30 @@ public final class OffHeapLongTable implements AutoCloseable {
      * still within the reader grace period.
      */
     public long nativeBytes() {
-        synchronized (retireLock) {
-            var total = view.segment().byteSize();
-            for (var retired : retiredArenas) {
-                total += retired.byteSize();
-            }
-            return total;
+        synchronized (lifecycleLock) {
+            return view.segment().byteSize() + retiredBytesLocked();
         }
     }
 
     public long retiredBytes() {
+        synchronized (lifecycleLock) {
+            return retiredBytesLocked();
+        }
+    }
+
+    private long retiredBytesLocked() {
         var total = 0L;
-        synchronized (retireLock) {
-            for (var retired : retiredArenas) {
-                total += retired.byteSize();
-            }
+        for (var retired : retiredArenas) {
+            total += retired.byteSize();
         }
         return total;
     }
 
     @Scheduled(fixedRate = 60_000)
     public void backup() {
-        scribe.dump(this);
+        synchronized (backupLock) {
+            if (closed) return;
+            scribe.dump(this);
+        }
     }
 }
