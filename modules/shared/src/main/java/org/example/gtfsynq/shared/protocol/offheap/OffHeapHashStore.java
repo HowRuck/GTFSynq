@@ -123,25 +123,29 @@ public class OffHeapHashStore implements AutoCloseable {
     }
 
     long[] getWithLock(long key, long stamp) {
-        var capacity = binTable.capacity();
-        var mask = binTable.capacityMask();
+        var view = binTable.snapshot();
+        var source = view.segment();
+        var capacity = view.capacity();
+        var mask = view.capacityMask();
         var index = OffHeapLongTable.hash(key) & mask;
 
         for (var i = 0L; i < capacity; i++) {
-            var slotKey = binTable.getKey(index);
+            var slotKey = binTable.getKey(source, index);
 
             if (slotKey == OffHeapLongTable.EMPTY_VALUE) {
                 return missWithValidation(stamp);
             }
 
             if (slotKey == key) {
-                var slotExpiry = binTable.getExpiry(index);
+                var slotExpiry = binTable.getExpiry(source, index);
                 if (slotExpiry <= currentMinute) {
                     return missWithValidation(stamp);
                 }
 
                 var data = new long[] {
-                    binTable.getValue(index), binTable.getCustomSlot1(index), binTable.getCustomSlot2(index),
+                    binTable.getValue(source, index),
+                    binTable.getCustomSlot1(source, index),
+                    binTable.getCustomSlot2(source, index),
                 };
 
                 // Validate optimistic read lock

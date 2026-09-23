@@ -5,7 +5,6 @@ import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gtfsynq.shared.persistence.OffHeapFileScribe;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -99,11 +98,9 @@ public final class OffHeapLongTable implements AutoCloseable {
 
     private volatile Arena arena;
 
-    @Getter
-    private volatile MemorySegment segment;
+    record TableView(MemorySegment segment, long capacity, long capacityMask) {}
 
-    private volatile long capacity;
-    private volatile long capacityMask;
+    private volatile TableView view;
 
     /**
      * {@link #close()} is invoked both through the owning store's lifecycle
@@ -119,67 +116,98 @@ public final class OffHeapLongTable implements AutoCloseable {
     public OffHeapLongTable(OffHeapFileScribe scribe) {
         this.scribe = scribe;
         this.arena = Arena.ofShared();
-        this.capacity = INITIAL_CAPACITY;
-        this.capacityMask = INITIAL_CAPACITY - 1;
-        this.segment = this.arena.allocate(INITIAL_CAPACITY * SLOT_SIZE, 64);
+        var initialSegment = this.arena.allocate(INITIAL_CAPACITY * SLOT_SIZE, 64);
+        this.view = new TableView(initialSegment, INITIAL_CAPACITY, INITIAL_CAPACITY - 1);
 
         scribe.load(this);
     }
 
+    TableView snapshot() {
+        return view;
+    }
+
+    public MemorySegment getSegment() {
+        return view.segment();
+    }
+
     public long capacity() {
-        return capacity;
+        return view.capacity();
     }
 
     public long capacityMask() {
-        return capacityMask;
+        return view.capacityMask();
     }
 
     public long getKey(long index) {
-        return segment.get(ValueLayout.JAVA_LONG, slotOffset(index) + KEY_OFFSET);
+        return getKey(getSegment(), index);
+    }
+
+    long getKey(MemorySegment source, long index) {
+        return source.get(ValueLayout.JAVA_LONG, slotOffset(index) + KEY_OFFSET);
     }
 
     public long getValue(long index) {
-        return segment.get(ValueLayout.JAVA_LONG, slotOffset(index) + VALUE_OFFSET);
+        return getValue(getSegment(), index);
+    }
+
+    long getValue(MemorySegment source, long index) {
+        return source.get(ValueLayout.JAVA_LONG, slotOffset(index) + VALUE_OFFSET);
     }
 
     public int getExpiry(long index) {
-        return segment.get(ValueLayout.JAVA_INT, slotOffset(index) + EXPIRY_OFFSET);
+        return getExpiry(getSegment(), index);
+    }
+
+    int getExpiry(MemorySegment source, long index) {
+        return source.get(ValueLayout.JAVA_INT, slotOffset(index) + EXPIRY_OFFSET);
     }
 
     public int getPsl(long index) {
-        return segment.get(ValueLayout.JAVA_INT, slotOffset(index) + PSL_OFFSET);
+        return getPsl(getSegment(), index);
+    }
+
+    int getPsl(MemorySegment source, long index) {
+        return source.get(ValueLayout.JAVA_INT, slotOffset(index) + PSL_OFFSET);
     }
 
     public int getCustomSlot1(long index) {
-        return segment.get(ValueLayout.JAVA_INT, slotOffset(index) + CUSTOM_SLOT1_OFFSET);
+        return getCustomSlot1(getSegment(), index);
+    }
+
+    int getCustomSlot1(MemorySegment source, long index) {
+        return source.get(ValueLayout.JAVA_INT, slotOffset(index) + CUSTOM_SLOT1_OFFSET);
     }
 
     public int getCustomSlot2(long index) {
-        return segment.get(ValueLayout.JAVA_INT, slotOffset(index) + CUSTOM_SLOT2_OFFSET);
+        return getCustomSlot2(getSegment(), index);
+    }
+
+    int getCustomSlot2(MemorySegment source, long index) {
+        return source.get(ValueLayout.JAVA_INT, slotOffset(index) + CUSTOM_SLOT2_OFFSET);
     }
 
     public void setKey(long index, long key) {
-        segment.set(ValueLayout.JAVA_LONG, slotOffset(index) + KEY_OFFSET, key);
+        getSegment().set(ValueLayout.JAVA_LONG, slotOffset(index) + KEY_OFFSET, key);
     }
 
     public void setValue(long index, long value) {
-        segment.set(ValueLayout.JAVA_LONG, slotOffset(index) + VALUE_OFFSET, value);
+        getSegment().set(ValueLayout.JAVA_LONG, slotOffset(index) + VALUE_OFFSET, value);
     }
 
     public void setExpiry(long index, int expiry) {
-        segment.set(ValueLayout.JAVA_INT, slotOffset(index) + EXPIRY_OFFSET, expiry);
+        getSegment().set(ValueLayout.JAVA_INT, slotOffset(index) + EXPIRY_OFFSET, expiry);
     }
 
     public void setPsl(long index, int psl) {
-        segment.set(ValueLayout.JAVA_INT, slotOffset(index) + PSL_OFFSET, psl);
+        getSegment().set(ValueLayout.JAVA_INT, slotOffset(index) + PSL_OFFSET, psl);
     }
 
     public void setCustomSlot1(long index, int customSlot1) {
-        segment.set(ValueLayout.JAVA_INT, slotOffset(index) + CUSTOM_SLOT1_OFFSET, customSlot1);
+        getSegment().set(ValueLayout.JAVA_INT, slotOffset(index) + CUSTOM_SLOT1_OFFSET, customSlot1);
     }
 
     public void setCustomSlot2(long index, int customSlot2) {
-        segment.set(ValueLayout.JAVA_INT, slotOffset(index) + CUSTOM_SLOT2_OFFSET, customSlot2);
+        getSegment().set(ValueLayout.JAVA_INT, slotOffset(index) + CUSTOM_SLOT2_OFFSET, customSlot2);
     }
 
     public static long hash(long key) {
@@ -241,8 +269,9 @@ public final class OffHeapLongTable implements AutoCloseable {
      * @return the number of live entries
      */
     public long countLiveEntries(int currentMinute) {
-        var cap = capacity;
-        var seg = segment;
+        var current = view;
+        var cap = current.capacity();
+        var seg = current.segment();
         var live = 0L;
         for (var i = 0L; i < cap; i++) {
             if (keyAt(seg, i) != EMPTY_VALUE && expiryAt(seg, i) > currentMinute) {
@@ -258,8 +287,9 @@ public final class OffHeapLongTable implements AutoCloseable {
      * @return the number of occupied slots
      */
     public long countOccupied() {
-        var cap = capacity;
-        var seg = segment;
+        var current = view;
+        var cap = current.capacity();
+        var seg = current.segment();
         var occupied = 0L;
         for (var i = 0L; i < cap; i++) {
             if (keyAt(seg, i) != EMPTY_VALUE) {
@@ -277,7 +307,7 @@ public final class OffHeapLongTable implements AutoCloseable {
      * @return the number of live entries after the operation
      */
     public long autoResize(int currentMinute) {
-        var cap = capacity;
+        var cap = view.capacity();
         var live = countLiveEntries(currentMinute);
 
         if (live * 100 >= cap * GROW_HIGH_WATERMARK_PERCENT) {
@@ -308,8 +338,9 @@ public final class OffHeapLongTable implements AutoCloseable {
             throw new IllegalArgumentException("New capacity must be a power of two in [1, " + MAX_CAPACITY + "]");
         }
 
-        var oldCap = capacity;
-        var oldSegment = segment;
+        var current = view;
+        var oldCap = current.capacity();
+        var oldSegment = current.segment();
         var newMask = newCapacity - 1;
         var newArena = Arena.ofShared();
         var newSegment = newArena.allocate(newCapacity * SLOT_SIZE, 64);
@@ -379,14 +410,10 @@ public final class OffHeapLongTable implements AutoCloseable {
 
     private void swapSegment(Arena newArena, MemorySegment newSegment, long newCapacity) {
         var oldArena = this.arena;
-        var oldSize = this.segment != null ? this.segment.byteSize() : 0L;
+        var oldView = this.view;
+        var oldSize = oldView.segment().byteSize();
         this.arena = newArena;
-        this.capacity = newCapacity;
-        this.capacityMask = newCapacity - 1;
-        // Publish the segment last: readers combine this reference with the
-        // store's stamp validation, and the old arena stays alive for the
-        // retention period, so late readers stay safe
-        this.segment = newSegment;
+        this.view = new TableView(newSegment, newCapacity, newCapacity - 1);
 
         if (oldArena != null) {
             synchronized (retireLock) {
@@ -438,7 +465,7 @@ public final class OffHeapLongTable implements AutoCloseable {
     }
 
     public long byteSize() {
-        return segment.byteSize();
+        return getSegment().byteSize();
     }
 
     /**
@@ -446,7 +473,7 @@ public final class OffHeapLongTable implements AutoCloseable {
      * still within the reader grace period.
      */
     public long nativeBytes() {
-        var total = segment.byteSize();
+        var total = getSegment().byteSize();
         synchronized (retireLock) {
             for (var retired : retiredArenas) {
                 total += retired.byteSize();
