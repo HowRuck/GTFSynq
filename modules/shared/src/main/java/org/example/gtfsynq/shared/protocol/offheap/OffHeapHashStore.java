@@ -316,7 +316,12 @@ public class OffHeapHashStore implements AutoCloseable {
 
     @Override
     public void close() {
-        binTable.close();
+        var stamp = lock.writeLock();
+        try {
+            binTable.close();
+        } finally {
+            lock.unlockWrite(stamp);
+        }
     }
 
     @Scheduled(fixedRate = 60000)
