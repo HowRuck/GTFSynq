@@ -49,7 +49,7 @@ public final class OffHeapLongTable implements AutoCloseable {
      * this watermark (occupancy is an upper bound on the live load, so below
      * this a shrink is guaranteed to apply).
      */
-    public static final int SHRINK_LOW_WATERMARK_PERCENT = 25;
+    public static final int SHRINK_LOW_WATERMARK_PERCENT = 17;
 
     /**
      * Compact at the same capacity when the live load drops below this
