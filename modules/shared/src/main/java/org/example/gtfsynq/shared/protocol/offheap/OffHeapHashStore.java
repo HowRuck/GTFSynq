@@ -2,6 +2,7 @@ package org.example.gtfsynq.shared.protocol.offheap;
 
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
+import java.lang.foreign.MemorySegment;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.StampedLock;
 import lombok.RequiredArgsConstructor;
@@ -194,13 +195,15 @@ public class OffHeapHashStore implements AutoCloseable {
     }
 
     void insert(long key, long value, int expiry, int customSlot1, int customSlot2) {
-        var capacity = binTable.capacity();
-        var mask = binTable.capacityMask();
+        var view = binTable.snapshot();
+        var source = view.segment();
+        var capacity = view.capacity();
+        var mask = view.capacityMask();
         var index = OffHeapLongTable.hash(key) & mask;
         long firstAvailableIndex = -1;
 
         for (var i = 0L; i < capacity; i++) {
-            var slotKey = binTable.getKey(index);
+            var slotKey = binTable.getKey(source, index);
 
             // If we hit an empty slot, the key is definitely not in the map.
             if (slotKey == OffHeapLongTable.EMPTY_VALUE) {
@@ -208,10 +211,10 @@ public class OffHeapHashStore implements AutoCloseable {
                 // packed.
                 // Otherwise, write to this empty slot.
                 if (firstAvailableIndex != -1) {
-                    writeSlot(firstAvailableIndex, key, value, expiry, customSlot1, customSlot2);
+                    writeSlot(source, firstAvailableIndex, key, value, expiry, customSlot1, customSlot2);
                     staleOverwrites++;
                 } else {
-                    writeSlot(index, key, value, expiry, customSlot1, customSlot2);
+                    writeSlot(source, index, key, value, expiry, customSlot1, customSlot2);
                     size++;
                     maybeGrow();
                 }
@@ -220,14 +223,14 @@ public class OffHeapHashStore implements AutoCloseable {
 
             // If we find the exact key, update it in place.
             if (slotKey == key) {
-                writeSlot(index, key, value, expiry, customSlot1, customSlot2);
+                writeSlot(source, index, key, value, expiry, customSlot1, customSlot2);
                 return;
             }
 
             // If we pass an expired slot, remember it so we can overwrite it later.
             // We MUST NOT return yet, because the exact key might be further down the
             // chain!
-            var slotExpiry = binTable.getExpiry(index);
+            var slotExpiry = binTable.getExpiry(source, index);
             if (slotExpiry <= currentMinute && firstAvailableIndex == -1) {
                 firstAvailableIndex = index;
             }
@@ -239,7 +242,7 @@ public class OffHeapHashStore implements AutoCloseable {
         // If we loop through the whole table and it's full:
         if (firstAvailableIndex != -1) {
             // We can evict the expired element we found
-            writeSlot(firstAvailableIndex, key, value, expiry, customSlot1, customSlot2);
+            writeSlot(source, firstAvailableIndex, key, value, expiry, customSlot1, customSlot2);
             staleOverwrites++;
         } else {
             throw new IllegalStateException("OffHeapHashStore is completely full!");
@@ -303,13 +306,8 @@ public class OffHeapHashStore implements AutoCloseable {
         }
     }
 
-    private void writeSlot(long index, long k, long v, int e, int c1, int c2) {
-        binTable.setKey(index, k);
-        binTable.setValue(index, v);
-        binTable.setExpiry(index, e);
-        binTable.setPsl(index, 0);
-        binTable.setCustomSlot1(index, c1);
-        binTable.setCustomSlot2(index, c2);
+    private void writeSlot(MemorySegment source, long index, long k, long v, int e, int c1, int c2) {
+        OffHeapLongTable.putSlot(source, index, k, v, e, 0, c1, c2);
     }
 
     public long size() {
