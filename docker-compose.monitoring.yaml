@@ -40,7 +40,7 @@ services:
   # Loki-compatible read API in front of VictoriaLogs so Grafana's built-in
   # Loki datasource, Explore and Logs Drilldown work without running Loki.
   loki-vl-proxy:
-    image: docker.io/reliablyobserve/loki-vl-proxy:1.81.0
+    image: docker.io/reliablyobserve/loki-vl-proxy:1.84.0
     container_name: loki-vl-proxy
     depends_on:
       - victorialogs
