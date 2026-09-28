@@ -24,6 +24,9 @@ subprojects {
 
     spotless {
         java {
+            // protoc output is regenerated on every codegen, so formatting it is
+            // wasted work and made spotlessJavaApply fail on files we don't own.
+            targetExclude 'build/generated/**'
             palantirJavaFormat(libs.versions.palantir.java.format.get())
             removeUnusedImports()
             importOrder()
