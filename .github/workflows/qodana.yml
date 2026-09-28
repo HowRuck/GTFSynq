@@ -28,7 +28,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  pull-requests: read
+  pull-requests: write
   contents: read
   security-events: write
 
@@ -51,6 +51,10 @@ jobs:
         run: ./gradlew :shared:generateProto --info
       - name: "Qodana Scan"
         uses: JetBrains/qodana-action@v2026.2.1
+        with:
+          # Same as the SARIF upload below: a fork PR gets a read-only
+          # GITHUB_TOKEN, so commenting there would always fail
+          post-pr-comment: ${{ github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork }}
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
       - name: Upload SARIF
