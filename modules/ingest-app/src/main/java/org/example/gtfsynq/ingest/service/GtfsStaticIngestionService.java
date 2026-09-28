@@ -1,11 +1,15 @@
 package org.example.gtfsynq.ingest.service;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gtfsynq.ingest.config.GtfsProperties;
+import org.example.gtfsynq.ingest.service.metrics.StaticFeedMetrics;
+import org.example.gtfsynq.ingest.service.metrics.StaticFeedMetrics.Outcome;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -26,6 +30,7 @@ public class GtfsStaticIngestionService {
 
     private final GtfsProperties gtfsConfig;
     private final GtfsStaticIngestionAsyncService ingestionAsyncService;
+    private final StaticFeedMetrics metrics;
     private final AtomicBoolean isRunning = new AtomicBoolean(false);
 
     /**
@@ -34,11 +39,13 @@ public class GtfsStaticIngestionService {
     @Scheduled(fixedRateString = "${gtfsynq.static-polling.interval-ms:86400000}")
     public void process() {
         if (!isRunning.compareAndSet(false, true)) {
+            metrics.recordCycleSkipped();
             log.info("Previous static ingestion is still running, skipping this iteration");
             return;
         }
 
-        var startTime = System.currentTimeMillis();
+        var startNanos = System.nanoTime();
+        var startedAtMillis = System.currentTimeMillis();
 
         try {
             var futures = gtfsConfig.sources().entrySet().stream()
@@ -47,6 +54,8 @@ public class GtfsStaticIngestionService {
                     .map(entry -> submitStaticFeed(
                             entry.getKey(), entry.getValue().staticConfig().url()))
                     .toList();
+
+            metrics.recordFeedsConfigured(futures.size());
 
             if (futures.isEmpty()) {
                 log.debug("No static feed sources configured, skipping static ingestion");
@@ -57,10 +66,11 @@ public class GtfsStaticIngestionService {
 
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
-            log.info("Static ingestion finished in {}ms", System.currentTimeMillis() - startTime);
+            log.info("Static ingestion finished in {}ms", System.currentTimeMillis() - startedAtMillis);
         } catch (Exception e) {
             log.error("Critical error during static ingestion", e);
         } finally {
+            metrics.recordCycleDuration(System.nanoTime() - startNanos);
             isRunning.set(false);
         }
     }
@@ -73,18 +83,28 @@ public class GtfsStaticIngestionService {
 
     /**
      * Submits a single static feed for async processing, bounded by a timeout.
+     * <p>
+     * The timeout releases the cycle but does not interrupt the download, so a timed out
+     * attempt is recorded here rather than left to the download's own — possibly never
+     * arriving — outcome.
      *
      * @param feedId The ID of the feed
      * @param url    The static feed URL
-     * @return a future that completes when the feed was processed or failed
+     * @return a future that completes when the feed was processed, failed or timed out
      */
     private CompletableFuture<Void> submitStaticFeed(String feedId, String url) {
         return ingestionAsyncService
                 .ingestAsync(feedId, url)
                 .orTimeout(gtfsConfig.staticFeedTimeoutSeconds(), TimeUnit.SECONDS)
                 .exceptionally(ex -> {
+                    metrics.recordOutcome(feedId, isTimeout(ex) ? Outcome.TIMEOUT : Outcome.FAILED);
                     log.error("Static feed {} ({}) failed", feedId, url, ex);
                     return null;
                 });
+    }
+
+    private static boolean isTimeout(Throwable ex) {
+        return ex instanceof TimeoutException
+                || ex instanceof CompletionException && ex.getCause() instanceof TimeoutException;
     }
 }

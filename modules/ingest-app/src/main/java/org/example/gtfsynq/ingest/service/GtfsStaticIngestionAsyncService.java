@@ -11,6 +11,8 @@ import org.example.gtfsynq.ingest.adapter.inbound.http.GtfsStaticFeedDownloader.
 import org.example.gtfsynq.ingest.adapter.inbound.http.StaticFeedDownloadException;
 import org.example.gtfsynq.ingest.adapter.outbound.kafka.GtfsStaticFeedKafkaProducer;
 import org.example.gtfsynq.ingest.adapter.outbound.storage.S3StaticFeedStorage;
+import org.example.gtfsynq.ingest.service.metrics.StaticFeedMetrics;
+import org.example.gtfsynq.ingest.service.metrics.StaticFeedMetrics.Outcome;
 import org.example.gtfsynq.shared.protocol.StaticFeedIngested;
 import org.example.gtfsynq.shared.util.SizeFormat;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -31,6 +33,7 @@ public class GtfsStaticIngestionAsyncService {
     private final GtfsStaticFeedDownloader staticFeedDownloader;
     private final S3StaticFeedStorage staticFeedStorage;
     private final GtfsStaticFeedKafkaProducer staticFeedKafkaProducer;
+    private final StaticFeedMetrics metrics;
 
     /**
      * Ingests one static feed source.
@@ -44,8 +47,11 @@ public class GtfsStaticIngestionAsyncService {
      */
     @Async
     public CompletableFuture<Void> ingestAsync(String feedId, String sourceUrl) {
+        var downloadStart = System.nanoTime();
+
         try {
             var feed = staticFeedDownloader.download(feedId, sourceUrl);
+            metrics.recordDownload(feedId, System.nanoTime() - downloadStart, feed.sizeBytes());
 
             try {
                 storeAndPublish(feedId, sourceUrl, feed);
@@ -53,8 +59,11 @@ public class GtfsStaticIngestionAsyncService {
                 staticFeedDownloader.discard(feed);
             }
         } catch (StaticFeedDownloadException e) {
+            metrics.recordDownloadFailure(feedId, System.nanoTime() - downloadStart);
+            metrics.recordOutcome(feedId, Outcome.FAILED);
             log.error("Static feed {} ({}) could not be downloaded", feedId, sourceUrl, e);
         } catch (Exception e) {
+            metrics.recordOutcome(feedId, Outcome.FAILED);
             log.error("Unexpected error ingesting static feed {} ({})", feedId, sourceUrl, e);
         }
 
@@ -66,6 +75,7 @@ public class GtfsStaticIngestionAsyncService {
 
         try {
             if (staticFeedStorage.exists(objectKey)) {
+                metrics.recordOutcome(feedId, Outcome.UNCHANGED);
                 log.info("Static feed {} is unchanged (sha256={}), skipping storage and event", feedId, feed.sha256());
                 return;
             }
@@ -83,6 +93,8 @@ public class GtfsStaticIngestionAsyncService {
                     .setEtag(Objects.requireNonNullElse(etag, ""))
                     .build());
 
+            metrics.recordOutcome(feedId, Outcome.SUCCESS);
+
             log.info(
                     "Stored static feed {} as s3://{}/{} of size {}",
                     feedId,
@@ -90,6 +102,7 @@ public class GtfsStaticIngestionAsyncService {
                     objectKey,
                     SizeFormat.humanBytes(feed.sizeBytes()));
         } catch (SdkException e) {
+            metrics.recordOutcome(feedId, Outcome.FAILED);
             log.error("Failed to store static feed {} from {}", feedId, sourceUrl, e);
         }
     }

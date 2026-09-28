@@ -4,7 +4,7 @@
   "tags": ["gtfsynq", "domain"],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 3,
+  "version": 5,
   "editable": true,
   "refresh": "30s",
   "graphTooltip": 1,
@@ -114,11 +114,151 @@
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 }
     },
     {
+      "id": 21,
+      "type": "row",
+      "title": "Static feed",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 13 }
+    },
+    {
+      "id": 22,
+      "type": "stat",
+      "title": "Static feed age since last success",
+      "description": "Seconds since the stalest configured feed was last ingested successfully. Static feeds poll on a days-scale cadence, so a growing value here is the stall signal no counter can give.",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        {
+          "expr": "max(gtfs_static_last_success_age_seconds{instance=~\"$instance\"})",
+          "legendFormat": "stalest feed",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 }
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "Age since last success by feed",
+      "description": "Seconds since each feed was last ingested successfully. Alert when a feed exceeds roughly two poll intervals.",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        {
+          "expr": "gtfs_static_last_success_age_seconds{instance=~\"$instance\"}",
+          "legendFormat": "{{feed}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 }
+    },
+    {
+      "id": 24,
+      "type": "timeseries",
+      "title": "Static ingestion attempts by outcome",
+      "description": "Attempts per second: success (new revision stored and published), unchanged (archive already stored) and failed.",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        {
+          "expr": "sum by (outcome) (rate(gtfs_static_ingest_total{instance=~\"$instance\"}[$__rate_interval]))",
+          "legendFormat": "{{outcome}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 22 }
+    },
+    {
+      "id": 25,
+      "type": "timeseries",
+      "title": "Static feed download duration (95th percentile)",
+      "description": "Time to stream a static archive off the remote server, 95th percentile. Useful for diagnosing the static-feed timeout.",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(gtfs_static_download_duration_seconds_bucket{instance=~\"$instance\"}[$__rate_interval])))",
+          "legendFormat": "p95",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 22 }
+    },
+    {
+      "id": 26,
+      "type": "stat",
+      "title": "Static ingestion cycles skipped",
+      "description": "Scheduled cycles skipped because the previous one was still running. Non-zero means ingestion is falling behind its own schedule.",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        {
+          "expr": "sum(increase(gtfs_static_cycle_skipped_total{instance=~\"$instance\"}[$__range]))",
+          "legendFormat": "skipped",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 30 }
+    },
+    {
+      "id": 27,
+      "type": "timeseries",
+      "title": "Static archive size (max)",
+      "description": "Largest archive downloaded per feed in the current window. A sudden drop can mean a truncated or partial download.",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        {
+          "expr": "max by (feed) (gtfs_static_archive_size_bytes_max{instance=~\"$instance\"})",
+          "legendFormat": "{{feed}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 30 }
+    },
+    {
+      "id": 28,
+      "type": "timeseries",
+      "title": "Static feed cycle duration (95th percentile)",
+      "description": "Wall clock time for one scheduled cycle, 95th percentile. Rising toward the 24h poll interval is the early warning that cycle.skipped will start incrementing.",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(gtfs_static_cycle_duration_seconds_bucket{instance=~\"$instance\"}[$__rate_interval])))",
+          "legendFormat": "p95",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 38 }
+    },
+    {
+      "id": 29,
+      "type": "timeseries",
+      "title": "Feeds configured vs reporting",
+      "description": "Sources with a usable static URL against feeds that have actually reported an attempt. A persistent gap means a source was dropped from configuration, or has never been reachable.",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        {
+          "expr": "gtfs_static_feeds_configured{instance=~\"$instance\"}",
+          "legendFormat": "configured",
+          "refId": "A"
+        },
+        {
+          "expr": "count(gtfs_static_last_success_age_seconds{instance=~\"$instance\"})",
+          "legendFormat": "reporting",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 38 }
+    },
+    {
       "id": 5,
       "type": "row",
       "title": "Sink / Store",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 13 }
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 46 }
     },
     {
       "id": 6,
@@ -134,7 +274,7 @@
         }
       ],
       "fieldConfig": { "defaults": { "unit": "ops" } },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 }
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 47 }
     },
     {
       "id": 7,
@@ -150,7 +290,7 @@
         }
       ],
       "fieldConfig": { "defaults": { "unit": "s" } },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 }
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 47 }
     },
     {
       "id": 8,
@@ -166,7 +306,7 @@
         }
       ],
       "fieldConfig": { "defaults": { "unit": "s" } },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 22 }
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 55 }
     },
     {
       "id": 9,
@@ -182,7 +322,7 @@
         }
       ],
       "fieldConfig": { "defaults": { "unit": "s" } },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 22 }
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 55 }
     },
     {
       "id": 10,
@@ -208,7 +348,7 @@
         }
       ],
       "fieldConfig": { "defaults": { "unit": "s" } },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 30 }
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 63 }
     },
     {
       "id": 11,
@@ -224,7 +364,7 @@
         }
       ],
       "fieldConfig": { "defaults": { "unit": "ops" } },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 30 }
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 63 }
     },
     {
       "id": 12,
@@ -250,7 +390,7 @@
           "custom": { "spanNulls": true }
         }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 38 }
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 71 }
     },
     {
       "id": 13,
@@ -266,7 +406,7 @@
         }
       ],
       "fieldConfig": { "defaults": { "unit": "ops" } },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 38 }
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 71 }
     },
     {
       "id": 14,
@@ -282,7 +422,7 @@
         }
       ],
       "fieldConfig": { "defaults": { "unit": "ops" } },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 46 }
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 79 }
     },
     {
       "id": 15,
@@ -304,14 +444,14 @@
         "textMode": "value_and_name",
         "reduceOptions": { "calcs": ["lastNotNull"] }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 46 }
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 79 }
     },
     {
       "id": 16,
       "type": "row",
       "title": "Off-heap store",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 54 }
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 87 }
     },
     {
       "id": 17,
@@ -332,7 +472,7 @@
         }
       ],
       "fieldConfig": { "defaults": { "unit": "short" } },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 55 }
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 88 }
     },
     {
       "id": 18,
@@ -348,7 +488,7 @@
         }
       ],
       "fieldConfig": { "defaults": { "unit": "short" } },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 55 }
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 88 }
     },
     {
       "id": 19,
@@ -381,7 +521,7 @@
           }
         }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 63 }
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 96 }
     },
     {
       "id": 20,
@@ -415,7 +555,7 @@
         "textMode": "value_and_name",
         "reduceOptions": { "calcs": ["lastNotNull"] }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 63 }
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 96 }
     }
   ]
 }

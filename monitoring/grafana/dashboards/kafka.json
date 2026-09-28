@@ -4,7 +4,7 @@
   "tags": ["gtfsynq", "kafka"],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "panels": [
     {
       "id": 1,
@@ -56,6 +56,21 @@
         }
       ],
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Static feed topic current offset",
+      "description": "Offsets on the static feed topic. Flat means nothing new has been published; it only rises when a feed actually changed.",
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        {
+          "expr": "kafka_topic_partition_current_offset{topic=\"gtfs-static-feeds\"}",
+          "legendFormat": "partition {{partition}}",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 }
     }
   ]
 }
