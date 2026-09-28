@@ -4,6 +4,7 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.lang.foreign.MemorySegment;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.StampedLock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,13 +44,11 @@ public class OffHeapHashStore implements AutoCloseable {
     public volatile int currentMinute = (int) (System.currentTimeMillis() / 60000);
 
     /**
-     * Number of occupied (non-empty) slots, including expired ones. Guarded by
-     * the write lock: all mutations run under {@link StampedLock#writeLock()},
-     * so the read-modify-write on this volatile field is mutually exclusive.
-     * Volatile is retained for visibility of lock-free readers (e.g. metrics).
+     * Number of occupied (non-empty) slots, including expired ones. Every
+     * mutation runs under {@link StampedLock#writeLock()}; the counter is
+     * atomic so lock-free readers (e.g. metrics) can sample it safely.
      */
-    @SuppressWarnings("NonAtomicOperationOnVolatileField") // mutations are serialized by the write lock
-    private volatile long size;
+    private final AtomicLong size = new AtomicLong();
 
     /**
      * Number of inserts that had to overwrite an expired slot. Signals that
@@ -95,8 +94,8 @@ public class OffHeapHashStore implements AutoCloseable {
 
     @EventListener(ContextRefreshedEvent.class)
     public void init() {
-        size = binTable.countOccupied();
-        log.info("OffHeapHashStore initialized with {} occupied slots (capacity {})", size, binTable.capacity());
+        size.set(binTable.countOccupied());
+        log.info("OffHeapHashStore initialized with {} occupied slots (capacity {})", size.get(), binTable.capacity());
     }
 
     public long get(long key) {
@@ -215,7 +214,7 @@ public class OffHeapHashStore implements AutoCloseable {
                     staleOverwrites++;
                 } else {
                     writeSlot(source, index, key, value, expiry, customSlot1, customSlot2);
-                    size++;
+                    size.incrementAndGet();
                     maybeGrow();
                 }
                 return;
@@ -256,7 +255,7 @@ public class OffHeapHashStore implements AutoCloseable {
     private void maybeGrow() {
         var capacity = binTable.capacity();
 
-        if (size * 100 < capacity * RESIZE_TRIGGER_PERCENT) {
+        if (size.get() * 100 < capacity * RESIZE_TRIGGER_PERCENT) {
             resizeSaturated = false;
             return;
         }
@@ -266,9 +265,10 @@ public class OffHeapHashStore implements AutoCloseable {
             return;
         }
 
-        size = binTable.autoResize(currentMinute);
+        var newSize = binTable.autoResize(currentMinute);
+        size.set(newSize);
         staleOverwrites = 0;
-        resizeSaturated = size * 100 >= binTable.capacity() * RESIZE_TRIGGER_PERCENT;
+        resizeSaturated = newSize * 100 >= binTable.capacity() * RESIZE_TRIGGER_PERCENT;
     }
 
     /**
@@ -291,16 +291,17 @@ public class OffHeapHashStore implements AutoCloseable {
             // Occupied slots bound the live count from above, so occupancy
             // below the shrink watermark guarantees a shrink will apply —
             // no expired-slot overwrite pressure is needed to detect it.
-            var shrinkable = size * 100 <= capacity * OffHeapLongTable.SHRINK_LOW_WATERMARK_PERCENT;
+            var shrinkable = size.get() * 100 <= capacity * OffHeapLongTable.SHRINK_LOW_WATERMARK_PERCENT;
 
             if (!shrinkable && staleOverwrites < (capacity >>> STALE_OVERWRITE_SHIFT)) {
                 return;
             }
 
-            size = binTable.autoResize(currentMinute);
+            var newSize = binTable.autoResize(currentMinute);
+            size.set(newSize);
             staleOverwrites = 0;
             resizeSaturated = binTable.capacity() >= OffHeapLongTable.MAX_CAPACITY
-                    && size * 100 >= binTable.capacity() * RESIZE_TRIGGER_PERCENT;
+                    && newSize * 100 >= binTable.capacity() * RESIZE_TRIGGER_PERCENT;
         } finally {
             lock.unlockWrite(stamp);
         }
@@ -311,7 +312,7 @@ public class OffHeapHashStore implements AutoCloseable {
     }
 
     public long size() {
-        return size;
+        return size.get();
     }
 
     @Override
@@ -331,7 +332,7 @@ public class OffHeapHashStore implements AutoCloseable {
 
     @Scheduled(fixedRate = 60000)
     public void printLoadPercentage() {
-        var occupied = size;
+        var occupied = size.get();
         var capacity = binTable.capacity();
         var loadPercentage = ((double) occupied / capacity) * 100;
         log.info("[OffHeapHashStore] Load: {}% ({}/{})", "%.2f".formatted(loadPercentage), occupied, capacity);
