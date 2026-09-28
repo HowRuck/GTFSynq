@@ -34,7 +34,7 @@ permissions:
 
 jobs:
   qodana:
-    runs-on: ubuntu-26.04
+    runs-on: avrea-ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v7
