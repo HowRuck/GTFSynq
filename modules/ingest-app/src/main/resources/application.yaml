@@ -25,7 +25,7 @@ gtfs:
             realtime-config:
                 urls:
                     - https://realtime.gtfs.de/realtime-free.pb
-                poll-interval-seconds: 30
+                poll-interval-seconds: 60
 
         entur:
             static-config:
@@ -33,7 +33,7 @@ gtfs:
             realtime-config:
                 urls:
                     - https://api.entur.io/realtime/v1/gtfs-rt/trip-updates
-                poll-interval-seconds: 30
+                poll-interval-seconds: 60
 
         helsinki-hsl:
             static-config:
@@ -41,7 +41,7 @@ gtfs:
             realtime-config:
                 urls:
                     - https://realtime.hsl.fi/realtime/trip-updates/v2/hsl
-                poll-interval-seconds: 30
+                poll-interval-seconds: 60
 
         ovapi:
             static-config:
@@ -49,7 +49,7 @@ gtfs:
             realtime-config:
                 urls:
                     - https://gtfs.ovapi.nl/nl/tripUpdates.pb
-                poll-interval-seconds: 30
+                poll-interval-seconds: 60
 
         sncf:
             static-config:
@@ -58,7 +58,7 @@ gtfs:
                 urls:
                     - https://proxy.transport.data.gouv.fr/resource/sncf-gtfs-rt-trip-updates
                     - https://proxy.transport.data.gouv.fr/resource/sncf-gtfs-rt-service-alerts
-                poll-interval-seconds: 30
+                poll-interval-seconds: 60
 
 # GTFSynq-specific configuration
 gtfsynq:
