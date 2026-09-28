@@ -8,12 +8,12 @@ public class GtfsPropertiesRuntimeHints implements RuntimeHintsRegistrar {
     @Override
     public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
         // Hibernate Validator reads @ConfigurationProperties record fields
-        // reflectively (Field.get) during cascading validation, so
-        // DECLARED_FIELDS is required in the native image despite the
-        // deprecation warning. Without it the ingest app fails at startup
-        // with MissingReflectionRegistrationError on FeedSource.staticConfig.
+        // reflectively (Field.get) during cascading validation, so field access
+        // must be granted in the native image. Without it the ingest app fails
+        // at startup with MissingReflectionRegistrationError on
+        // FeedSource.staticConfig.
         MemberCategory[] memberCategories = {
-            MemberCategory.DECLARED_FIELDS,
+            MemberCategory.ACCESS_DECLARED_FIELDS,
             MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
             MemberCategory.INVOKE_DECLARED_METHODS
         };
