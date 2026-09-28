@@ -106,7 +106,7 @@ public final class OffHeapLongTable implements AutoCloseable {
      */
     private volatile boolean closed;
 
-    private boolean initializationComplete;
+    private final boolean initializationComplete;
 
     private final Deque<RetiredArena> retiredArenas = new ArrayDeque<>();
     private final Object lifecycleLock = new Object();
