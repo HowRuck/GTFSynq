@@ -147,10 +147,42 @@ services:
       retries: 5
       start_period: 10s
 
+  # One-shot: installs the VictoriaMetrics datasource plugins into grafana-data,
+  # then exits. `grafana` waits for it to complete (see service_completed_successfully).
+  #
+  # This deliberately does NOT use GF_INSTALL_PLUGINS on the grafana service.
+  # That option is handled by Grafana's *background* installer, which downloads
+  # asynchronously after the provisioning module has already started. On a
+  # fresh grafana-data volume, provisioning therefore cannot resolve the
+  # victoriametrics-metrics-datasource type and the whole module graph aborts
+  # with "Datasource provisioning error: data source not found" — before the
+  # download can finish. Re-running does not help; the container exits first.
+  # Installing up front removes the race and keeps the install reproducible.
+  grafana-plugins:
+    image: docker.io/grafana/grafana:13.2.2
+    container_name: grafana-plugins
+    restart: "no"
+    # One plugin per invocation: `grafana cli plugins install` joins multiple
+    # positional args into a single space-separated plugin id, which the
+    # catalog then rejects with [plugin.versionNotFound].
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        grafana cli plugins install victoriametrics-logs-datasource
+        grafana cli plugins install victoriametrics-metrics-datasource
+    environment:
+      # Install into the volume that the grafana service reads, not the
+      # image's default plugin dir.
+      GF_PATHS_PLUGINS: /var/lib/grafana/plugins
+    volumes:
+      - grafana-data:/var/lib/grafana
+
   grafana:
     image: docker.io/grafana/grafana:13.2.2
     container_name: grafana
     depends_on:
+      grafana-plugins:
+        condition: service_completed_successfully
       victoriametrics:
         condition: service_started
       victorialogs:
@@ -161,7 +193,6 @@ services:
       GF_SECURITY_ADMIN_USER: ${GF_SECURITY_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD:?GF_SECURITY_ADMIN_PASSWORD must be set (see .env.template)}
       GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_INSTALL_PLUGINS: victoriametrics-logs-datasource,victoriametrics-metrics-datasource
     ports:
       - "3000:3000"
     volumes:
