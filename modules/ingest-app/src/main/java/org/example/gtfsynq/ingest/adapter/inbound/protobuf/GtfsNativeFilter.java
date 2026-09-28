@@ -99,12 +99,7 @@ public class GtfsNativeFilter {
 
         var existingHash = stateStore.get(hashedId);
 
-        if (existingHash == OffHeapLongTable.EMPTY_VALUE) {
-            stateStore.put(hashedId, hashedBytes);
-            return new BinaryFeedEntityWithMetadata(entityBytes, scanResult.type(), feedTs.getEpochSecond());
-        }
-
-        if (hashedBytes == existingHash) {
+        if (existingHash != OffHeapLongTable.EMPTY_VALUE && hashedBytes == existingHash) {
             return null;
         }
 
