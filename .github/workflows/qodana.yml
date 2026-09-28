@@ -30,6 +30,7 @@ concurrency:
 permissions:
   pull-requests: read
   contents: read
+  security-events: write
 
 jobs:
   qodana:
@@ -53,6 +54,8 @@ jobs:
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
       - name: Upload SARIF
+        # Fork PRs get a read-only GITHUB_TOKEN, so the upload would always fail there
+        if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork }}
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: ${{ runner.temp }}/qodana/results/qodana.sarif.json
