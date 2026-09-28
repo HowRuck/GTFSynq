@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   build-push:
-    runs-on: ubuntu-26.04
+    runs-on: avrea-ubuntu-latest
     strategy:
       matrix:
         app: [api-app, ingest-app, store-app]
