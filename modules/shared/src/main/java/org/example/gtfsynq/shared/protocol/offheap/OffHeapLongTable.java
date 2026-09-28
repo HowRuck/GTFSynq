@@ -101,8 +101,7 @@ public final class OffHeapLongTable implements AutoCloseable {
     private volatile TableView view;
 
     /**
-     * Guards {@link #view} publication, {@link #closed}, and
-     * {@link #retiredArenas}. Reads of {@link #view} remain lock-free.
+     * Guarded by {@link #lifecycleLock}
      */
     private volatile boolean closed;
 
