@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package gtfsynq.static;
+
+option java_package = "org.example.gtfsynq.shared.protocol";
+option java_multiple_files = true;
+option java_outer_classname = "StaticFeedProtocol";
+
+// Event published by the ingest app once a GTFS static feed archive has been
+// stored in S3-compatible object storage.
+//
+// The archive itself never travels over Kafka: consumers (store app) receive
+// the storage location plus the integrity metadata and are expected to fetch
+// and validate the referenced object themselves.
+message StaticFeedIngested {
+  // Feed source identifier, e.g. "gtfs-de". Matches GtfsProperties.sources key.
+  string feed_id = 1;
+
+  // Object storage bucket holding the archive.
+  string bucket = 2;
+
+  // Object storage key of the archive.
+  string object_key = 3;
+
+  // Upstream URL the archive was downloaded from.
+  string source_url = 4;
+
+  // Size of the stored archive in bytes.
+  uint64 size_bytes = 5;
+
+  // Hex encoded SHA-256 digest of the stored archive.
+  string sha256 = 6;
+
+  // Time the archive finished uploading, in seconds since the epoch.
+  int64 ingested_at_epoch_seconds = 7;
+
+  // Object storage entity tag of the stored archive.
+  string etag = 8;
+}

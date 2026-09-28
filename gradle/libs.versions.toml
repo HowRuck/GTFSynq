@@ -2,7 +2,7 @@
 protobufPlugin = "0.10.0"
 sonarqube = "7.5.0.8588"
 spotless = "8.10.2"
-palantir-java-format = "2.97.0"
+palantir-java-format = "2.100.0"
 
 # Frameworks & core dependencies
 spring-boot = "4.2.0-M2"
@@ -15,6 +15,7 @@ datafusion-java = "0.1.0"
 # Misc libraries
 javatuples = "2.0.1"
 zero-allocation-hashing = "2026.0"
+aws-sdk = "2.55.3"
 jspecify = "1.0.1"
 micrometer-jvm-extras = "0.3.0"
 
@@ -51,6 +52,10 @@ micrometer-jvm-extras = { module = "io.github.mweirauch:micrometer-jvm-extras", 
 # HTTP client
 httpclient5 = { module = "org.apache.httpcomponents.client5:httpclient5" }
 
+# Object storage (S3 compatible)
+aws-sdk-s3 = { module = "software.amazon.awssdk:s3", version.ref = "aws-sdk" }
+aws-sdk-url-connection-client = { module = "software.amazon.awssdk:url-connection-client", version.ref = "aws-sdk" }
+
 # Data formats & serialization
 protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
 grpc-all = { module = "io.grpc:grpc-all", version.ref = "grpc" }
@@ -67,6 +72,7 @@ spring-context = { module = "org.springframework:spring-context" }
 lombok = ["lombok"]
 web = ["spring-boot-starter-web", "spring-boot-starter-actuator"]
 kafka = ["spring-boot-starter-kafka", "kafka-streams"]
+s3 = ["aws-sdk-s3", "aws-sdk-url-connection-client"]
 integration-test = ["spring-boot-starter-test", "spring-kafka-test"]
 
 [plugins]

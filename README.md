@@ -20,7 +20,8 @@ It is built with **Gradle**, runs on **Java 26**, and is designed to work with *
 ## Features
 
 - **Real-time processing**: Ingest and process GTFS-RT feeds with low latency
-- **Static feed support**: Model GTFS CSV data alongside realtime transit updates
+- **Static feed ingestion**: Download GTFS static (CSV) archives, store them in S3-compatible object storage, and publish an ingestion event for validation
+- **Event-driven handoff**: Kafka carries GTFS-RT payloads and static feed storage references
 - **Time-series storage**: Store transit data efficiently in TimescaleDB
 - **Kafka integration**: Stream transit payloads through Apache Kafka
 - **Protobuf support**: Encode and decode GTFS-RT messages efficiently
@@ -92,6 +93,7 @@ The repository includes a Docker Compose setup that starts:
 - `store-app` (port 8082)
 - Kafka
 - TimescaleDB
+- S3-compatible object storage for GTFS static feeds (port 9000)
 
 App images are built with Spring Boot's `bootBuildImage` (Paketo buildpacks, no Dockerfile),
 then Compose starts everything from those prebuilt images. First create a `.env`
@@ -99,8 +101,9 @@ with strong secrets (Compose refuses to start without them):
 
 ```bash
 cp .env.template .env
-# edit .env and set POSTGRES_PASSWORD and GF_SECURITY_ADMIN_PASSWORD
-openssl rand -base64 32   # use this to generate each password
+# edit .env and set POSTGRES_PASSWORD, S3_SECRET_KEY and GF_SECURITY_ADMIN_PASSWORD
+# generate each one with: openssl rand -base64 32
+openssl rand -base64 32
 
 ./gradlew :api-app:bootBuildImage :ingest-app:bootBuildImage :store-app:bootBuildImage
 docker compose up -d
@@ -144,7 +147,7 @@ A typical local development setup looks like this:
 3. Make changes in `src/main/java`.
 4. Re-run `./gradlew test` and `./gradlew bootJar` as needed.
 
-If you want to run only the infrastructure containers and keep the app on your host machine, start Kafka and TimescaleDB separately using the same Compose file, then run the app locally with `./gradlew`.
+If you want to run only the infrastructure containers and keep the app on your host machine, start Kafka, TimescaleDB and the S3 service separately using the same Compose file (`docker compose -f docker-compose.dev.yaml up -d`), export the `GTFSYNQ_STORAGE_S3_*` values from `.env.template`, then run the app locally with `./gradlew`.
 
 ## Project Structure
 
@@ -185,11 +188,12 @@ Contains code reused by multiple apps:
 - GTFS formatting helpers
 
 ### `modules/ingest-app`
-Responsible for getting data into Kafka:
+Responsible for getting data into Kafka and object storage:
 
 - scheduled GTFS-RT polling
 - native GTFS-RT parsing
 - Kafka publishing
+- scheduled GTFS static download, content-addressed S3 storage and ingestion events
 - feed/source configuration
 
 ### `modules/store-app`
@@ -211,18 +215,50 @@ Reserved for the REST API layer:
 ## Runtime Flow
 
 ```text
-GTFS-RT / GTFS CSV sources
-        ↓
-   ingest-app
-        ↓
-      Kafka
-        ↓
-    store-app
-        ↓
- PostgreSQL / TimescaleDB
-        ↓
-      api-app
+GTFS-RT sources                        GTFS static (CSV) sources
+        ↓                                        ↓
+ ingest-app  ──────────────────┐          ingest-app
+        │                      │                │
+        │             gtfs-trip-updates         │  archive
+        ↓                      │                ↓
+      Kafka  ────────────────► store-app      S3 storage
+                               │                │
+                               │   gtfs-static-feeds (object location + digest)
+                               └────────────────┘
+                                ↓
+                        PostgreSQL / TimescaleDB
+                                ↓
+                              api-app
 ```
+
+## Static Feed Ingestion
+
+Every source that has a `gtfs.sources.<id>.static-config.url` is polled on the static
+schedule (`gtfsynq.static-polling.interval-ms`, daily by default), independently of the
+GTFS-RT polling cadence:
+
+1. The archive is streamed to a temporary file while its SHA-256 digest is computed.
+2. The archive is uploaded to S3-compatible object storage under a content-addressed key,
+   `static/<feed-id>/<sha256>.zip`, so a revision is stored exactly once and every revision
+   is kept.
+3. A `StaticFeedIngested` protobuf event (feed id, bucket, key, source URL, size, digest,
+   ingestion time, ETag) is published to the `gtfs-static-feeds` topic, keyed by feed id.
+
+When the digest of a polled archive already exists in the bucket, the upload and the event
+are both skipped: downstream consumers are only woken up by an actual revision change.
+The archive itself never travels over Kafka - consumers fetch and validate the referenced
+object themselves.
+
+Storage is configured under `gtfsynq.storage.s3`:
+
+| Property | Default | Purpose |
+|---|---|---|
+| `enabled` | `true` | Master switch for static ingestion; when false no S3 client is created and static feeds are not polled |
+| `endpoint` | `http://localhost:9000` | Endpoint of the S3-compatible service; leave empty for AWS S3 |
+| `region` | `us-east-1` | Region requests are signed for |
+| `bucket` | `gtfsynq-static` | Bucket holding the archives; created on first upload when missing |
+| `access-key` / `secret-key` | empty | Static credentials; when empty the AWS default credentials chain is used |
+| `path-style-access` | `true` | Address buckets as `endpoint/bucket`, as local S3 services require |
 
 ## Configuration
 
@@ -234,6 +270,7 @@ Important defaults:
 - Kafka bootstrap server: `localhost:9092`
 - PostgreSQL / TimescaleDB: `localhost:5432`
 - Database name: `gtfsynq`
+- S3-compatible object storage: `http://localhost:9000`, bucket `gtfsynq-static`
 
 When running through Docker Compose, these values are overridden with container hostnames.
 

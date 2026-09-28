@@ -6,6 +6,7 @@ spring:
         name: GTFSynq-Ingest
     kafka:
         topic: gtfs-trip-updates
+        static-feed-topic: gtfs-static-feeds
         bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
         streams:
             properties:
@@ -16,6 +17,7 @@ server:
 
 gtfs:
     feed-timeout-seconds: 55
+    static-feed-timeout-seconds: 600
     sources:
         gtfs-de:
             static-config:
@@ -60,10 +62,29 @@ gtfs:
 
 # GTFSynq-specific configuration
 gtfsynq:
-    # Polling configuration
+    # Realtime polling configuration
     polling:
         interval-ms: 60000
         enabled: true
+
+    # Static feed polling configuration. Static feeds change on the order of days,
+    # so they are polled far less often than realtime feeds.
+    static-polling:
+        enabled: true
+        interval-ms: 86400000
+
+    # Object storage for downloaded static feed archives
+    storage:
+        s3:
+            enabled: true
+            # Local default; point this at the compose `s3` service or any S3 compatible endpoint.
+            endpoint: ${GTFSYNQ_STORAGE_S3_ENDPOINT:http://localhost:9000}
+            region: ${GTFSYNQ_STORAGE_S3_REGION:us-east-1}
+            bucket: ${GTFSYNQ_STORAGE_S3_BUCKET:gtfsynq-static}
+            # Blank credentials fall back to the AWS default credentials provider chain.
+            access-key: ${GTFSYNQ_STORAGE_S3_ACCESS_KEY:}
+            secret-key: ${GTFSYNQ_STORAGE_S3_SECRET_KEY:}
+            path-style-access: true
 
     # Source configuration
     source:

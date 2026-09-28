@@ -27,7 +27,6 @@ subprojects {
             palantirJavaFormat(libs.versions.palantir.java.format.get())
             removeUnusedImports()
             importOrder()
-            formatAnnotations()
         }
     }
 
@@ -44,6 +43,7 @@ subprojects {
         sourceCompatibility = JavaVersion.VERSION_25
         toolchain {
             languageVersion = JavaLanguageVersion.of(25)
+            vendor = JvmVendorSpec.ADOPTIUM
         }
     }
 

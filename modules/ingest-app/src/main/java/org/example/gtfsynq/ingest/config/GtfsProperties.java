@@ -39,6 +39,10 @@ import org.springframework.validation.annotation.Validated;
  *        If a single feed poll does not complete within this window, its future is
  *        failed with a TimeoutException and the rest of the batch continues.
  *        Defaults to 25 seconds.
+ * @param staticFeedTimeoutSeconds timeout in seconds applied to the ingestion of a single
+ *        static feed, covering download, storage and event publication. Static archives
+ *        are much larger than realtime payloads and are transferred to object storage, so
+ *        this window is generous by default. Defaults to 600 seconds.
  */
 @Validated
 @ConfigurationProperties("gtfs")
@@ -46,7 +50,9 @@ import org.springframework.validation.annotation.Validated;
 public record GtfsProperties(
         Map<String, @Valid FeedSource> sources,
 
-        @DefaultValue("25") int feedTimeoutSeconds) {
+        @DefaultValue("25") int feedTimeoutSeconds,
+
+        @DefaultValue("600") int staticFeedTimeoutSeconds) {
 
     /**
      * Feed source configuration for a GTFS feed.

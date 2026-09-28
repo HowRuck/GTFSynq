@@ -105,6 +105,7 @@ public final class OffHeapLongTable implements AutoCloseable {
      * {@link #retiredArenas}. Reads of {@link #view} remain lock-free.
      */
     private volatile boolean closed;
+
     private boolean initializationComplete;
 
     private final Deque<RetiredArena> retiredArenas = new ArrayDeque<>();
@@ -378,8 +379,7 @@ public final class OffHeapLongTable implements AutoCloseable {
             if (closed) throw new IllegalStateException("OffHeap table is closed");
 
             var oldView = this.view;
-            var retired = new RetiredArena(
-                    oldView.arena(), oldView.segment().byteSize(), System.nanoTime());
+            var retired = new RetiredArena(oldView.arena(), oldView.segment().byteSize(), System.nanoTime());
             retiredArenas.addLast(retired);
             this.view = newView;
         }

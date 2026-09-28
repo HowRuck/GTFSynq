@@ -21,6 +21,7 @@ public class GtfsPropertiesRuntimeHints implements RuntimeHintsRegistrar {
         hints.reflection().registerType(GtfsProperties.FeedSource.class, memberCategories);
         hints.reflection().registerType(GtfsProperties.StaticConfig.class, memberCategories);
         hints.reflection().registerType(GtfsProperties.RealtimeConfig.class, memberCategories);
+        hints.reflection().registerType(S3StorageProperties.class, memberCategories);
         hints.reflection()
                 .registerType(org.example.gtfsynq.ingest.config.enums.GtfsStaticFeedFile.class, memberCategories);
     }
