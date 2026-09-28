@@ -10,7 +10,7 @@
       "id": 1,
       "type": "stat",
       "title": "Exporter up",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [{ "expr": "pg_up" }],
       "gridPos": { "h": 4, "w": 24, "x": 0, "y": 0 }
     },
@@ -18,7 +18,7 @@
       "id": 2,
       "type": "timeseries",
       "title": "Backends by database",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "pg_stat_database_numbackends",
@@ -31,7 +31,7 @@
       "id": 3,
       "type": "timeseries",
       "title": "Tuples fetched / returned",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "rate(pg_stat_database_tup_fetched[$__rate_interval])",
@@ -48,7 +48,7 @@
       "id": 4,
       "type": "timeseries",
       "title": "Commits / rollbacks",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "rate(pg_stat_database_xact_commit[$__rate_interval])",

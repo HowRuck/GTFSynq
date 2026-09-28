@@ -14,7 +14,7 @@
         "name": "instance",
         "label": "Instance",
         "type": "query",
-        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
         "query": {
           "query": "label_values(up{job=\"gtfsynq-apps\"}, instance)",
           "refId": "VictoriaMetrics"
@@ -32,7 +32,7 @@
       "id": 1,
       "type": "stat",
       "title": "Application availability",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "up{job=\"gtfsynq-apps\", instance=~\"$instance\"}",
@@ -80,7 +80,7 @@
       "type": "timeseries",
       "title": "Invalid feed entities skipped",
       "description": "Invalid feed entities skipped per second because they have no ID or entity type.",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "sum by (instance) (rate(gtfs_ingest_skipped_invalid_total{instance=~\"$instance\"}[$__rate_interval]))",
@@ -96,7 +96,7 @@
       "type": "stat",
       "title": "Invalid entities skipped",
       "description": "Total invalid feed entities skipped during the selected time range.",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "sum by (instance) (increase(gtfs_ingest_skipped_invalid_total{instance=~\"$instance\"}[$__range]))",
@@ -125,7 +125,7 @@
       "type": "stat",
       "title": "Static feed age since last success",
       "description": "Seconds since the stalest configured feed was last ingested successfully. Static feeds poll on a days-scale cadence, so a growing value here is the stall signal no counter can give.",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "max(gtfs_static_last_success_age_seconds{instance=~\"$instance\"})",
@@ -141,7 +141,7 @@
       "type": "timeseries",
       "title": "Age since last success by feed",
       "description": "Seconds since each feed was last ingested successfully. Alert when a feed exceeds roughly two poll intervals.",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "gtfs_static_last_success_age_seconds{instance=~\"$instance\"}",
@@ -157,7 +157,7 @@
       "type": "timeseries",
       "title": "Static ingestion attempts by outcome",
       "description": "Attempts per second: success (new revision stored and published), unchanged (archive already stored) and failed.",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "sum by (outcome) (rate(gtfs_static_ingest_total{instance=~\"$instance\"}[$__rate_interval]))",
@@ -173,7 +173,7 @@
       "type": "timeseries",
       "title": "Static feed download duration (95th percentile)",
       "description": "Time to stream a static archive off the remote server, 95th percentile. Useful for diagnosing the static-feed timeout.",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "histogram_quantile(0.95, sum by (le) (rate(gtfs_static_download_duration_seconds_bucket{instance=~\"$instance\"}[$__rate_interval])))",
@@ -189,7 +189,7 @@
       "type": "stat",
       "title": "Static ingestion cycles skipped",
       "description": "Scheduled cycles skipped because the previous one was still running. Non-zero means ingestion is falling behind its own schedule.",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "sum(increase(gtfs_static_cycle_skipped_total{instance=~\"$instance\"}[$__range]))",
@@ -205,7 +205,7 @@
       "type": "timeseries",
       "title": "Static archive size (max)",
       "description": "Largest archive downloaded per feed in the current window. A sudden drop can mean a truncated or partial download.",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "max by (feed) (gtfs_static_archive_size_bytes_max{instance=~\"$instance\"})",
@@ -221,7 +221,7 @@
       "type": "timeseries",
       "title": "Static feed cycle duration (95th percentile)",
       "description": "Wall clock time for one scheduled cycle, 95th percentile. Rising toward the 24h poll interval is the early warning that cycle.skipped will start incrementing.",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "histogram_quantile(0.95, sum by (le) (rate(gtfs_static_cycle_duration_seconds_bucket{instance=~\"$instance\"}[$__rate_interval])))",
@@ -237,7 +237,7 @@
       "type": "timeseries",
       "title": "Feeds configured vs reporting",
       "description": "Sources with a usable static URL against feeds that have actually reported an attempt. A persistent gap means a source was dropped from configuration, or has never been reachable.",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "gtfs_static_feeds_configured{instance=~\"$instance\"}",
@@ -265,7 +265,7 @@
       "type": "timeseries",
       "title": "Database write rate",
       "description": "Database writes completed per second, broken down by operation.",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "sum by (op) (rate(gtfs_sink_db_write_seconds_count{instance=~\"$instance\"}[$__rate_interval]))",
@@ -281,7 +281,7 @@
       "type": "timeseries",
       "title": "Database write latency (95th percentile)",
       "description": "95% of database writes finish within this time; the remaining 5% take longer.",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "histogram_quantile(0.95, sum by (op, le) (rate(gtfs_sink_db_write_seconds_bucket{instance=~\"$instance\"}[$__rate_interval])))",
@@ -297,7 +297,7 @@
       "type": "timeseries",
       "title": "Database write latency (99th percentile)",
       "description": "99% of database writes finish within this time; the slowest 1% take longer.",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "histogram_quantile(0.99, sum by (op, le) (rate(gtfs_sink_db_write_seconds_bucket{instance=~\"$instance\"}[$__rate_interval])))",
@@ -313,7 +313,7 @@
       "type": "timeseries",
       "title": "Database write latency (recent maximum)",
       "description": "Longest database write observed in the recent rolling window, approximately two minutes. This is not the maximum since startup.",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "max by (op) (gtfs_sink_db_write_seconds_max{instance=~\"$instance\"})",
@@ -329,7 +329,7 @@
       "type": "timeseries",
       "title": "Flush duration percentiles",
       "description": "Typical, slower, and slowest recent flush durations. p50 is the median, p95 covers 95% of flushes, and p99 covers 99%.",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "histogram_quantile(0.50, sum by (le) (rate(gtfs_sink_flush_duration_seconds_bucket{instance=~\"$instance\"}[$__rate_interval])))",
@@ -355,7 +355,7 @@
       "type": "timeseries",
       "title": "Flushes per second",
       "description": "Number of buffer flushes completed per second.",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "sum by (instance) (rate(gtfs_sink_flush_duration_seconds_count{instance=~\"$instance\"}[$__rate_interval]))",
@@ -371,7 +371,7 @@
       "type": "timeseries",
       "title": "Entities per flush",
       "description": "Average and recent maximum number of descriptors or stop-time updates processed in each flush. Values can be absent when no flushes occur; the maximum covers a rolling window of approximately two minutes.",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "sum by (type) (rate(gtfs_sink_entities_count_sum{instance=~\"$instance\"}[$__rate_interval])) / sum by (type) (rate(gtfs_sink_entities_count_count{instance=~\"$instance\"}[$__rate_interval]))",
@@ -397,7 +397,7 @@
       "type": "timeseries",
       "title": "Entities processed per second",
       "description": "Descriptors and stop-time updates processed per second.",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "sum by (type) (rate(gtfs_sink_entities_count_sum{instance=~\"$instance\"}[$__rate_interval]))",
@@ -413,7 +413,7 @@
       "type": "timeseries",
       "title": "Duplicate updates dropped per second",
       "description": "Duplicate trip updates discarded per second before they are buffered.",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "sum by (reason, instance) (rate(gtfs_sink_dropped_total{instance=~\"$instance\"}[$__rate_interval]))",
@@ -429,7 +429,7 @@
       "type": "stat",
       "title": "Duplicate updates dropped",
       "description": "Total duplicate trip updates discarded during the selected time range.",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "sum by (reason, instance) (increase(gtfs_sink_dropped_total{instance=~\"$instance\"}[$__range]))",
@@ -458,7 +458,7 @@
       "type": "timeseries",
       "title": "Off-heap store usage",
       "description": "Occupied and total off-heap store slots for each application instance.",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "offheap_store_size{instance=~\"$instance\"}",
@@ -479,7 +479,7 @@
       "type": "timeseries",
       "title": "Free off-heap slots",
       "description": "Unused off-heap store slots. A value near zero means the store is close to its current capacity and may need to grow.",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "offheap_store_capacity{instance=~\"$instance\"} - offheap_store_size{instance=~\"$instance\"}",
@@ -495,7 +495,7 @@
       "type": "timeseries",
       "title": "Off-heap store usage",
       "description": "Percentage of off-heap store capacity currently occupied. Automatic resizing starts at 70% usage.",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "offheap_store_load_ratio{instance=~\"$instance\"}",
@@ -528,7 +528,7 @@
       "type": "stat",
       "title": "Current off-heap store usage",
       "description": "Current percentage of off-heap store capacity occupied by each application instance.",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "offheap_store_load_ratio{instance=~\"$instance\"}",

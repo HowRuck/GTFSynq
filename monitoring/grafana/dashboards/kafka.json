@@ -10,7 +10,7 @@
       "id": 1,
       "type": "timeseries",
       "title": "Topic current offset",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "kafka_topic_partition_current_offset{topic=\"gtfs-trip-updates\"}",
@@ -23,7 +23,7 @@
       "id": 2,
       "type": "timeseries",
       "title": "Consumer group lag",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "kafka_consumergroup_lag",
@@ -36,7 +36,7 @@
       "id": 3,
       "type": "timeseries",
       "title": "Brokers up",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [{ "expr": "kafka_brokers" }],
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }
     },
@@ -44,7 +44,7 @@
       "id": 4,
       "type": "timeseries",
       "title": "Spring Kafka listener / template",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "rate(spring_kafka_listener_seconds_count[$__rate_interval])",
@@ -62,7 +62,7 @@
       "type": "timeseries",
       "title": "Static feed topic current offset",
       "description": "Offsets on the static feed topic. Flat means nothing new has been published; it only rises when a feed actually changed.",
-      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
           "expr": "kafka_topic_partition_current_offset{topic=\"gtfs-static-feeds\"}",

@@ -20,7 +20,7 @@
         "label": "Application",
         "type": "query",
         "datasource": {
-          "type": "prometheus",
+          "type": "victoriametrics-metrics-datasource",
           "uid": "VictoriaMetrics"
         },
         "definition": "label_values(up{job=\"gtfsynq-apps\"}, application)",
@@ -41,7 +41,7 @@
         "label": "Instance",
         "type": "query",
         "datasource": {
-          "type": "prometheus",
+          "type": "victoriametrics-metrics-datasource",
           "uid": "VictoriaMetrics"
         },
         "definition": "label_values(up{job=\"gtfsynq-apps\",application=~\"$application\"}, instance)",
@@ -65,7 +65,7 @@
       "type": "timeseries",
       "title": "HTTP request rate (per instance)",
       "datasource": {
-        "type": "prometheus",
+        "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
       },
       "fieldConfig": {
@@ -108,7 +108,7 @@
       "type": "timeseries",
       "title": "HTTP p95 latency",
       "datasource": {
-        "type": "prometheus",
+        "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
       },
       "fieldConfig": {
@@ -151,7 +151,7 @@
       "type": "stat",
       "title": "Up",
       "datasource": {
-        "type": "prometheus",
+        "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
       },
       "fieldConfig": {
@@ -193,7 +193,7 @@
       "type": "timeseries",
       "title": "CPU usage (process / system)",
       "datasource": {
-        "type": "prometheus",
+        "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
       },
       "fieldConfig": {
@@ -241,7 +241,7 @@
       "type": "timeseries",
       "title": "HikariCP connections",
       "datasource": {
-        "type": "prometheus",
+        "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
       },
       "fieldConfig": {
@@ -299,7 +299,7 @@
       "type": "timeseries",
       "title": "Log events rate",
       "datasource": {
-        "type": "prometheus",
+        "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
       },
       "fieldConfig": {
@@ -342,7 +342,7 @@
       "type": "timeseries",
       "title": "JVM heap (used / committed / max)",
       "datasource": {
-        "type": "prometheus",
+        "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
       },
       "fieldConfig": {
@@ -393,7 +393,7 @@
       "type": "timeseries",
       "title": "JVM non-heap + direct buffers",
       "datasource": {
-        "type": "prometheus",
+        "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
       },
       "fieldConfig": {
@@ -444,7 +444,7 @@
       "type": "timeseries",
       "title": "Host RAM (node-exporter)",
       "datasource": {
-        "type": "prometheus",
+        "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
       },
       "fieldConfig": {
@@ -494,7 +494,7 @@
       "type": "timeseries",
       "title": "Process RSS",
       "datasource": {
-        "type": "prometheus",
+        "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
       },
       "fieldConfig": {
@@ -537,7 +537,7 @@
       "type": "timeseries",
       "title": "JVM threads",
       "datasource": {
-        "type": "prometheus",
+        "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
       },
       "fieldConfig": {
@@ -588,7 +588,7 @@
       "type": "timeseries",
       "title": "GC pause rate",
       "datasource": {
-        "type": "prometheus",
+        "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
       },
       "fieldConfig": {
@@ -635,7 +635,7 @@
       "type": "timeseries",
       "title": "Off-heap shared arenas (bytes)",
       "datasource": {
-        "type": "prometheus",
+        "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
       },
       "fieldConfig": {
@@ -682,7 +682,7 @@
       "type": "timeseries",
       "title": "Off-heap store slots",
       "datasource": {
-        "type": "prometheus",
+        "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
       },
       "fieldConfig": {

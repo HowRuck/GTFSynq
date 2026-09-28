@@ -1,9 +1,25 @@
 apiVersion: 1
 
 datasources:
+  # MetricsQL-aware datasource. Grafana's built-in Prometheus type already
+  # speaks MetricsQL over the wire, but has no idea the function exists; this
+  # plugin adds MetricsQL autocompletion, a query builder, WITH templates and
+  # a "Run in VMUI" link. Requires the plugin declared in GF_INSTALL_PLUGINS
+  # (docker-compose.monitoring.yaml).
   - name: VictoriaMetrics
-    type: prometheus
+    # Pinned explicitly: the provisioned dashboards reference this uid.
+    uid: VictoriaMetrics
+    type: victoriametrics-metrics-datasource
     access: proxy
     url: http://victoriametrics:8428
     isDefault: true
     editable: true
+    jsonData:
+      # Matches global.scrape_interval in monitoring/vm/vm-scrape.yml, so
+      # $__rate_interval and the step/lookbehind window reflect what was
+      # actually scraped instead of a generic default.
+      timeInterval: 15s
+      # `url` above is only resolvable inside the compose network, which would
+      # make the query editor's "Run in VMUI" button produce a dead link. Point
+      # it at the host-published port instead.
+      vmuiUrl: http://localhost:8428
