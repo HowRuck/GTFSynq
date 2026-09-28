@@ -5,7 +5,7 @@ spotless = "8.10.2"
 palantir-java-format = "2.97.0"
 
 # Frameworks & core dependencies
-spring-boot = "4.2.0-M1"
+spring-boot = "4.2.0-M2"
 spring-dependency-management = "1.1.7"
 graalvm-native = "1.1.14"
 grpc = "1.84.0"
