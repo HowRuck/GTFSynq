@@ -2,9 +2,10 @@ version: "1.0"
 
 profile:
   name: qodana.recommended
-  inspections:
-    - inspection: SpellCheckingInspection
-      enabled: true
+
+include:
+  - name: SpellCheckingInspection
+  - name: GrazieInspection
 
 linter: qodana-jvm-community
 
