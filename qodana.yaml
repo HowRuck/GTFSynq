@@ -18,3 +18,5 @@ exclude:
       - "**/generated/**"
       - "**/extracted-protos/**"
       - "**/extracted-include-protos/**"
+plugins:
+  - id: com.intellij.grazie.pro
