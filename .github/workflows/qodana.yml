@@ -48,7 +48,7 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
       - name: Generate proto sources
-        run: ./gradlew :shared:generateProto --info
+        run: ./gradlew :shared:generateProto
       - name: "Qodana Scan"
         uses: JetBrains/qodana-action@v2026.2.1
         with:
