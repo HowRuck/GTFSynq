@@ -1,13 +1,13 @@
 version: "1.0"
 
+linter: qodana-jvm-community
+
 profile:
   name: qodana.recommended
 
 include:
   - name: SpellCheckingInspection
-  - name: GrazieInspection
-
-linter: qodana-jvm-community
+  - name: LanguageDetectionInspection
 
 exclude:
   - name: All
@@ -19,5 +19,3 @@ exclude:
       - "**/generated/**"
       - "**/extracted-protos/**"
       - "**/extracted-include-protos/**"
-plugins:
-  - id: com.intellij.grazie.pro
