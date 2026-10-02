@@ -159,7 +159,7 @@ services:
   # download can finish. Re-running does not help; the container exits first.
   # Installing up front removes the race and keeps the install reproducible.
   grafana-plugins:
-    image: docker.io/grafana/grafana:13.2.2
+    image: docker.io/grafana/grafana:13.2.3
     container_name: grafana-plugins
     restart: "no"
     # One plugin per invocation: `grafana cli plugins install` joins multiple
@@ -178,7 +178,7 @@ services:
       - grafana-data:/var/lib/grafana
 
   grafana:
-    image: docker.io/grafana/grafana:13.2.2
+    image: docker.io/grafana/grafana:13.2.3
     container_name: grafana
     depends_on:
       grafana-plugins:
