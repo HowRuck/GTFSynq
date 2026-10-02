@@ -15,7 +15,7 @@ datafusion-java = "0.1.0"
 # Misc libraries
 javatuples = "2.0.1"
 zero-allocation-hashing = "2026.0"
-aws-sdk = "2.55.6"
+aws-sdk = "2.55.7"
 jspecify = "1.0.1"
 micrometer-jvm-extras = "0.3.0"
 
