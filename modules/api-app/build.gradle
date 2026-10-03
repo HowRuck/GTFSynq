@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.spring.boot)
+    alias(libs.plugins.graalvm.native)
     alias(libs.plugins.spring.dependency.management)
     id 'java'
 }

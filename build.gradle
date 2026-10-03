@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.spring.boot) apply false
+    alias(libs.plugins.graalvm.native) apply false
     alias(libs.plugins.spring.dependency.management) apply false
     alias(libs.plugins.protobuf) apply false
     alias(libs.plugins.sonarqube)
@@ -18,6 +19,7 @@ allprojects {
 subprojects {
     apply plugin: 'java'
     apply plugin: 'io.spring.dependency-management'
+    apply plugin: "org.springframework.boot.aot"
     apply plugin: 'com.diffplug.spotless'
 
     spotless {
@@ -40,10 +42,11 @@ subprojects {
     }
 
     java {
-        targetCompatibility = JavaVersion.VERSION_27
-        sourceCompatibility = JavaVersion.VERSION_27
+        targetCompatibility = JavaVersion.VERSION_25
+        sourceCompatibility = JavaVersion.VERSION_25
         toolchain {
-            languageVersion = JavaLanguageVersion.of(27)
+            languageVersion = JavaLanguageVersion.of(25)
+            vendor = JvmVendorSpec.ADOPTIUM
         }
     }
 
@@ -60,15 +63,10 @@ subprojects {
             def tag = findProperty('imageTag') ?: project.version
             imageName = "${registry}/gtfsynq-${project.name}:${tag}"
             publish = project.hasProperty('publishImage')
-
-            buildpacks = [
-                'docker://docker.io/paketobuildpacks/bellsoft-liberica:11.10.0',
-                'urn:cnb:builder:paketo-buildpacks/java'
-            ]
-
             environment.putAll([
                     "BPL_JVM_THREAD_COUNT": "50",
                     "BP_SPRING_CLOUD_BINDINGS_DISABLED": "true",
+                    "BP_SPRING_AOT_ENABLED": "true",
                     "JAVA_TOOL_OPTIONS": "--add-opens=java.base/java.nio=ALL-UNNAMED -XX:+ExitOnOutOfMemoryError"
             ])
             // Persist buildpack layers/tooling (JDK, GraalVM, ...) to a host

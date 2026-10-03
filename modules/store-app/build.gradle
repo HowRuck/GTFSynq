@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.spring.boot)
+    alias(libs.plugins.graalvm.native)
     alias(libs.plugins.spring.dependency.management)
     id 'java'
 }
@@ -13,18 +14,6 @@ dependencies {
     implementation libs.bundles.kafka
     implementation libs.spring.boot.starter.flyway
 
-    // Reads the static feed archives the ingest app published to object storage,
-    // so the same S3 configuration keys work in both apps.
-    implementation libs.bundles.s3
-
-    // Canonical GTFS Schedule validator (github.com/mobilitydata/gtfs-validator).
-    // core and model are declared explicitly because the main artifact's POM keeps them
-    // in runtime scope, which is not enough to compile against them.
-    implementation libs.gtfs.validator.main
-    implementation libs.gtfs.validator.core
-    implementation libs.gtfs.validator.model
-    implementation libs.guava
-
     runtimeOnly libs.flyway.database.postgresql
 
     runtimeOnly libs.postgresql
@@ -32,15 +21,28 @@ dependencies {
 
     compileOnly libs.bundles.lombok
     annotationProcessor libs.bundles.lombok
-    annotationProcessor libs.spring.boot.configuration.processor
 
     testImplementation libs.bundles.integration.test
 }
 
-// The GTFS validator finds its rules and table descriptors by scanning the classpath
-// (ClassGraphDiscovery). That works on a JVM, so the rules are discovered at runtime and
-// there is no generated class list to keep in step with the validator version.
-
 bootJar {
     archiveFileName = 'app.jar'
+}
+
+graalvmNative {
+    binaries {
+        main {
+            buildArgs.add('--enable-url-protocols=https')
+            // OffHeapLongTable uses Arena.ofShared(); GraalVM disables
+            // shared arenas in native images unless enabled.
+            buildArgs.add('-H:+UnlockExperimentalVMOptions')
+            buildArgs.add('-H:+SharedArenaSupport')
+            buildArgs.add('--gc=parallel')
+        }
+    }
+}
+
+tasks.named('bootBuildImage') {
+    // Paketo does not read graalvmNative.buildArgs; pass explicitly
+    environment.put('BP_NATIVE_IMAGE_BUILD_ARGUMENTS', '--enable-url-protocols=https -H:+UnlockExperimentalVMOptions -H:+SharedArenaSupport --gc=parallel')
 }

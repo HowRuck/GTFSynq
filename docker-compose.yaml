@@ -67,8 +67,6 @@ services:
                 condition: service_completed_successfully
             timescaledb:
                 condition: service_healthy
-            s3:
-                condition: service_healthy
         environment:
             SPRING_DATASOURCE_URL: jdbc:postgresql://timescaledb:5432/gtfsynq
             SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
@@ -76,11 +74,6 @@ services:
             SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
             SERVER_PORT: 8082
             STATE_SAVE_PATH: /app/data/state_dump.bin
-            # Static feed validation reads back the archives the ingest app stored.
-            GTFSYNQ_STORAGE_S3_ENDPOINT: http://s3:7070
-            GTFSYNQ_STORAGE_S3_REGION: ${S3_REGION:-us-east-1}
-            GTFSYNQ_STORAGE_S3_ACCESS_KEY: ${S3_ACCESS_KEY:?S3_ACCESS_KEY must be set (see .env.template)}
-            GTFSYNQ_STORAGE_S3_SECRET_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY must be set (see .env.template)}
         ports:
             - "127.0.0.1:8082:8082"
         volumes:
