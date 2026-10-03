@@ -2,12 +2,11 @@
 protobufPlugin = "0.10.0"
 sonarqube = "7.5.0.8588"
 spotless = "8.10.3"
-palantir-java-format = "2.100.0"
+palantir-java-format = "2.101.0"
 
 # Frameworks & core dependencies
 spring-boot = "4.2.0-M2"
 spring-dependency-management = "1.1.7"
-graalvm-native = "1.1.14"
 grpc = "1.84.0"
 protobuf = "4.36.2"
 datafusion-java = "0.1.0"
@@ -16,6 +15,8 @@ datafusion-java = "0.1.0"
 javatuples = "2.0.1"
 zero-allocation-hashing = "2026.0"
 aws-sdk = "2.55.7"
+gtfs-validator = "8.0.1"
+guava = "33.5.0-jre"
 jspecify = "1.0.1"
 micrometer-jvm-extras = "0.3.0"
 
@@ -56,6 +57,15 @@ httpclient5 = { module = "org.apache.httpcomponents.client5:httpclient5" }
 aws-sdk-s3 = { module = "software.amazon.awssdk:s3", version.ref = "aws-sdk" }
 aws-sdk-url-connection-client = { module = "software.amazon.awssdk:url-connection-client", version.ref = "aws-sdk" }
 
+# GTFS Schedule validation
+# gtfs-validator-main declares core and model as `implementation`, so its published POM
+# exposes them in runtime scope only. They are needed at compile time, hence listed here.
+gtfs-validator-main = { module = "org.mobilitydata.gtfs-validator:gtfs-validator-main", version.ref = "gtfs-validator" }
+gtfs-validator-core = { module = "org.mobilitydata.gtfs-validator:gtfs-validator-core", version.ref = "gtfs-validator" }
+gtfs-validator-model = { module = "org.mobilitydata.gtfs-validator:gtfs-validator-model", version.ref = "gtfs-validator" }
+
+guava = { module = "com.google.guava:guava", version.ref = "guava" }
+
 # Data formats & serialization
 protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
 grpc-all = { module = "io.grpc:grpc-all", version.ref = "grpc" }
@@ -83,4 +93,3 @@ spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 
 # Frameworks
 spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
-graalvm-native = { id = "org.graalvm.buildtools.native", version.ref = "graalvm-native" }

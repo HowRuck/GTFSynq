@@ -5,18 +5,12 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.ImportRuntimeHints;
 
 /**
- * Configuration class for setting up plain Kafka consumer for GTFS data processing.
- *
- * <p>Kafka Streams is intentionally avoided: it pulls in RocksDB/JNI and
- * classes like {@code NoOpProcessorWrapper} that are not GraalVM native-friendly.
- * This workload is stateless (parse/filter/forward), so a plain listener suffices.
+ * Configuration class for setting up plain Kafka consumer for GTFS data processing
  */
 @Configuration
 @EnableConfigurationProperties(HotDataRetentionConfig.class)
-@ImportRuntimeHints(KafkaConsumerRuntimeHints.class)
 public class GtfsKafkaStreamsConfig {
 
     @Bean

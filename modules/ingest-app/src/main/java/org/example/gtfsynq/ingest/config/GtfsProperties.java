@@ -7,7 +7,6 @@ import org.example.gtfsynq.ingest.config.enums.GtfsStaticFeedFile;
 import org.hibernate.validator.constraints.URL;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
-import org.springframework.context.annotation.ImportRuntimeHints;
 import org.springframework.validation.annotation.Validated;
 
 /**
@@ -46,7 +45,6 @@ import org.springframework.validation.annotation.Validated;
  */
 @Validated
 @ConfigurationProperties("gtfs")
-@ImportRuntimeHints(GtfsPropertiesRuntimeHints.class)
 public record GtfsProperties(
         Map<String, @Valid FeedSource> sources,
 

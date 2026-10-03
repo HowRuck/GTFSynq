@@ -18,6 +18,7 @@ spring:
         locations: classpath:db/migration
     kafka:
         topic: gtfs-trip-updates
+        static-feed-topic: gtfs-static-feeds
         bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
         consumer:
             group-id: gtfsynq-store
@@ -30,6 +31,29 @@ gtfsynq:
         enabled: true
         flush-interval-ms: 10000
         max-buffer-size: 20000
+
+    # Validation of the static feeds the ingest app published to object storage.
+    static-validation:
+        enabled: true
+        # ISO 3166-1 alpha-2 code of the country the feeds serve; ZZ means unset.
+        country-code: ${GTFSYNQ_STATIC_VALIDATION_COUNTRY_CODE:ZZ}
+        num-threads: 4
+        # Notices tolerated before a feed counts as invalid. Errors are GTFS spec
+        # violations, so any one of them exceeds the default; warnings are best-practice
+        # findings that real feeds routinely contain, hence the permissive ceiling.
+        max-errors: 0
+        max-warnings: 1000
+
+    storage:
+        s3:
+            enabled: true
+            # Local default; point this at the compose `s3` service or any S3 compatible endpoint.
+            endpoint: ${GTFSYNQ_STORAGE_S3_ENDPOINT:http://localhost:9000}
+            region: ${GTFSYNQ_STORAGE_S3_REGION:us-east-1}
+            # Blank credentials fall back to the AWS default credentials provider chain.
+            access-key: ${GTFSYNQ_STORAGE_S3_ACCESS_KEY:}
+            secret-key: ${GTFSYNQ_STORAGE_S3_SECRET_KEY:}
+            path-style-access: true
 
     retention:
         hours: 1h

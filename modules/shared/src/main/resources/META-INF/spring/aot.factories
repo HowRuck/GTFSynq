@@ -1,2 +1,0 @@
-org.springframework.aot.hint.RuntimeHintsRegistrar=\
-org.example.gtfsynq.shared.aot.ProtobufRuntimeHints

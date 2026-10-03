@@ -3,7 +3,6 @@ package org.example.gtfsynq.ingest.config;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
-import org.springframework.context.annotation.ImportRuntimeHints;
 import org.springframework.validation.annotation.Validated;
 
 /**
@@ -41,7 +40,6 @@ import org.springframework.validation.annotation.Validated;
  */
 @Validated
 @ConfigurationProperties("gtfsynq.storage.s3")
-@ImportRuntimeHints(GtfsPropertiesRuntimeHints.class)
 public record S3StorageProperties(
         @DefaultValue("true") boolean enabled,
 
