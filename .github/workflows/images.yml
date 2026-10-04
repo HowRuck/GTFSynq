@@ -29,19 +29,32 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
       - name: Set up Java
         uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 25
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
+
+      - name: Cache Jib Layers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/google-cloud-tools-jib
+          key: ${{ runner.os }}-jib-${{ matrix.app }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/gradle.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-jib-${{ matrix.app }}-
+            ${{ runner.os }}-jib-
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build and push image
         # Quarkus/Jib builds the image without a Docker daemon and reads the
         # registry credentials written by docker/login-action.
