@@ -55,7 +55,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push image
+      - name: Build and push JVM image
         # Quarkus/Jib builds the image without a Docker daemon and reads the
         # registry credentials written by docker/login-action.
         run: ./gradlew :${{ matrix.app }}:imageBuild -Dquarkus.container-image.push=true
+
+      - name: Build and push native image
+        # Native compilation happens in the GraalVM builder container (Docker is
+        # available on the runner), then Jib packages the executable without a
+        # daemon. quarkus.package.jar.enabled=false is mandatory: the Gradle
+        # plugin cannot emit a JAR and a native binary in the same build.
+        run: >
+          ./gradlew :${{ matrix.app }}:imageBuild
+          -Dquarkus.container-image.push=true
+          -Dquarkus.container-image.name=gtfsynq-${{ matrix.app }}-native
+          -Dquarkus.native.enabled=true
+          -Dquarkus.native.container-build=true
+          -Dquarkus.package.jar.enabled=false
