@@ -1,10 +1,8 @@
 plugins {
-    alias(libs.plugins.spring.boot) apply false
-    alias(libs.plugins.graalvm.native) apply false
-    alias(libs.plugins.spring.dependency.management) apply false
     alias(libs.plugins.protobuf) apply false
     alias(libs.plugins.sonarqube)
     alias(libs.plugins.spotless) apply false
+    alias(libs.plugins.quarkus) apply false
 }
 
 allprojects {
@@ -18,8 +16,6 @@ allprojects {
 
 subprojects {
     apply plugin: 'java'
-    apply plugin: 'io.spring.dependency-management'
-    apply plugin: "org.springframework.boot.aot"
     apply plugin: 'com.diffplug.spotless'
 
     spotless {
@@ -30,14 +26,6 @@ subprojects {
             palantirJavaFormat(libs.versions.palantir.java.format.get())
             removeUnusedImports()
             importOrder()
-        }
-    }
-
-    dependencyManagement {
-        dependencies {
-            dependency "com.google.protobuf:protobuf-java:${libs.versions.protobuf.get()}"
-            dependency "com.google.protobuf:protobuf-kotlin:${libs.versions.protobuf.get()}"
-            dependency "com.google.protobuf:protobuf-java-util:${libs.versions.protobuf.get()}"
         }
     }
 
@@ -54,44 +42,26 @@ subprojects {
         useJUnitPlatform()
     }
 
-    plugins.withId('org.springframework.boot') {
-        tasks.named('bootBuildImage') {
-            // Build:  ./gradlew bootBuildImage
-            // Push:   docker login ghcr.io -u <user> # once
-            //         ./gradlew bootBuildImage -PpublishImage -PimageTag=latest
-            def registry = findProperty('imageRegistry') ?: 'ghcr.io/howruck'
-            def tag = findProperty('imageTag') ?: project.version
-            imageName = "${registry}/gtfsynq-${project.name}:${tag}"
-            publish = project.hasProperty('publishImage')
-            environment.putAll([
-                    "BPL_JVM_THREAD_COUNT": "50",
-                    "BP_SPRING_CLOUD_BINDINGS_DISABLED": "true",
-                    "BP_SPRING_AOT_ENABLED": "true",
-                    "JAVA_TOOL_OPTIONS": "--add-opens=java.base/java.nio=ALL-UNNAMED -XX:+ExitOnOutOfMemoryError"
-            ])
-            // Persist buildpack layers/tooling (JDK, GraalVM, ...) to a host
-            // directory instead of a Docker named volume so CI can cache it
-            // with actions/cache across ephemeral runners.
-            def cnbCacheDir = rootProject.file(".cnb-cache/${project.name}")
-            buildWorkspace {
-                bind {
-                    source = new File(cnbCacheDir, 'workspace').absolutePath
-                }
-            }
-            buildCache {
-                bind {
-                    source = new File(cnbCacheDir, 'build').absolutePath
-                }
-            }
-            launchCache {
-                bind {
-                    source = new File(cnbCacheDir, 'launch').absolutePath
-                }
+    // The generated protobuf code validates at runtime that protobuf-java is at
+    // least as new as the protoc that produced it, so the runtime must not be
+    // downgraded by a platform/BOM constraint.
+    configurations.configureEach {
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == 'com.google.protobuf') {
+                details.useVersion(libs.versions.protobuf.get())
             }
         }
     }
 }
 
+// Quarkus apps are packaged by the `io.quarkus` plugin (see modules/*/build.gradle)
+// and containerised by the Jib extension, configured in each app's
+// application.properties:
+//
+//   ./gradlew :api-app:build                          # JVM fast-jar
+//   ./gradlew :api-app:imageBuild                     # local container image
+//   ./gradlew :api-app:imageBuild -Dquarkus.container-image.push=true
+//   ./gradlew :api-app:build -Dnative                 # native executable
 sonarqube {
     properties {
         property "sonar.projectKey", "HowRuck_NordSIRI"

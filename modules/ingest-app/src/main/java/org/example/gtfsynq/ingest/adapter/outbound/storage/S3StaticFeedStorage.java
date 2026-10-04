@@ -1,5 +1,6 @@
 package org.example.gtfsynq.ingest.adapter.outbound.storage;
 
+import jakarta.inject.Singleton;
 import java.net.HttpURLConnection;
 import java.nio.file.Path;
 import java.util.Map;
@@ -7,8 +8,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gtfsynq.ingest.config.S3StorageProperties;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Component;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.BucketAlreadyOwnedByYouException;
@@ -22,10 +21,9 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
  * is kept side by side. Callers are expected to check {@link #exists(String)} before
  * uploading, which is what makes repeated polls of an unchanged feed cheap.
  */
-@Component
+@Singleton
 @Slf4j
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "gtfsynq.storage.s3", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class S3StaticFeedStorage {
 
     /**

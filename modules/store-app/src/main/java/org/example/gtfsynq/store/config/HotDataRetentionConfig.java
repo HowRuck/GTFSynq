@@ -1,10 +1,15 @@
 package org.example.gtfsynq.store.config;
 
+import io.smallrye.config.ConfigMapping;
+import io.smallrye.config.WithDefault;
 import java.time.Duration;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.bind.DefaultValue;
 
-@ConfigurationProperties(prefix = "gtfsynq.retention")
-public record HotDataRetentionConfig(
-        @DefaultValue("1h") Duration hours,
-        @DefaultValue("15") Integer rateMinutes) {}
+@ConfigMapping(prefix = "gtfsynq.retention")
+public interface HotDataRetentionConfig {
+
+    @WithDefault("1h")
+    Duration hours();
+
+    @WithDefault("15m")
+    Duration rate();
+}

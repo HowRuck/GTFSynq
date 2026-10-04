@@ -13,20 +13,19 @@ services:
             timescaledb:
                 condition: service_healthy
         environment:
-            SPRING_DATASOURCE_URL: jdbc:postgresql://timescaledb:5432/gtfsynq
-            SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
-            SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set (see .env.template)}
-            SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-            SERVER_PORT: 8080
+            QUARKUS_HTTP_PORT: 8080
+            QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://timescaledb:5432/gtfsynq
+            QUARKUS_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+            QUARKUS_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set (see .env.template)}
         ports:
             # Host-only by default. Expose externally via a reverse proxy
             # (Pangolin/Newt, Caddy, nginx) or an SSH tunnel, never 0.0.0.0.
             - "127.0.0.1:8080:8080"
         volumes:
             - gtfsynq-api-data:/app/data
-        # NOTE: no healthcheck — Paketo run-tiny images contain no shell,
-        # wget or curl, so any CMD-SHELL probe can never succeed.
-        # Health is observable from the host via /actuator/health.
+        # NOTE: no healthcheck — the app images are minimal runtime images, so a
+        # CMD-SHELL probe is not guaranteed to work. Health is observable from the
+        # host via /q/health.
 
     ingest-app:
         image: ghcr.io/howruck/gtfsynq-ingest-app:0.0.1-SNAPSHOT
@@ -41,11 +40,8 @@ services:
             s3:
                 condition: service_healthy
         environment:
-            SPRING_DATASOURCE_URL: jdbc:postgresql://timescaledb:5432/gtfsynq
-            SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
-            SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set (see .env.template)}
-            SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-            SERVER_PORT: 8081
+            QUARKUS_HTTP_PORT: 8081
+            KAFKA_BOOTSTRAP_SERVERS: kafka:9092
             STATE_SAVE_PATH: /app/data/state_dump.bin
             GTFSYNQ_STORAGE_S3_ENDPOINT: http://s3:7070
             GTFSYNQ_STORAGE_S3_REGION: ${S3_REGION:-us-east-1}
@@ -68,11 +64,11 @@ services:
             timescaledb:
                 condition: service_healthy
         environment:
-            SPRING_DATASOURCE_URL: jdbc:postgresql://timescaledb:5432/gtfsynq
-            SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
-            SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set (see .env.template)}
-            SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-            SERVER_PORT: 8082
+            QUARKUS_HTTP_PORT: 8082
+            QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://timescaledb:5432/gtfsynq
+            QUARKUS_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+            QUARKUS_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set (see .env.template)}
+            KAFKA_BOOTSTRAP_SERVERS: kafka:9092
             STATE_SAVE_PATH: /app/data/state_dump.bin
         ports:
             - "127.0.0.1:8082:8082"

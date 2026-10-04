@@ -15,7 +15,8 @@ build/
 bin/
 **/bin/
 
-# Buildpacks (bootBuildImage needs full build context; only exclude outputs & local data)
+# Container images are built by the Quarkus Jib extension straight from the Gradle
+# output (no build context); this file only matters when building with Dockerfiles.
 docker-compose*.yaml
 
 # Docs & metadata (not needed for the build)

@@ -4,10 +4,10 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import jakarta.inject.Singleton;
 import java.util.concurrent.TimeUnit;
-import org.springframework.stereotype.Component;
 
-@Component
+@Singleton
 public class GtfsSinkMetrics {
 
     private static final String GTFS_SINK_DB_WRITE = "gtfs.sink.db.write";

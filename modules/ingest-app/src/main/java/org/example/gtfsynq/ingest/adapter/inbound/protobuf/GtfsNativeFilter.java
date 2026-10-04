@@ -4,6 +4,7 @@ import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.WireFormat;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.inject.Singleton;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,35 +15,36 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import net.openhft.hashing.LongHashFunction;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.example.gtfsynq.shared.protocol.BinaryFeedEntityWithMetadata;
 import org.example.gtfsynq.shared.protocol.offheap.OffHeapHashStore;
 import org.example.gtfsynq.shared.protocol.offheap.OffHeapLongTable;
 import org.example.gtfsynq.shared.util.SizeFormat;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 /**
  * A filter that parses native GTFS feeds from input streams
  */
-@Component
+@Singleton
 @Slf4j
 public class GtfsNativeFilter {
 
     private final OffHeapHashStore stateStore;
     private final Counter skippedInvalidCounter;
+    private final int readBufferSizeMb;
 
-    public GtfsNativeFilter(OffHeapHashStore stateStore, MeterRegistry registry) {
+    public GtfsNativeFilter(
+            OffHeapHashStore stateStore,
+            MeterRegistry registry,
+            @ConfigProperty(name = "gtfsynq.read-buffer-size", defaultValue = "8") int readBufferSizeMb) {
         this.stateStore = stateStore;
         this.skippedInvalidCounter = Counter.builder("gtfs.ingest.skipped.invalid")
                 .description("Feed entities skipped due to missing id or type")
                 .register(registry);
+        this.readBufferSizeMb = readBufferSizeMb;
     }
 
     private final LongHashFunction hashFunction = LongHashFunction.xx3();
     private int lastUpdateCount = 10_000;
-
-    @Value("${gtfs.readBufferSize:8}")
-    private int readBufferSizeMb;
 
     /**
      * Check if the feed header has changed and update the state store if it has

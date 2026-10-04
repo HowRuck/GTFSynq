@@ -1,25 +1,21 @@
 plugins {
-    alias(libs.plugins.spring.boot)
-    alias(libs.plugins.graalvm.native)
-    alias(libs.plugins.spring.dependency.management)
+    alias(libs.plugins.quarkus)
     id 'java'
 }
 
 dependencies {
+    implementation platform(libs.quarkus.bom)
     implementation project(':shared')
 
-    implementation libs.bundles.web
-    implementation libs.spring.boot.starter.data.jpa
-
-    runtimeOnly libs.postgresql
-    runtimeOnly libs.micrometer.registry.prometheus
+    implementation libs.quarkus.rest
+    implementation libs.quarkus.hibernate.orm
+    implementation libs.quarkus.jdbc.postgresql
+    implementation libs.quarkus.smallrye.health
+    implementation libs.quarkus.micrometer.registry.prometheus
+    implementation libs.quarkus.container.image.jib
 
     compileOnly libs.bundles.lombok
     annotationProcessor libs.bundles.lombok
 
-    testImplementation libs.spring.boot.starter.test
-}
-
-bootJar {
-    archiveFileName = 'app.jar'
+    testImplementation libs.quarkus.junit5
 }

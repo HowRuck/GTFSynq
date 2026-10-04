@@ -1,21 +1,21 @@
 package org.example.gtfsynq.store.service;
 
+import io.quarkus.scheduler.Scheduled;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
+import jakarta.transaction.Transactional;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.example.gtfsynq.shared.model.FeedEntityWithMetadata;
 import org.example.gtfsynq.shared.model.dto.TripDescriptorDto;
 import org.example.gtfsynq.shared.model.dto.TripStopTimeUpdateDto;
 import org.example.gtfsynq.shared.model.dto.TripUpdateDto;
 import org.example.gtfsynq.store.adapter.outbound.database.TripUpdateRepository;
 import org.example.gtfsynq.store.service.metrics.GtfsSinkMetrics;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Buffers GTFS TripUpdate writes and flushes them to the database in batches.
@@ -27,9 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>The sink keeps only the most recent update per entity id in memory. On flush, it persists the
  * parent trip-update row and all normalized child rows in one transactional operation per entity.
  */
-@Service
+@Singleton
 @Slf4j
-@RequiredArgsConstructor
 public class GtfsTripUpdateSink {
 
     private final TripUpdateRepository tripUpdateRepository;
@@ -40,15 +39,27 @@ public class GtfsTripUpdateSink {
     private final DatabaseDeduplicationService deduplicationService;
     private final GtfsSinkMetrics metrics;
 
-    @Value("${gtfsynq.sink.enabled:true}")
-    private boolean enabled;
+    private final boolean enabled;
 
     /**
      * Hard cap on buffered updates. When the buffer reaches this size the
      * overflow triggers an early flush
      */
-    @Value("${gtfsynq.sink.max-buffer-size:20000}")
-    private int maxBufferSize;
+    private final int maxBufferSize;
+
+    @Inject
+    public GtfsTripUpdateSink(
+            TripUpdateRepository tripUpdateRepository,
+            DatabaseDeduplicationService deduplicationService,
+            GtfsSinkMetrics metrics,
+            @ConfigProperty(name = "gtfsynq.sink.enabled", defaultValue = "true") boolean enabled,
+            @ConfigProperty(name = "gtfsynq.sink.max-buffer-size", defaultValue = "20000") int maxBufferSize) {
+        this.tripUpdateRepository = tripUpdateRepository;
+        this.deduplicationService = deduplicationService;
+        this.metrics = metrics;
+        this.enabled = enabled;
+        this.maxBufferSize = maxBufferSize;
+    }
 
     /**
      * Accepts a feed entity and buffers it for later batch persistence.
@@ -101,7 +112,7 @@ public class GtfsTripUpdateSink {
     /**
      * Flushes the current buffer on a schedule.
      */
-    @Scheduled(fixedDelayString = "${gtfsynq.sink.flush-interval-ms:10000}")
+    @Scheduled(every = "{gtfsynq.sink.flush-interval}")
     @Transactional
     public void scheduledFlush() {
         if (!enabled) {

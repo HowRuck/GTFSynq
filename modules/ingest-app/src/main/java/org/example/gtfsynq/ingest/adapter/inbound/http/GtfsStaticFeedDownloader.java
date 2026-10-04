@@ -1,20 +1,24 @@
 package org.example.gtfsynq.ingest.adapter.inbound.http;
 
+import jakarta.inject.Singleton;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.util.HexFormat;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.gtfsynq.ingest.config.HttpTimeouts;
 import org.example.gtfsynq.shared.util.SizeFormat;
-import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
 
 /**
  * Downloads GTFS static feed archives
@@ -24,7 +28,7 @@ import org.springframework.web.client.RestClientException;
  * instead of being buffered in memory
  * <p>
  */
-@Component
+@Singleton
 @Slf4j
 @RequiredArgsConstructor
 public class GtfsStaticFeedDownloader {
@@ -35,7 +39,8 @@ public class GtfsStaticFeedDownloader {
 
     private static final String TEMP_FILE_SUFFIX = ".zip";
 
-    private final RestClient restClient;
+    private final HttpClient httpClient;
+    private final HttpTimeouts httpTimeouts;
 
     /**
      * Downloads a static feed to a temporary file
@@ -75,7 +80,11 @@ public class GtfsStaticFeedDownloader {
             return new DownloadedStaticFeed(target, sha256, sizeBytes);
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException(DIGEST_ALGORITHM + " is not available", e);
-        } catch (IOException | RestClientException e) {
+        } catch (IOException e) {
+            log.error("Failed to download static feed {} from {}", feedId, sourceUrl, e);
+            throw new StaticFeedDownloadException("Failed to download static feed " + feedId + " from " + sourceUrl, e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             log.error("Failed to download static feed {} from {}", feedId, sourceUrl, e);
             throw new StaticFeedDownloadException("Failed to download static feed " + feedId + " from " + sourceUrl, e);
         } finally {
@@ -94,25 +103,28 @@ public class GtfsStaticFeedDownloader {
         discard(feed.file());
     }
 
-    private long downloadInto(String feedId, String sourceUrl, Path target, MessageDigest digest) {
-        return restClient.get().uri(sourceUrl).exchange((_, response) -> {
-            var statusCode = response.getStatusCode();
+    private long downloadInto(String feedId, String sourceUrl, Path target, MessageDigest digest)
+            throws IOException, InterruptedException {
+        var request = HttpRequest.newBuilder(URI.create(sourceUrl))
+                .timeout(Duration.ofMillis(httpTimeouts.readMs()))
+                .GET()
+                .build();
 
-            if (!statusCode.is2xxSuccessful()) {
-                log.warn(
-                        "Unexpected HTTP {} while downloading static feed {} from {}",
-                        statusCode.value(),
-                        feedId,
-                        sourceUrl);
-                throw new StaticFeedDownloadException("Unexpected HTTP " + statusCode.value()
-                        + " while downloading static feed " + feedId + " from " + sourceUrl);
-            }
+        var response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+        var statusCode = response.statusCode();
 
-            try (InputStream in = new BufferedInputStream(response.getBody());
-                    var out = new DigestOutputStream(Files.newOutputStream(target), digest)) {
-                return in.transferTo(out);
-            }
-        });
+        if (statusCode < 200 || statusCode >= 300) {
+            response.body().close();
+
+            log.warn("Unexpected HTTP {} while downloading static feed {} from {}", statusCode, feedId, sourceUrl);
+            throw new StaticFeedDownloadException("Unexpected HTTP " + statusCode + " while downloading static feed "
+                    + feedId + " from " + sourceUrl);
+        }
+
+        try (InputStream in = new BufferedInputStream(response.body());
+                var out = new DigestOutputStream(Files.newOutputStream(target), digest)) {
+            return in.transferTo(out);
+        }
     }
 
     private void discard(Path file) {

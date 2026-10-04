@@ -1,5 +1,6 @@
 package org.example.gtfsynq.store.service;
 
+import jakarta.inject.Singleton;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import lombok.RequiredArgsConstructor;
@@ -9,12 +10,11 @@ import org.example.gtfsynq.shared.model.dto.TripUpdateDto;
 import org.example.gtfsynq.shared.protocol.offheap.OffHeapHashStore;
 import org.example.gtfsynq.shared.protocol.offheap.OffHeapLongTable;
 import org.example.gtfsynq.shared.util.FeedHashing;
-import org.springframework.stereotype.Component;
 
 /**
  * Service for deduplicating trip updates in the database
  */
-@Component
+@Singleton
 @Slf4j
 @RequiredArgsConstructor
 public class DatabaseDeduplicationService {

@@ -5,13 +5,13 @@ import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import jakarta.inject.Singleton;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import org.springframework.stereotype.Component;
 
 /**
  * Metrics for the static feed ingestion pipeline.
@@ -23,7 +23,7 @@ import org.springframework.stereotype.Component;
  * ingests successfully, so "no data" becomes an alertable condition rather than an
  * ambiguous one.
  */
-@Component
+@Singleton
 public class StaticFeedMetrics {
 
     private static final double MILLIS_PER_SECOND = 1000.0;

@@ -1,10 +1,10 @@
 package org.example.gtfsynq.ingest.config;
 
+import jakarta.enterprise.inject.Disposes;
+import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 import java.net.URI;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.util.StringUtils;
+import lombok.RequiredArgsConstructor;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
@@ -13,36 +13,46 @@ import software.amazon.awssdk.services.s3.S3Client;
 /**
  * Wires the S3 client used to store downloaded GTFS static feed archives.
  * <p>
- * The client is only created when {@code gtfsynq.storage.s3.enabled} is not set to
- * {@code false}; without it the static ingestion services are not registered either.
- * Building the client performs no network I/O, so an unreachable object store only
- * surfaces once a feed is actually ingested.
+ * The client is always created; whether static ingestion actually runs is decided at
+ * runtime from {@link S3StorageProperties#enabled()}. Building the client performs no
+ * network I/O, so an unreachable object store only surfaces once a feed is actually
+ * ingested.
  */
-@Configuration(proxyBeanMethods = false)
-@ConditionalOnProperty(prefix = "gtfsynq.storage.s3", name = "enabled", havingValue = "true", matchIfMissing = true)
+@Singleton
+@RequiredArgsConstructor
 public class S3StorageConfig {
+
+    private final S3StorageProperties properties;
 
     /**
      * Creates the S3 client. Credentials are taken from the configuration when both are
      * present, otherwise the default AWS credentials provider chain is used.
      *
-     * @param properties S3 storage configuration
      * @return configured S3 client
      */
-    @Bean
-    public S3Client s3Client(S3StorageProperties properties) {
+    @Produces
+    @Singleton
+    public S3Client s3Client() {
         var builder =
                 S3Client.builder().region(Region.of(properties.region())).forcePathStyle(properties.pathStyleAccess());
 
-        if (StringUtils.hasText(properties.endpoint())) {
-            builder.endpointOverride(URI.create(properties.endpoint()));
-        }
+        properties
+                .endpoint()
+                .filter(endpoint -> !endpoint.isBlank())
+                .ifPresent(endpoint -> builder.endpointOverride(URI.create(endpoint)));
 
-        if (StringUtils.hasText(properties.accessKey()) && StringUtils.hasText(properties.secretKey())) {
-            builder.credentialsProvider(StaticCredentialsProvider.create(
-                    AwsBasicCredentials.create(properties.accessKey(), properties.secretKey())));
+        var accessKey = properties.accessKey().filter(key -> !key.isBlank());
+        var secretKey = properties.secretKey().filter(key -> !key.isBlank());
+
+        if (accessKey.isPresent() && secretKey.isPresent()) {
+            builder.credentialsProvider(
+                    StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey.get(), secretKey.get())));
         }
 
         return builder.build();
+    }
+
+    void dispose(@Disposes S3Client client) {
+        client.close();
     }
 }

@@ -2,18 +2,29 @@ package org.example.gtfsynq.shared.observability;
 
 import io.github.mweirauch.micrometer.jvm.extras.ProcessMemoryMetrics;
 import io.github.mweirauch.micrometer.jvm.extras.ProcessThreadMetrics;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 
-@Configuration(proxyBeanMethods = false)
+/**
+ * Exposes the JMX-backed JVM extras binders as CDI beans.
+ *
+ * <p>
+ * Quarkus' Micrometer integration automatically registers every CDI bean that
+ * implements {@code MeterBinder}, so declaring these as beans is enough to add
+ * the {@code process.memory.*} / {@code process.threads.*} meters that the
+ * supplied Grafana dashboards query.
+ */
+@Singleton
 public class JvmExtrasMetricsConfiguration {
 
-    @Bean
+    @Produces
+    @Singleton
     ProcessMemoryMetrics processMemoryMetrics() {
         return new ProcessMemoryMetrics();
     }
 
-    @Bean
+    @Produces
+    @Singleton
     ProcessThreadMetrics processThreadMetrics() {
         return new ProcessThreadMetrics();
     }

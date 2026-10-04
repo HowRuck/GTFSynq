@@ -4,17 +4,13 @@ global:
 
 scrape_configs:
   - job_name: gtfsynq-apps
-    metrics_path: /actuator/prometheus
+    metrics_path: /q/metrics
     static_configs:
+      # Each app exports its own `application` label (quarkus.application.name),
+      # so no target labels are added here.
       - targets: ["api-app:8080"]
-        labels:
-          application: "api-app"
       - targets: ["ingest-app:8081"]
-        labels:
-          application: "ingest-app"
       - targets: ["store-app:8082"]
-        labels:
-          application: "store-app"
 
   - job_name: postgres
     static_configs:

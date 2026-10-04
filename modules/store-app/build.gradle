@@ -1,48 +1,26 @@
 plugins {
-    alias(libs.plugins.spring.boot)
-    alias(libs.plugins.graalvm.native)
-    alias(libs.plugins.spring.dependency.management)
+    alias(libs.plugins.quarkus)
     id 'java'
 }
 
 dependencies {
+    implementation platform(libs.quarkus.bom)
     implementation project(':shared')
 
-    implementation libs.spring.boot.starter
-    implementation libs.spring.boot.starter.web
-    implementation libs.spring.boot.starter.actuator
-    implementation libs.bundles.kafka
-    implementation libs.spring.boot.starter.flyway
+    implementation libs.quarkus.arc
+    implementation libs.quarkus.scheduler
+    implementation libs.quarkus.vertx.http
+    implementation libs.quarkus.messaging.kafka
+    implementation libs.quarkus.jdbc.postgresql
+    implementation libs.quarkus.flyway
+    implementation libs.quarkus.smallrye.health
+    implementation libs.quarkus.micrometer.registry.prometheus
+    implementation libs.quarkus.container.image.jib
 
     runtimeOnly libs.flyway.database.postgresql
-
-    runtimeOnly libs.postgresql
-    runtimeOnly libs.micrometer.registry.prometheus
 
     compileOnly libs.bundles.lombok
     annotationProcessor libs.bundles.lombok
 
-    testImplementation libs.bundles.integration.test
-}
-
-bootJar {
-    archiveFileName = 'app.jar'
-}
-
-graalvmNative {
-    binaries {
-        main {
-            buildArgs.add('--enable-url-protocols=https')
-            // OffHeapLongTable uses Arena.ofShared(); GraalVM disables
-            // shared arenas in native images unless enabled.
-            buildArgs.add('-H:+UnlockExperimentalVMOptions')
-            buildArgs.add('-H:+SharedArenaSupport')
-            buildArgs.add('--gc=parallel')
-        }
-    }
-}
-
-tasks.named('bootBuildImage') {
-    // Paketo does not read graalvmNative.buildArgs; pass explicitly
-    environment.put('BP_NATIVE_IMAGE_BUILD_ARGUMENTS', '--enable-url-protocols=https -H:+UnlockExperimentalVMOptions -H:+SharedArenaSupport --gc=parallel')
+    testImplementation libs.quarkus.junit5
 }

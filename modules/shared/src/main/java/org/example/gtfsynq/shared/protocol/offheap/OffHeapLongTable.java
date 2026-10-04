@@ -7,7 +7,6 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gtfsynq.shared.persistence.OffHeapFileScribe;
-import org.springframework.scheduling.annotation.Scheduled;
 
 /**
  * Shared off-heap memory helper for a packed {@code long -> long -> long} table
@@ -388,7 +387,6 @@ public final class OffHeapLongTable implements AutoCloseable {
      * Closes arenas that were retired by a resize once the retention grace
      * period has elapsed
      */
-    @Scheduled(fixedRate = 60_000)
     public void purgeRetiredArenas() {
         synchronized (backupLock) {
             var deadline = System.nanoTime() - ARENA_RETENTION_NANOS;
@@ -457,7 +455,6 @@ public final class OffHeapLongTable implements AutoCloseable {
         return total;
     }
 
-    @Scheduled(fixedRate = 60_000)
     public void backup() {
         synchronized (backupLock) {
             if (closed) return;

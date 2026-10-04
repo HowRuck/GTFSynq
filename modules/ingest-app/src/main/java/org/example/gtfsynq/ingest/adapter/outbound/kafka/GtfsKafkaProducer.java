@@ -1,33 +1,38 @@
 package org.example.gtfsynq.ingest.adapter.outbound.kafka;
 
 import com.google.transit.realtime.GtfsRealtime;
+import jakarta.inject.Singleton;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.example.gtfsynq.shared.protocol.BinaryFeedEntityWithMetadata;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Service;
 
 /**
  * Kafka producer for GTFS trip updates
  */
-@Service
+@Singleton
 @Slf4j
-@RequiredArgsConstructor
 public class GtfsKafkaProducer {
 
     /**
-     * Kafka template for sending messages
+     * Kafka producer for sending messages
      */
-    private final KafkaTemplate<String, byte[]> kafka;
+    private final KafkaProducer<String, byte[]> kafka;
 
     /**
      * Kafka topic to send messages to
      */
-    @Value("${spring.kafka.topic:gtfs-trip-updates}")
-    private String topic;
+    private final String topic;
+
+    public GtfsKafkaProducer(
+            KafkaProducer<String, byte[]> kafka,
+            @ConfigProperty(name = "gtfsynq.kafka.trip-updates-topic", defaultValue = "gtfs-trip-updates")
+                    String topic) {
+        this.kafka = kafka;
+        this.topic = topic;
+    }
 
     /**
      * Sends a batch of trip updates to Kafka.
@@ -35,7 +40,6 @@ public class GtfsKafkaProducer {
      * @param feedId the feed ID
      * @param entities the entities to send
      */
-    @Async
     public void sendTripUpdates(String feedId, List<BinaryFeedEntityWithMetadata> entities) {
         var startTime = System.currentTimeMillis();
 
@@ -46,7 +50,8 @@ public class GtfsKafkaProducer {
         log.debug("Sending {} trip updates to Kafka", entities.size());
 
         for (var entity : entities) {
-            kafka.send(topic, feedId, entity.encode());
+            // KafkaProducer#send(String, K, V) was removed in Kafka 4.
+            kafka.send(new ProducerRecord<>(topic, feedId, entity.encode()));
         }
 
         var endTime = System.currentTimeMillis();
@@ -60,6 +65,7 @@ public class GtfsKafkaProducer {
      * @param entity The GTFS trip update entity
      */
     public void send(String id, GtfsRealtime.FeedEntity entity) {
-        kafka.send(topic, id, entity.toByteArray());
+        // KafkaProducer#send(String, K, V) was removed in Kafka 4.
+        kafka.send(new ProducerRecord<>(topic, id, entity.toByteArray()));
     }
 }

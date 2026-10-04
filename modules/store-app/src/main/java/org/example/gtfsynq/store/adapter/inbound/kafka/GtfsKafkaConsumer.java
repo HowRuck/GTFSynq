@@ -2,16 +2,16 @@ package org.example.gtfsynq.store.adapter.inbound.kafka;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.transit.realtime.GtfsRealtime.FeedEntity;
+import io.smallrye.common.annotation.Blocking;
+import io.smallrye.reactive.messaging.kafka.Record;
+import jakarta.inject.Singleton;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.microprofile.reactive.messaging.Incoming;
 import org.example.gtfsynq.shared.model.FeedEntityWithMetadata;
 import org.example.gtfsynq.shared.protocol.BinaryFeedEntityWithMetadata;
 import org.example.gtfsynq.store.service.GtfsTripUpdateSink;
-import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.messaging.handler.annotation.Header;
-import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.stereotype.Component;
 
 /**
  * Kafka consumer for GTFS-RT TripUpdate messages.
@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
  * Actual database persistence is handled by {@link GtfsTripUpdateSink}, which batches
  * and flushes updates to the relational TimescaleDB schema.
  */
-@Component
+@Singleton
 @Slf4j
 @RequiredArgsConstructor
 public class GtfsKafkaConsumer {
@@ -68,16 +68,15 @@ public class GtfsKafkaConsumer {
     /**
      * Consume raw Kafka records
      *
-     * @param feedId Kafka key / feed identifier
-     * @param value raw Kafka value
+     * @param record raw Kafka record, keyed by feed identifier
      */
-    @KafkaListener(topics = "${spring.kafka.topic:gtfs-trip-updates}")
-    public void consume(
-            @Header(value = "kafka_receivedMessageKey", required = false) String feedId,
-            @Payload(required = false) byte[] value) {
+    @Incoming("gtfs-trip-updates")
+    @Blocking
+    public void consume(Record<String, byte[]> record) {
+        var value = record.value();
         if (value == null) {
             return;
         }
-        routeToSink(feedId, parseFeedEntity(value));
+        routeToSink(record.key(), parseFeedEntity(value));
     }
 }

@@ -1,5 +1,7 @@
 package org.example.gtfsynq.store.adapter.outbound.database;
 
+import jakarta.inject.Singleton;
+import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -10,24 +12,23 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.LinkedList;
 import java.util.List;
+import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gtfsynq.shared.model.dto.TripDescriptorDto;
 import org.example.gtfsynq.shared.model.dto.TripStopTimeUpdateDto;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Repository;
 
 /**
  * High-throughput persistence for GTFS-RT TripUpdate entities
  */
-@Repository
+@Singleton
 @RequiredArgsConstructor
 @Slf4j
 public class TripUpdateRepository {
 
     private static final int BATCH_SIZE = 5000;
 
-    private final JdbcTemplate jdbcTemplate;
+    private final DataSource dataSource;
 
     /**
      * Upserts the parent trip update row
@@ -62,7 +63,7 @@ public class TripUpdateRepository {
 				    feed_ts = EXCLUDED.feed_ts
 				""";
 
-        jdbcTemplate.batchUpdate(sql, descriptors, BATCH_SIZE, (preparedStatement, descriptor) -> {
+        batchUpdate(sql, descriptors, (preparedStatement, descriptor) -> {
             preparedStatement.setString(1, descriptor.entityId());
             preparedStatement.setObject(2, descriptor.feedId(), Types.OTHER);
             preparedStatement.setLong(3, descriptor.id());
@@ -104,7 +105,7 @@ public class TripUpdateRepository {
 				ON CONFLICT (trip_update_id, feed_ts, stop_sequence) DO NOTHING
 				""";
 
-        jdbcTemplate.batchUpdate(sql, updates, BATCH_SIZE, this::bindStopTimeUpdateParameters);
+        batchUpdate(sql, updates, this::bindStopTimeUpdateParameters);
     }
 
     public void upsertHotTrips(List<TripDescriptorDto> tripDescriptors, List<TripStopTimeUpdateDto> stopTimeUpdates) {
@@ -128,7 +129,13 @@ public class TripUpdateRepository {
 				WHERE last_seen_at < ?
 				""";
 
-        return jdbcTemplate.update(sql, lastSeenAt);
+        try (Connection connection = dataSource.getConnection();
+                PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setObject(1, lastSeenAt);
+            return preparedStatement.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -179,7 +186,7 @@ public class TripUpdateRepository {
 				    last_seen_at = NOW()
 				""";
 
-        jdbcTemplate.batchUpdate(sql, uniqueUpdateRows, BATCH_SIZE, (preparedStatement, row) -> {
+        batchUpdate(sql, uniqueUpdateRows, (preparedStatement, row) -> {
             preparedStatement.setLong(1, row.tripUpdateId());
             preparedStatement.setObject(2, row.feedId(), Types.OTHER);
             preparedStatement.setTimestamp(3, Timestamp.from(row.feedTs()));
@@ -222,7 +229,7 @@ public class TripUpdateRepository {
 				    last_seen_at = NOW()
 				""";
 
-        jdbcTemplate.batchUpdate(sql, updates, BATCH_SIZE, this::bindStopTimeUpdateParameters);
+        batchUpdate(sql, updates, this::bindStopTimeUpdateParameters);
     }
 
     private void setNullableInteger(PreparedStatement ps, int index, Integer value) throws SQLException {
@@ -231,6 +238,36 @@ public class TripUpdateRepository {
         } else {
             ps.setInt(index, value);
         }
+    }
+
+    private <T> void batchUpdate(String sql, List<T> items, BatchBinder<T> binder) {
+        if (items == null || items.isEmpty()) {
+            return;
+        }
+
+        try (Connection connection = dataSource.getConnection();
+                PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            var pending = 0;
+            for (var item : items) {
+                binder.bind(preparedStatement, item);
+                preparedStatement.addBatch();
+                if (++pending >= BATCH_SIZE) {
+                    preparedStatement.executeBatch();
+                    preparedStatement.clearBatch();
+                    pending = 0;
+                }
+            }
+            if (pending > 0) {
+                preparedStatement.executeBatch();
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @FunctionalInterface
+    private interface BatchBinder<T> {
+        void bind(PreparedStatement preparedStatement, T item) throws SQLException;
     }
 
     private record HotTripUpdateRow(long tripUpdateId, String feedId, Instant feedTs) {}

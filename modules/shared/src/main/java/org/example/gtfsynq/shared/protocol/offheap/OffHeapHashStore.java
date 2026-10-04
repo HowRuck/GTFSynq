@@ -8,10 +8,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.StampedLock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.event.ContextRefreshedEvent;
-import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Scheduled;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -65,7 +61,6 @@ public class OffHeapHashStore implements AutoCloseable {
      * Binds Micrometer gauges lazily so plain unit-test construction
      * ({@code new OffHeapHashStore(table)}) keeps working without a registry.
      */
-    @Autowired(required = false)
     public void bindMetrics(MeterRegistry registry) {
         if (registry == null || !metricsBound.compareAndSet(false, true)) {
             return;
@@ -92,7 +87,6 @@ public class OffHeapHashStore implements AutoCloseable {
                 .register(registry);
     }
 
-    @EventListener(ContextRefreshedEvent.class)
     public void init() {
         size.set(binTable.countOccupied());
         log.info("OffHeapHashStore initialized with {} occupied slots (capacity {})", size.get(), binTable.capacity());
@@ -282,7 +276,6 @@ public class OffHeapHashStore implements AutoCloseable {
      * and writers for its duration. It is therefore skipped unless enough
      * expired-slot overwrites have accumulated to justify the pause.
      */
-    @Scheduled(fixedRate = 60_000)
     public void autoTune() {
         var stamp = lock.writeLock();
         try {
@@ -325,12 +318,10 @@ public class OffHeapHashStore implements AutoCloseable {
         }
     }
 
-    @Scheduled(fixedRate = 60000)
     public void tickMinute() {
         currentMinute = (int) (System.currentTimeMillis() / 60000);
     }
 
-    @Scheduled(fixedRate = 60000)
     public void printLoadPercentage() {
         var occupied = size.get();
         var capacity = binTable.capacity();

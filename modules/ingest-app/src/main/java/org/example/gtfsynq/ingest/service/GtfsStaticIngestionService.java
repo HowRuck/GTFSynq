@@ -1,18 +1,18 @@
 package org.example.gtfsynq.ingest.service;
 
+import io.quarkus.scheduler.Scheduled;
+import jakarta.inject.Singleton;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.example.gtfsynq.ingest.config.GtfsProperties;
+import org.example.gtfsynq.ingest.config.S3StorageProperties;
 import org.example.gtfsynq.ingest.service.metrics.StaticFeedMetrics;
 import org.example.gtfsynq.ingest.service.metrics.StaticFeedMetrics.Outcome;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
 
 /**
  * Service responsible for ingesting the static feeds of all configured sources at
@@ -22,22 +22,41 @@ import org.springframework.stereotype.Service;
  * schedule rather than on the GTFS-RT polling cadence. As the archives are large, a tick
  * that is still running when the next one fires is skipped entirely instead of queued
  */
-@Service
+@Singleton
 @Slf4j
-@AllArgsConstructor
-@ConditionalOnProperty(prefix = "gtfsynq.static-polling", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class GtfsStaticIngestionService {
 
     private final GtfsProperties gtfsConfig;
     private final GtfsStaticIngestionAsyncService ingestionAsyncService;
     private final StaticFeedMetrics metrics;
+    private final S3StorageProperties storageProperties;
+    private final boolean staticPollingEnabled;
     private final AtomicBoolean isRunning = new AtomicBoolean(false);
+
+    public GtfsStaticIngestionService(
+            GtfsProperties gtfsConfig,
+            GtfsStaticIngestionAsyncService ingestionAsyncService,
+            StaticFeedMetrics metrics,
+            S3StorageProperties storageProperties,
+            @ConfigProperty(name = "gtfsynq.static-polling.enabled", defaultValue = "true")
+                    boolean staticPollingEnabled) {
+        this.gtfsConfig = gtfsConfig;
+        this.ingestionAsyncService = ingestionAsyncService;
+        this.metrics = metrics;
+        this.storageProperties = storageProperties;
+        this.staticPollingEnabled = staticPollingEnabled;
+    }
 
     /**
      * Scheduled task to ingest the static feed of every source that has one configured.
      */
-    @Scheduled(fixedRateString = "${gtfsynq.static-polling.interval-ms:86400000}")
+    @Scheduled(every = "{gtfsynq.static-polling.interval}")
     public void process() {
+        if (!staticPollingEnabled || !storageProperties.enabled()) {
+            log.debug("Static polling is disabled, skipping this iteration");
+            return;
+        }
+
         if (!isRunning.compareAndSet(false, true)) {
             metrics.recordCycleSkipped();
             log.info("Previous static ingestion is still running, skipping this iteration");
@@ -76,7 +95,13 @@ public class GtfsStaticIngestionService {
     }
 
     private static boolean hasUrl(GtfsProperties.FeedSource source) {
-        var url = source.staticConfig().url();
+        var staticConfig = source.staticConfig();
+
+        if (staticConfig == null) {
+            return false;
+        }
+
+        var url = staticConfig.url();
 
         return url != null && !url.isBlank();
     }

@@ -1,22 +1,23 @@
 package org.example.gtfsynq.ingest.service;
 
+import io.quarkus.scheduler.Scheduled;
+import jakarta.inject.Singleton;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import lombok.AllArgsConstructor;
+import java.util.stream.Stream;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gtfsynq.ingest.config.GtfsProperties;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
 
 /**
  * Service responsible for processing GTFS feeds at regular intervals
  */
-@Service
+@Singleton
 @Slf4j
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class GtfsIngestionService {
 
     private final GtfsProperties gtfsConfig;
@@ -32,7 +33,7 @@ public class GtfsIngestionService {
      * is ephemeral, and backpressure via skip is preferred over falling further
      * behind on every tick.
      */
-    @Scheduled(fixedRateString = "${gtfsynq.polling.interval-ms}")
+    @Scheduled(every = "{gtfsynq.polling.interval}")
     public void process() {
         if (!isRunning.compareAndSet(false, true)) {
             log.info("Previous polling is still running, skipping this iteration");
@@ -47,7 +48,17 @@ public class GtfsIngestionService {
                     gtfsConfig.sources().size());
 
             var futures = gtfsConfig.sources().entrySet().stream()
-                    .flatMap(e -> e.getValue().realtimeConfig().urls().stream().map(url -> submitFeed(e.getKey(), url)))
+                    .flatMap(e -> {
+                        var realtimeConfig = e.getValue().realtimeConfig();
+
+                        if (realtimeConfig == null
+                                || realtimeConfig.urls() == null
+                                || realtimeConfig.urls().isEmpty()) {
+                            return Stream.empty();
+                        }
+
+                        return realtimeConfig.urls().stream().map(url -> submitFeed(e.getKey(), url));
+                    })
                     .toList();
 
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();

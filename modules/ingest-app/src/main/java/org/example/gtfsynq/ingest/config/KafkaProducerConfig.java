@@ -1,59 +1,62 @@
 package org.example.gtfsynq.ingest.config;
 
+import io.micrometer.core.instrument.binder.kafka.KafkaClientMetrics;
+import io.smallrye.common.annotation.Identifier;
+import jakarta.enterprise.inject.Disposes;
+import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.serialization.ByteArraySerializer;
-import org.apache.kafka.common.serialization.StringSerializer;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.kafka.core.DefaultKafkaProducerFactory;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.core.ProducerFactory;
 
 /**
- * Configuration for Kafka producer
+ * Configuration for Kafka producer.
+ * <p>
+ * The producer is built from the {@code kafka.*} keys in {@code application.properties},
+ * which carry the bootstrap servers, serializers and batching/timeout tuning, so no
+ * producer settings are hard-coded here.
  */
-@Configuration
+@Singleton
 public class KafkaProducerConfig {
 
     /**
-     * Kafka bootstrap servers
-     */
-    @Value("${spring.kafka.bootstrap-servers}")
-    private String bootstrapServers;
-
-    /**
-     * Kafka producer factory for creating Kafka producers
+     * Kafka producer for sending byte array messages.
      *
-     * @return Kafka producer factory
+     * @param config the default Kafka broker configuration injected by Quarkus
+     * @return Kafka producer
      */
-    @Bean
-    public ProducerFactory<String, byte[]> producerFactory() {
-        Map<String, Object> configProps = new HashMap<>();
+    @Produces
+    @Singleton
+    public KafkaProducer<String, byte[]> kafkaProducer(@Identifier("default-kafka-broker") Map<String, Object> config) {
+        var producerConfig = new HashMap<String, Object>();
 
-        // Initialize Kafka producer configuration properties
-        configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class);
+        for (var name : ProducerConfig.configNames()) {
+            if (config.containsKey(name)) {
+                producerConfig.put(name, config.get(name));
+            }
+        }
 
-        // Performance optimizations for batching and compression
-        configProps.put(ProducerConfig.LINGER_MS_CONFIG, 20);
-        configProps.put(ProducerConfig.BATCH_SIZE_CONFIG, 32768);
-        configProps.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, 120000);
-        configProps.put(ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, 30000);
+        return new KafkaProducer<>(producerConfig);
+    }
 
-        return new DefaultKafkaProducerFactory<>(configProps);
+    void dispose(@Disposes KafkaProducer<String, byte[]> producer) {
+        producer.close();
     }
 
     /**
-     * Kafka template for sending messages to Kafka
+     * Exposes the producer's Micrometer client metrics.
+     * <p>
+     * Quarkus only instruments the Kafka clients it creates itself, and a
+     * {@code KafkaClientMetrics} is a {@code MeterBinder} that Quarkus binds
+     * automatically, so simply exposing it is enough to get producer-side meters.
      *
-     * @return Kafka template
+     * @param producer the configured producer
+     * @return client metrics for the producer
      */
-    @Bean
-    public KafkaTemplate<String, byte[]> kafkaTemplate() {
-        return new KafkaTemplate<>(producerFactory());
+    @Produces
+    @Singleton
+    public KafkaClientMetrics kafkaProducerMetrics(KafkaProducer<String, byte[]> producer) {
+        return new KafkaClientMetrics(producer);
     }
 }

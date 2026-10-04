@@ -1,9 +1,14 @@
 package org.example.gtfsynq.ingest.service;
 
+import io.quarkus.runtime.ShutdownEvent;
+import jakarta.enterprise.event.Observes;
+import jakarta.inject.Singleton;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gtfsynq.ingest.adapter.inbound.http.GtfsStaticFeedDownloader;
@@ -11,29 +16,29 @@ import org.example.gtfsynq.ingest.adapter.inbound.http.GtfsStaticFeedDownloader.
 import org.example.gtfsynq.ingest.adapter.inbound.http.StaticFeedDownloadException;
 import org.example.gtfsynq.ingest.adapter.outbound.kafka.GtfsStaticFeedKafkaProducer;
 import org.example.gtfsynq.ingest.adapter.outbound.storage.S3StaticFeedStorage;
+import org.example.gtfsynq.ingest.config.S3StorageProperties;
 import org.example.gtfsynq.ingest.service.metrics.StaticFeedMetrics;
 import org.example.gtfsynq.ingest.service.metrics.StaticFeedMetrics.Outcome;
 import org.example.gtfsynq.shared.protocol.StaticFeedIngested;
 import org.example.gtfsynq.shared.util.SizeFormat;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Service;
 import software.amazon.awssdk.core.exception.SdkException;
 
 /**
  * Runs the static feed ingestion pipeline for a single source: download the archive,
  * store it in object storage and publish an ingestion event
  */
-@Service
+@Singleton
 @Slf4j
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "gtfsynq.storage.s3", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class GtfsStaticIngestionAsyncService {
 
     private final GtfsStaticFeedDownloader staticFeedDownloader;
     private final S3StaticFeedStorage staticFeedStorage;
     private final GtfsStaticFeedKafkaProducer staticFeedKafkaProducer;
     private final StaticFeedMetrics metrics;
+    private final S3StorageProperties storageProperties;
+
+    private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
     /**
      * Ingests one static feed source.
@@ -45,29 +50,38 @@ public class GtfsStaticIngestionAsyncService {
      * @param sourceUrl URL of the static feed archive
      * @return a future that completes when the source was processed or failed
      */
-    @Async
     public CompletableFuture<Void> ingestAsync(String feedId, String sourceUrl) {
-        var downloadStart = System.nanoTime();
-
-        try {
-            var feed = staticFeedDownloader.download(feedId, sourceUrl);
-            metrics.recordDownload(feedId, System.nanoTime() - downloadStart, feed.sizeBytes());
-
-            try {
-                storeAndPublish(feedId, sourceUrl, feed);
-            } finally {
-                staticFeedDownloader.discard(feed);
-            }
-        } catch (StaticFeedDownloadException e) {
-            metrics.recordDownloadFailure(feedId, System.nanoTime() - downloadStart);
-            metrics.recordOutcome(feedId, Outcome.FAILED);
-            log.error("Static feed {} ({}) could not be downloaded", feedId, sourceUrl, e);
-        } catch (Exception e) {
-            metrics.recordOutcome(feedId, Outcome.FAILED);
-            log.error("Unexpected error ingesting static feed {} ({})", feedId, sourceUrl, e);
+        if (!storageProperties.enabled()) {
+            return CompletableFuture.completedFuture(null);
         }
 
-        return CompletableFuture.completedFuture(null);
+        return CompletableFuture.runAsync(
+                () -> {
+                    var downloadStart = System.nanoTime();
+
+                    try {
+                        var feed = staticFeedDownloader.download(feedId, sourceUrl);
+                        metrics.recordDownload(feedId, System.nanoTime() - downloadStart, feed.sizeBytes());
+
+                        try {
+                            storeAndPublish(feedId, sourceUrl, feed);
+                        } finally {
+                            staticFeedDownloader.discard(feed);
+                        }
+                    } catch (StaticFeedDownloadException e) {
+                        metrics.recordDownloadFailure(feedId, System.nanoTime() - downloadStart);
+                        metrics.recordOutcome(feedId, Outcome.FAILED);
+                        log.error("Static feed {} ({}) could not be downloaded", feedId, sourceUrl, e);
+                    } catch (Exception e) {
+                        metrics.recordOutcome(feedId, Outcome.FAILED);
+                        log.error("Unexpected error ingesting static feed {} ({})", feedId, sourceUrl, e);
+                    }
+                },
+                executor);
+    }
+
+    void shutdown(@Observes ShutdownEvent event) {
+        executor.shutdown();
     }
 
     private void storeAndPublish(String feedId, String sourceUrl, DownloadedStaticFeed feed) {

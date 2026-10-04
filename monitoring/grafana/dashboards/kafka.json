@@ -43,16 +43,16 @@
     {
       "id": 4,
       "type": "timeseries",
-      "title": "Spring Kafka listener / template",
+      "title": "Kafka client throughput (produced / consumed)",
       "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
       "targets": [
         {
-          "expr": "rate(spring_kafka_listener_seconds_count[$__rate_interval])",
-          "legendFormat": "listener {{instance}}"
+          "expr": "sum by (instance) (rate(kafka_producer_record_send_total[$__rate_interval]))",
+          "legendFormat": "produced {{instance}}"
         },
         {
-          "expr": "rate(spring_kafka_template_seconds_count[$__rate_interval])",
-          "legendFormat": "template {{instance}}"
+          "expr": "sum by (instance) (rate(kafka_consumer_fetch_manager_records_consumed_total[$__rate_interval]))",
+          "legendFormat": "consumed {{instance}}"
         }
       ],
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }

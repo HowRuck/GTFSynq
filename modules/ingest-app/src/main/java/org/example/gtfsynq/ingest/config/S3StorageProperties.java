@@ -1,10 +1,9 @@
 package org.example.gtfsynq.ingest.config;
 
+import io.smallrye.config.ConfigMapping;
+import io.smallrye.config.WithDefault;
 import jakarta.validation.constraints.NotBlank;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.bind.DefaultValue;
-import org.springframework.context.annotation.ImportRuntimeHints;
-import org.springframework.validation.annotation.Validated;
+import java.util.Optional;
 
 /**
  * Configuration properties for the S3-compatible object storage that downloaded
@@ -13,46 +12,58 @@ import org.springframework.validation.annotation.Validated;
  * Example configuration:
  *
  * <pre>
- * gtfsynq:
- *   storage:
- *     s3:
- *       endpoint: {@code http://localhost:9000}
- *       bucket: gtfsynq-static
- *       access-key: ...
- *       secret-key: ...
+ * gtfsynq.storage.s3.endpoint={@code http://localhost:9000}
+ * gtfsynq.storage.s3.bucket=gtfsynq-static
+ * gtfsynq.storage.s3.access-key=...
+ * gtfsynq.storage.s3.secret-key=...
  * </pre>
- *
- * @param enabled whether static feed ingestion into object storage is enabled.
- *        When disabled, no S3 client is created and static feeds are not polled at all.
- *        Defaults to {@code true}.
- * @param endpoint endpoint of the S3-compatible service, e.g.
- *        {@code http://localhost:9000} for a local object store. Leave empty to use
- *        the standard AWS S3 endpoint.
- * @param region region to sign requests for. Defaults to {@code us-east-1}, which is
- *        also the region S3-compatible services use unless configured otherwise.
- * @param bucket bucket that holds the static feed archives. Must not be blank.
- * @param accessKey access key id. When either credential is blank, the AWS default
- *        credentials provider chain is used instead (environment, profile, container
- *        or instance role).
- * @param secretKey secret access key. See {@link #accessKey}.
- * @param pathStyleAccess whether to address buckets as {@code endpoint/bucket} instead of
- *        {@code bucket.endpoint}. Defaults to {@code true}, which is what local
- *        S3-compatible services need.
  */
-@Validated
-@ConfigurationProperties("gtfsynq.storage.s3")
-@ImportRuntimeHints(GtfsPropertiesRuntimeHints.class)
-public record S3StorageProperties(
-        @DefaultValue("true") boolean enabled,
+@ConfigMapping(prefix = "gtfsynq.storage.s3")
+public interface S3StorageProperties {
 
-        String endpoint,
+    /**
+     * Whether static feed ingestion into object storage is enabled. When disabled, no S3
+     * client is created and static feeds are not polled at all. Defaults to {@code true}.
+     */
+    @WithDefault("true")
+    boolean enabled();
 
-        @DefaultValue("us-east-1") String region,
+    /**
+     * Endpoint of the S3-compatible service, e.g. {@code http://localhost:9000} for a local
+     * object store. Empty (the default) uses the standard AWS S3 endpoint.
+     */
+    Optional<String> endpoint();
 
-        @NotBlank String bucket,
+    /**
+     * Region to sign requests for. Defaults to {@code us-east-1}, which is also the region
+     * S3-compatible services use unless configured otherwise.
+     */
+    @WithDefault("us-east-1")
+    String region();
 
-        String accessKey,
+    /**
+     * Bucket that holds the static feed archives. Must not be blank.
+     */
+    @NotBlank
+    @WithDefault("gtfsynq-static")
+    String bucket();
 
-        String secretKey,
+    /**
+     * Access key id. When empty (the default), the AWS default credentials provider chain is
+     * used instead (environment, profile, container or instance role).
+     */
+    Optional<String> accessKey();
 
-        @DefaultValue("true") boolean pathStyleAccess) {}
+    /**
+     * Secret access key. See {@link #accessKey()}.
+     */
+    Optional<String> secretKey();
+
+    /**
+     * Whether to address buckets as {@code endpoint/bucket} instead of
+     * {@code bucket.endpoint}. Defaults to {@code true}, which is what local S3-compatible
+     * services need.
+     */
+    @WithDefault("true")
+    boolean pathStyleAccess();
+}
