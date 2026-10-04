@@ -8,6 +8,7 @@ palantir-java-format = "2.100.0"
 quarkus = "3.40.1"
 protobuf = "4.36.2"
 aws-sdk = "2.55.7"
+quarkus-amazon-services = "3.23.0"
 
 # Jakarta EE APIs used by the framework-agnostic :shared module
 jakarta-inject = "2.0.1"
@@ -57,6 +58,10 @@ quarkus-micrometer-registry-prometheus = { module = "io.quarkus:quarkus-micromet
 # Build, Containerization & Testing
 quarkus-container-image-jib = { module = "io.quarkus:quarkus-container-image-jib" }
 quarkus-junit5 = { module = "io.quarkus:quarkus-junit5" }
+
+# Provides GraalVM substitutions that make the AWS SDK v2 native-image friendly
+# (strips the optional aws-crt checksum references when aws-crt is absent).
+quarkus-amazon-common = { module = "io.quarkiverse.amazonservices:quarkus-amazon-common", version.ref = "quarkus-amazon-services" }
 
 # Persistence
 flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql" }
