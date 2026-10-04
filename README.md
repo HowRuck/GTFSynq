@@ -354,12 +354,16 @@ Alternatively let Quarkus run the native build in a container (Docker/Podman
 required, ~8 GB RAM recommended, first build takes 5-15 min per service):
 
 ```bash
-./gradlew :api-app:build -Dnative -Dquarkus.native.container-build=true
+./gradlew :api-app:build -Dquarkus.native.enabled=true \
+  -Dquarkus.native.container-build=true -Dquarkus.package.jar.enabled=false
 ```
+
+`quarkus.package.jar.enabled=false` is required: the Quarkus Gradle plugin cannot
+emit a JAR and a native binary in the same build.
 
 `ingest-app` and `store-app` pass the shared-arena flag their off-heap state store
 requires via `quarkus.native.additional-build-args` in `application.properties`:
-`-H:+UnlockExperimentalVMOptions -H:+SharedArenaSupport --gc=parallel`
+`-H:+UnlockExperimentalVMOptions -H:+SharedArenaSupport`
 (`OffHeapLongTable` uses `Arena.ofShared()`, which GraalVM disables by default).
 
 To run native images, point Compose at the `-native` tags. Note the native run
