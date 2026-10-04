@@ -7,8 +7,6 @@ palantir-java-format = "2.100.0"
 # Frameworks & runtimes
 quarkus = "3.40.1"
 protobuf = "4.36.2"
-aws-sdk = "2.55.7"
-quarkus-amazon-services = "3.23.0"
 
 # Jakarta EE APIs used by the framework-agnostic :shared module
 jakarta-inject = "2.0.1"
@@ -38,6 +36,7 @@ microprofile-config-api = { module = "org.eclipse.microprofile.config:microprofi
 
 # Platform / BOM
 quarkus-bom = { module = "io.quarkus.platform:quarkus-bom", version.ref = "quarkus" }
+quarkus-amazon-services-bom = { module = "io.quarkus.platform:quarkus-amazon-services-bom", version.ref = "quarkus" }
 # Core & Runtime
 quarkus-arc = { module = "io.quarkus:quarkus-arc" }
 quarkus-vertx-http = { module = "io.quarkus:quarkus-vertx-http" }
@@ -59,9 +58,10 @@ quarkus-micrometer-registry-prometheus = { module = "io.quarkus:quarkus-micromet
 quarkus-container-image-jib = { module = "io.quarkus:quarkus-container-image-jib" }
 quarkus-junit5 = { module = "io.quarkus:quarkus-junit5" }
 
-# Provides GraalVM substitutions that make the AWS SDK v2 native-image friendly
-# (strips the optional aws-crt checksum references when aws-crt is absent).
-quarkus-amazon-common = { module = "io.quarkiverse.amazonservices:quarkus-amazon-common", version.ref = "quarkus-amazon-services" }
+# Managed S3 client plus the GraalVM substitutions that make the AWS SDK v2
+# native-image friendly (strips the optional aws-crt checksum references when
+# aws-crt is absent).
+quarkus-amazon-s3 = { module = "io.quarkiverse.amazonservices:quarkus-amazon-s3" }
 
 # Persistence
 flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql" }
@@ -74,10 +74,6 @@ kafka-clients = { module = "org.apache.kafka:kafka-clients" }
 micrometer-core = { module = "io.micrometer:micrometer-core" }
 micrometer-jvm-extras = { module = "io.github.mweirauch:micrometer-jvm-extras", version.ref = "micrometer-jvm-extras" }
 
-# Object storage (S3 compatible)
-aws-sdk-s3 = { module = "software.amazon.awssdk:s3", version.ref = "aws-sdk" }
-aws-sdk-url-connection-client = { module = "software.amazon.awssdk:url-connection-client", version.ref = "aws-sdk" }
-
 # Data formats & serialization
 protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
 
@@ -87,7 +83,6 @@ zero-allocation-hashing = { module = "net.openhft:zero-allocation-hashing", vers
 
 [bundles]
 lombok = ["lombok"]
-s3 = ["aws-sdk-s3", "aws-sdk-url-connection-client"]
 
 [plugins]
 protobuf = { id = "com.google.protobuf", version.ref = "protobufPlugin" }

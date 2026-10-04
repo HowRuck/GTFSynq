@@ -5,6 +5,7 @@ plugins {
 
 dependencies {
     implementation platform(libs.quarkus.bom)
+    implementation platform(libs.quarkus.amazon.services.bom)
     implementation project(':shared')
 
     implementation libs.quarkus.arc
@@ -16,7 +17,7 @@ dependencies {
     implementation libs.quarkus.micrometer.registry.prometheus
     implementation libs.quarkus.container.image.jib
 
-    implementation libs.bundles.s3
+    implementation libs.quarkus.amazon.s3
 
     compileOnly libs.bundles.lombok
     annotationProcessor libs.bundles.lombok
