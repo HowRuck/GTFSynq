@@ -74,6 +74,10 @@ kafka-clients = { module = "org.apache.kafka:kafka-clients" }
 micrometer-core = { module = "io.micrometer:micrometer-core" }
 micrometer-jvm-extras = { module = "io.github.mweirauch:micrometer-jvm-extras", version.ref = "micrometer-jvm-extras" }
 
+# HTTP client backing the Amazon S3 sync client (version from the Amazon
+# Services BOM). The S3 extension marks all HTTP clients optional.
+aws-sdk-url-connection-client = { module = "software.amazon.awssdk:url-connection-client" }
+
 # Data formats & serialization
 protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
 

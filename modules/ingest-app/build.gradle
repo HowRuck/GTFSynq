@@ -18,6 +18,7 @@ dependencies {
     implementation libs.quarkus.container.image.jib
 
     implementation libs.quarkus.amazon.s3
+    implementation libs.aws.sdk.url.connection.client
 
     compileOnly libs.bundles.lombok
     annotationProcessor libs.bundles.lombok
