@@ -5,15 +5,13 @@ import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import jakarta.transaction.Transactional;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.example.gtfsynq.shared.model.FeedEntityWithMetadata;
-import org.example.gtfsynq.shared.model.dto.TripDescriptorDto;
-import org.example.gtfsynq.shared.model.dto.TripStopTimeUpdateDto;
 import org.example.gtfsynq.shared.model.dto.TripUpdateDto;
+import org.example.gtfsynq.store.adapter.outbound.database.TripUpdateBatchMapper;
 import org.example.gtfsynq.store.adapter.outbound.database.TripUpdateRepository;
 import org.example.gtfsynq.store.service.metrics.GtfsSinkMetrics;
 
@@ -21,20 +19,26 @@ import org.example.gtfsynq.store.service.metrics.GtfsSinkMetrics;
  * Buffers GTFS TripUpdate writes and flushes them to the database in batches.
  *
  * <p>This sink is intended for high-throughput ingestion where individual message writes would be
- * too expensive. Incoming updates are coalesced by entity id so that the latest update wins before
- * being written to the database.
+ * too expensive. Incoming updates are deduplicated upstream, so the buffer only holds changed
+ * data. On flush, the drained batch is shaped into per-table rows by {@link TripUpdateBatchMapper}
+ * and handed to {@link TripUpdateRepository} for persistence.
  *
- * <p>The sink keeps only the most recent update per entity id in memory. On flush, it persists the
- * parent trip-update row and all normalized child rows in one transactional operation per entity.
+ * <p>Locking discipline: {@code bufferLock} guards only the buffer swap and is
+ * never held during database I/O, so Kafka consumer threads keep buffering
+ * while a flush is in flight. Concurrent flushes (scheduled vs. early) are
+ * serialized by {@code flushLock} instead.
  */
 @Singleton
 @Slf4j
 public class GtfsTripUpdateSink {
 
     private final TripUpdateRepository tripUpdateRepository;
+    private final TripUpdateBatchMapper batchMapper;
 
     private final ReentrantLock bufferLock = new ReentrantLock();
-    private final List<TripUpdateDto> buffer = new LinkedList<>();
+    private final List<TripUpdateDto> buffer = new ArrayList<>();
+
+    private final ReentrantLock flushLock = new ReentrantLock();
 
     private final DatabaseDeduplicationService deduplicationService;
     private final GtfsSinkMetrics metrics;
@@ -50,11 +54,13 @@ public class GtfsTripUpdateSink {
     @Inject
     public GtfsTripUpdateSink(
             TripUpdateRepository tripUpdateRepository,
+            TripUpdateBatchMapper batchMapper,
             DatabaseDeduplicationService deduplicationService,
             GtfsSinkMetrics metrics,
             @ConfigProperty(name = "gtfsynq.sink.enabled", defaultValue = "true") boolean enabled,
             @ConfigProperty(name = "gtfsynq.sink.max-buffer-size", defaultValue = "20000") int maxBufferSize) {
         this.tripUpdateRepository = tripUpdateRepository;
+        this.batchMapper = batchMapper;
         this.deduplicationService = deduplicationService;
         this.metrics = metrics;
         this.enabled = enabled;
@@ -79,33 +85,38 @@ public class GtfsTripUpdateSink {
             return;
         }
 
+        var cleanedUpdate = deduplicationService.cleanState(rawUpdateDto);
+        if (cleanedUpdate == null) {
+            metrics.recordDroppedDuplicate();
+            return;
+        }
+
+        var bufferedSize = 0;
+        var overLimit = false;
         bufferLock.lock();
         try {
-            var cleanedUpdate = deduplicationService.cleanState(rawUpdateDto);
-            if (cleanedUpdate == null) {
-                metrics.recordDroppedDuplicate();
-                return;
-            }
             buffer.add(cleanedUpdate);
-
-            log.debug(
-                    "Buffered TripUpdate entity={} feed={} bufferSize={}",
-                    cleanedUpdate.tripDescriptor() != null
-                            ? cleanedUpdate.tripDescriptor().entityId()
-                            : null,
-                    feedId,
-                    buffer.size());
-
-            // Backpressure: flush early on the producer thread instead of
-            // letting the buffer grow unbounded when intake outpaces the
-            // scheduled flush. Runs without the scheduled-flush transaction,
-            // so it commits per batch — slower, but correct and self-draining.
-            if (buffer.size() >= maxBufferSize) {
-                log.info("Buffer reached {} buffered updates, flushing early", buffer.size());
-                flushBufferLocked();
-            }
+            bufferedSize = buffer.size();
+            overLimit = bufferedSize >= maxBufferSize;
         } finally {
             bufferLock.unlock();
+        }
+
+        log.debug(
+                "Buffered TripUpdate entity={} feed={} bufferSize={}",
+                cleanedUpdate.tripDescriptor() != null
+                        ? cleanedUpdate.tripDescriptor().entityId()
+                        : null,
+                feedId,
+                bufferedSize);
+
+        // Backpressure: flush early on the producer thread instead of
+        // letting the buffer grow unbounded when intake outpaces the
+        // scheduled flush. The buffer lock is already released here, so
+        // other producers keep buffering while this flush runs.
+        if (overLimit) {
+            log.info("Buffer reached {} buffered updates, flushing early", bufferedSize);
+            flush();
         }
     }
 
@@ -119,12 +130,7 @@ public class GtfsTripUpdateSink {
             return;
         }
 
-        bufferLock.lock();
-        try {
-            flushBufferLocked();
-        } finally {
-            bufferLock.unlock();
-        }
+        flush();
     }
 
     /**
@@ -136,60 +142,83 @@ public class GtfsTripUpdateSink {
             return;
         }
 
+        log.info("Manual flush requested for {} buffered TripUpdate records", buffer.size());
+        flush();
+    }
+
+    /**
+     * Drains the buffer and persists the drained batch. A failed batch is
+     * re-queued at the head of the buffer so it is retried on the next flush,
+     * matching the previous behavior where the buffer was only cleared after
+     * a successful write.
+     *
+     * <p>{@code flushLock} is taken before the drain so that a drain and its
+     * write stay atomic with respect to other flushes. This preserves
+     * write ordering: without it, a slow flush could lose the race and write an
+     * older drained batch after a newer one, letting stale rows win the
+     * upsert on the hot/meta tables. Producers are unaffected because they only
+     * contend on {@code bufferLock}, which is released as soon as the drain
+     * swaps the buffer.
+     */
+    private void flush() {
+        flushLock.lock();
+        try {
+            var batch = drain();
+            if (batch.isEmpty()) {
+                return;
+            }
+
+            try {
+                flushBatch(batch);
+            } catch (RuntimeException e) {
+                requeue(batch);
+                throw e;
+            }
+        } finally {
+            flushLock.unlock();
+        }
+    }
+
+    /**
+     * Swaps the buffer contents into a private batch under the buffer lock.
+     * The lock is released before any database work happens.
+     */
+    private List<TripUpdateDto> drain() {
         bufferLock.lock();
         try {
-            log.info("Manual flush requested for {} buffered TripUpdate records", buffer.size());
-            flushBufferLocked();
+            if (buffer.isEmpty()) {
+                return List.of();
+            }
+            var batch = new ArrayList<>(buffer);
+            buffer.clear();
+            return batch;
         } finally {
             bufferLock.unlock();
         }
     }
 
-    private void flushBufferLocked() {
-        if (buffer.isEmpty()) {
-            return;
+    private void requeue(List<TripUpdateDto> batch) {
+        bufferLock.lock();
+        try {
+            buffer.addAll(0, batch);
+        } finally {
+            bufferLock.unlock();
         }
+    }
 
+    private void flushBatch(List<TripUpdateDto> batch) {
         var methodStart = System.nanoTime();
 
-        var flushSize = buffer.size();
+        var rows = batchMapper.map(batch);
 
-        var tripDescriptors = new ArrayList<TripDescriptorDto>(flushSize);
-        var stopTimeUpdates = new ArrayList<TripStopTimeUpdateDto>(flushSize);
-        for (var dto : buffer) {
-            if (dto.tripDescriptor() != null) {
-                tripDescriptors.add(dto.tripDescriptor());
-            }
-            var rows = dto.stopTimeUpdates();
-            if (rows != null) {
-                for (var row : rows) {
-                    if (row.stopSequence() != null) {
-                        stopTimeUpdates.add(row);
-                    }
-                }
-            }
-        }
-        tripDescriptors.trimToSize();
-        stopTimeUpdates.trimToSize();
+        metrics.recordEntities(
+                rows.descriptors().size(), rows.historyStopTimes().size());
 
-        metrics.recordEntities(tripDescriptors.size(), stopTimeUpdates.size());
-
-        var start = System.nanoTime();
-        tripUpdateRepository.upsertTripDescriptors(tripDescriptors);
-        var descriptorsNanos = System.nanoTime() - start;
-        metrics.recordDescriptors(descriptorsNanos);
-
-        start = System.nanoTime();
-        tripUpdateRepository.appendTripUpdates(stopTimeUpdates);
-        var stopTimesNanos = System.nanoTime() - start;
-        metrics.recordStopTimes(stopTimesNanos);
-
-        start = System.nanoTime();
-        tripUpdateRepository.upsertHotTrips(tripDescriptors, stopTimeUpdates);
-        var hotTripsNanos = System.nanoTime() - start;
-        metrics.recordHotTrips(hotTripsNanos);
-
-        buffer.clear();
+        // One shared-connection write for descriptors, history, and hot tables.
+        var timings = tripUpdateRepository.write(rows);
+        metrics.recordDescriptors(timings.descriptorsNanos());
+        metrics.recordStopTimes(timings.stopTimesNanos());
+        metrics.recordHotTrips(timings.hotNanos());
 
         var totalNanos = System.nanoTime() - methodStart;
         metrics.recordTotal(totalNanos);
@@ -197,12 +226,12 @@ public class GtfsTripUpdateSink {
         log.info(
                 "Flushed {} updates ({} descriptor upserts, {} stop-time rows) in {}ms"
                         + " (descriptors={}ms, stop-times={}ms, hot={}ms)",
-                flushSize,
-                tripDescriptors.size(),
-                stopTimeUpdates.size(),
+                batch.size(),
+                rows.descriptors().size(),
+                rows.historyStopTimes().size(),
                 totalNanos / 1_000_000,
-                descriptorsNanos / 1_000_000,
-                stopTimesNanos / 1_000_000,
-                hotTripsNanos / 1_000_000);
+                timings.descriptorsNanos() / 1_000_000,
+                timings.stopTimesNanos() / 1_000_000,
+                timings.hotNanos() / 1_000_000);
     }
 }

@@ -15,7 +15,7 @@ quarkus:
     db-kind: postgresql
     username: postgres
     jdbc:
-      url: jdbc:postgresql://localhost:5432/gtfsynq
+      url: jdbc:postgresql://localhost:5432/gtfsynq?reWriteBatchedInserts=true
       max-size: 10
     # Connection pool metrics (agroal_*) for the Grafana dashboards.
     metrics:
