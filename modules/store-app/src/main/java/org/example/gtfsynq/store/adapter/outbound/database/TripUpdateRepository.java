@@ -128,7 +128,7 @@ public class TripUpdateRepository {
      */
     public FlushTimings write(TripUpdateRows rows) {
         if (rows.isEmpty()) {
-            return new FlushTimings(0, 0, 0);
+            return new FlushTimings(0, 0, 0, 0);
         }
 
         try (Connection connection = dataSource.getConnection()) {
@@ -145,10 +145,18 @@ public class TripUpdateRepository {
             var stopTimesNanos = System.nanoTime() - start;
 
             start = System.nanoTime();
-            upsertHotTrips(connection, rows);
-            var hotNanos = System.nanoTime() - start;
+            batchUpdate(connection, UPSERT_HOT_TRIPS_SQL, rows.hotTripRows(), this::bindHotTripRow);
+            var hotTripRowsNanos = System.nanoTime() - start;
 
-            return new FlushTimings(descriptorsNanos, stopTimesNanos, hotNanos);
+            start = System.nanoTime();
+            batchUpdate(
+                    connection,
+                    UPSERT_HOT_STOP_TIME_UPDATES_SQL,
+                    rows.hotStopTimes(),
+                    this::bindStopTimeUpdateParameters);
+            var hotStopTimesNanos = System.nanoTime() - start;
+
+            return new FlushTimings(descriptorsNanos, stopTimesNanos, hotTripRowsNanos, hotStopTimesNanos);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -167,12 +175,6 @@ public class TripUpdateRepository {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    private void upsertHotTrips(Connection connection, TripUpdateRows rows) throws SQLException {
-        batchUpdate(connection, UPSERT_HOT_TRIPS_SQL, rows.hotTripRows(), this::bindHotTripRow);
-        batchUpdate(
-                connection, UPSERT_HOT_STOP_TIME_UPDATES_SQL, rows.hotStopTimes(), this::bindStopTimeUpdateParameters);
     }
 
     private void bindHotTripRow(PreparedStatement preparedStatement, TripUpdateRows.HotTripRow row)
@@ -263,5 +265,6 @@ public class TripUpdateRepository {
     /**
      * Per-phase database timings for one {@link #write} call, in nanoseconds.
      */
-    public record FlushTimings(long descriptorsNanos, long stopTimesNanos, long hotNanos) {}
+    public record FlushTimings(
+            long descriptorsNanos, long stopTimesNanos, long hotTripRowsNanos, long hotStopTimesNanos) {}
 }

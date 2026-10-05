@@ -4,7 +4,7 @@
   "tags": ["gtfsynq", "domain"],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 5,
+  "version": 6,
   "editable": true,
   "refresh": "30s",
   "graphTooltip": 1,
@@ -447,11 +447,32 @@
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 79 }
     },
     {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Average flush phase duration",
+      "description": "Mean time each flush spends mapping the drained batch into rows and in each database write, broken down by phase. Mapping is client-side shaping; the db phases are the batch writes to the metadata, history, and hot tables.",
+      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
+      "targets": [
+        {
+          "expr": "rate(gtfs_sink_map_duration_seconds_sum{instance=~\"$instance\"}[$__rate_interval]) / rate(gtfs_sink_map_duration_seconds_count{instance=~\"$instance\"}[$__rate_interval])",
+          "legendFormat": "map",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (op) (rate(gtfs_sink_db_write_seconds_sum{instance=~\"$instance\"}[$__rate_interval])) / sum by (op) (rate(gtfs_sink_db_write_seconds_count{instance=~\"$instance\"}[$__rate_interval]))",
+          "legendFormat": "db {{op}}",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 87 }
+    },
+    {
       "id": 16,
       "type": "row",
       "title": "Off-heap store",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 87 }
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 95 }
     },
     {
       "id": 17,
@@ -472,7 +493,7 @@
         }
       ],
       "fieldConfig": { "defaults": { "unit": "short" } },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 88 }
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 96 }
     },
     {
       "id": 18,
@@ -488,7 +509,7 @@
         }
       ],
       "fieldConfig": { "defaults": { "unit": "short" } },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 88 }
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 96 }
     },
     {
       "id": 19,
@@ -521,7 +542,7 @@
           }
         }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 96 }
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 104 }
     },
     {
       "id": 20,
@@ -555,7 +576,7 @@
         "textMode": "value_and_name",
         "reduceOptions": { "calcs": ["lastNotNull"] }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 96 }
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 104 }
     }
   ]
 }

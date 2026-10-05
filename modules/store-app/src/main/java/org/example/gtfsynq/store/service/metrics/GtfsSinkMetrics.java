@@ -12,9 +12,11 @@ public class GtfsSinkMetrics {
 
     private static final String GTFS_SINK_DB_WRITE = "gtfs.sink.db.write";
 
+    private final Timer mapTimer;
     private final Timer descriptorTimer;
     private final Timer stopTimeTimer;
     private final Timer hotTripsTimer;
+    private final Timer hotStopTimesTimer;
     private final Timer totalFlushTimer;
 
     private final DistributionSummary descriptorCountSummary;
@@ -23,6 +25,11 @@ public class GtfsSinkMetrics {
     private final Counter droppedDuplicatesCounter;
 
     public GtfsSinkMetrics(MeterRegistry registry) {
+        this.mapTimer = Timer.builder("gtfs.sink.map.duration")
+                .description("Time to shape a drained batch into per-table rows")
+                .publishPercentileHistogram()
+                .register(registry);
+
         this.descriptorTimer = Timer.builder(GTFS_SINK_DB_WRITE)
                 .tag("op", "upsert_descriptors")
                 .publishPercentileHistogram()
@@ -35,6 +42,11 @@ public class GtfsSinkMetrics {
 
         this.hotTripsTimer = Timer.builder(GTFS_SINK_DB_WRITE)
                 .tag("op", "upsert_hot_trips")
+                .publishPercentileHistogram()
+                .register(registry);
+
+        this.hotStopTimesTimer = Timer.builder(GTFS_SINK_DB_WRITE)
+                .tag("op", "upsert_hot_stop_times")
                 .publishPercentileHistogram()
                 .register(registry);
 
@@ -59,6 +71,10 @@ public class GtfsSinkMetrics {
                 .register(registry);
     }
 
+    public void recordMap(long nanos) {
+        mapTimer.record(nanos, TimeUnit.NANOSECONDS);
+    }
+
     public void recordDescriptors(long nanos) {
         descriptorTimer.record(nanos, TimeUnit.NANOSECONDS);
     }
@@ -69,6 +85,10 @@ public class GtfsSinkMetrics {
 
     public void recordHotTrips(long nanos) {
         hotTripsTimer.record(nanos, TimeUnit.NANOSECONDS);
+    }
+
+    public void recordHotStopTimes(long nanos) {
+        hotStopTimesTimer.record(nanos, TimeUnit.NANOSECONDS);
     }
 
     public void recordTotal(long nanos) {

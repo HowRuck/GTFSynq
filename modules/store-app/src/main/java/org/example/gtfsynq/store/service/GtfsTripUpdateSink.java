@@ -209,29 +209,34 @@ public class GtfsTripUpdateSink {
     private void flushBatch(List<TripUpdateDto> batch) {
         var methodStart = System.nanoTime();
 
+        var mapStart = System.nanoTime();
         var rows = batchMapper.map(batch);
+        var mapNanos = System.nanoTime() - mapStart;
+        metrics.recordMap(mapNanos);
 
-        metrics.recordEntities(
-                rows.descriptors().size(), rows.historyStopTimes().size());
+        metrics.recordEntities(rows.descriptors().size(), rows.historyStopTimes().size());
 
         // One shared-connection write for descriptors, history, and hot tables.
         var timings = tripUpdateRepository.write(rows);
         metrics.recordDescriptors(timings.descriptorsNanos());
         metrics.recordStopTimes(timings.stopTimesNanos());
-        metrics.recordHotTrips(timings.hotNanos());
+        metrics.recordHotTrips(timings.hotTripRowsNanos());
+        metrics.recordHotStopTimes(timings.hotStopTimesNanos());
 
         var totalNanos = System.nanoTime() - methodStart;
         metrics.recordTotal(totalNanos);
 
         log.info(
-                "Flushed {} updates ({} descriptor upserts, {} stop-time rows) in {}ms"
-                        + " (descriptors={}ms, stop-times={}ms, hot={}ms)",
+                "Flushed {} updates ({} descriptor upserts, {} stop-time rows) in {}ms (map={}ms,"
+                        + " descriptors={}ms, stop-times={}ms, hot-trips={}ms, hot-stops={}ms)",
                 batch.size(),
                 rows.descriptors().size(),
                 rows.historyStopTimes().size(),
                 totalNanos / 1_000_000,
+                mapNanos / 1_000_000,
                 timings.descriptorsNanos() / 1_000_000,
                 timings.stopTimesNanos() / 1_000_000,
-                timings.hotNanos() / 1_000_000);
+                timings.hotTripRowsNanos() / 1_000_000,
+                timings.hotStopTimesNanos() / 1_000_000);
     }
 }
