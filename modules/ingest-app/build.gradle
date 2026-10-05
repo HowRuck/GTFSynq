@@ -8,10 +8,8 @@ dependencies {
     implementation platform(libs.quarkus.amazon.services.bom)
     implementation project(':shared')
 
-    implementation libs.quarkus.arc
     implementation libs.quarkus.config.yaml
     implementation libs.quarkus.scheduler
-    implementation libs.quarkus.vertx.http
     implementation libs.quarkus.kafka.client
     implementation libs.quarkus.hibernate.validator
     implementation libs.quarkus.smallrye.health

@@ -38,8 +38,6 @@ microprofile-config-api = { module = "org.eclipse.microprofile.config:microprofi
 quarkus-bom = { module = "io.quarkus.platform:quarkus-bom", version.ref = "quarkus" }
 quarkus-amazon-services-bom = { module = "io.quarkus.platform:quarkus-amazon-services-bom", version.ref = "quarkus" }
 # Core & Runtime
-quarkus-arc = { module = "io.quarkus:quarkus-arc" }
-quarkus-vertx-http = { module = "io.quarkus:quarkus-vertx-http" }
 quarkus-scheduler = { module = "io.quarkus:quarkus-scheduler" }
 # Configuration (application.yaml instead of application.properties)
 quarkus-config-yaml = { module = "io.quarkus:quarkus-config-yaml" }
@@ -67,10 +65,6 @@ quarkus-amazon-s3 = { module = "io.quarkiverse.amazonservices:quarkus-amazon-s3"
 
 # Persistence
 flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql" }
-postgresql = { module = "org.postgresql:postgresql" }
-
-# Messaging
-kafka-clients = { module = "org.apache.kafka:kafka-clients" }
 
 # Observability
 micrometer-core = { module = "io.micrometer:micrometer-core" }
