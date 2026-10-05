@@ -25,6 +25,7 @@ It is built with **Gradle**, runs on **Java 25**, and is designed to work with *
 - **Time-series storage**: Store transit data efficiently in TimescaleDB
 - **Kafka integration**: Stream transit payloads through Apache Kafka
 - **Protobuf support**: Encode and decode GTFS-RT messages efficiently
+- **GraalVM native images**: Ahead-of-time compile any app into a standalone native executable for fast startup and low memory
 - **Observability**: SmallRye Health and Micrometer/Prometheus metrics
 - **Docker-based runtime**: Run the full stack with a single Compose command
 
@@ -40,6 +41,7 @@ It is built with **Gradle**, runs on **Java 25**, and is designed to work with *
 | Serialization | Protobuf 4 | GTFS-RT message encoding |
 | Monitoring | SmallRye Health + Micrometer/Prometheus | Health and metrics |
 | Images | Quarkus container-image Jib | Container image build (no Dockerfile) |
+| Native image | GraalVM / Mandrel 25 | Ahead-of-time compiled native executables |
 
 ## Prerequisites
 
@@ -410,6 +412,7 @@ GTFSynq is primarily intended for educational and exploratory use. It is a good 
 - Flyway database migrations
 - TimescaleDB time-series modeling
 - Protobuf-based transport formats
+- GraalVM/Mandrel native image compilation
 - off-heap state with the Java foreign memory API
 
 ## License
