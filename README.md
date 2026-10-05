@@ -315,6 +315,18 @@ Migrations are applied automatically on startup
 ./gradlew clean build
 ```
 
+### Build scans
+
+Every build publishes a [Develocity build scan](https://scans.gradle.com) — a
+shareable report of what the build did (tasks, tests, timings, cache hits).
+Publishing happens on developer machines and in CI alike; in CI the scan URL is
+also collected into the GitHub Actions job summary by `gradle/actions/setup-gradle`.
+
+```bash
+./gradlew build --no-scan              # skip publishing for this build
+./gradlew build -Dscan.uploadInBackground=false  # wait for the upload before exiting
+```
+
 ### Run an app from Gradle (dev mode, live reload)
 
 ```bash

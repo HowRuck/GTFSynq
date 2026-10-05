@@ -7,6 +7,19 @@ pluginManagement {
 
 plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+    id("com.gradle.develocity") version "4.6.0"
+}
+
+// Publish a build scan to the free public service (https://scans.gradle.com) for
+// every build, so developer machines and CI runs alike produce a shareable
+// report. Agreeing to the terms here keeps publishing non-interactive.
+// Opt a single local build out with `--no-scan`.
+develocity {
+    buildScan {
+        termsOfUseUrl = "https://gradle.com/help/legal-terms-of-use"
+        termsOfUseAgree = "yes"
+        publishing.onlyIf { true }
+    }
 }
 
 rootProject.name = 'GTFSynq'
