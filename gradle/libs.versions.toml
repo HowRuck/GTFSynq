@@ -2,7 +2,7 @@
 protobufPlugin = "0.10.0"
 sonarqube = "7.5.0.8588"
 spotless = "8.10.3"
-palantir-java-format = "2.100.0"
+palantir-java-format = "2.101.0"
 
 # Frameworks & runtimes
 quarkus = "3.40.1"
