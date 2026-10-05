@@ -112,10 +112,14 @@ services:
             - kafka-data:/var/lib/kafka/data
 
         healthcheck:
+            # kafka-native ships only the native broker binary: no JVM and none of
+            # the /opt/kafka/bin CLI scripts (kafka-broker-api-versions.sh etc.),
+            # so probe the listener socket instead. The image includes bash, whose
+            # /dev/tcp pseudo-device can open a TCP connection without extra tools.
             test:
                 [
                     "CMD-SHELL",
-                    "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092",
+                    "timeout 5 bash -c 'echo > /dev/tcp/127.0.0.1/9092'",
                 ]
             interval: 10s
             timeout: 5s
