@@ -5,6 +5,9 @@ palantir-java-format = "2.101.0"
 
 # Frameworks & runtimes
 quarkus = "4.0.0.Beta1"
+# The Amazon Services platform BOM is released on its own cadence and currently
+# has no 4.x line, so it cannot follow the Quarkus core version above.
+quarkus-amazon-services = "3.40.1"
 protobuf = "4.36.2"
 
 # Jakarta EE APIs used by the framework-agnostic :shared module
@@ -35,7 +38,7 @@ microprofile-config-api = { module = "org.eclipse.microprofile.config:microprofi
 
 # Platform / BOM
 quarkus-bom = { module = "io.quarkus.platform:quarkus-bom", version.ref = "quarkus" }
-quarkus-amazon-services-bom = { module = "io.quarkus.platform:quarkus-amazon-services-bom", version.ref = "quarkus" }
+quarkus-amazon-services-bom = { module = "io.quarkus.platform:quarkus-amazon-services-bom", version.ref = "quarkus-amazon-services" }
 # Core & Runtime
 quarkus-scheduler = { module = "io.quarkus:quarkus-scheduler" }
 # Configuration (application.yaml instead of application.properties)
