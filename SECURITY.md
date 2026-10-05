@@ -10,7 +10,6 @@ This project is created for educational and demonstration purposes only. It is *
 
 This project uses static analysis tools to help identify potential security issues and code quality problems:
 
-- **SonarQube**: Continuous code quality and security analysis
 - **CodeQL**: Semantic code analysis for vulnerability detection
 
 These tools run automatically and help maintain code quality, but they do not guarantee the absence of vulnerabilities.

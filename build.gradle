@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.protobuf) apply false
-    alias(libs.plugins.sonarqube)
     alias(libs.plugins.spotless) apply false
     alias(libs.plugins.quarkus) apply false
 }
@@ -62,10 +61,3 @@ subprojects {
 //   ./gradlew :api-app:imageBuild                     # local container image
 //   ./gradlew :api-app:imageBuild -Dquarkus.container-image.push=true
 //   ./gradlew :api-app:build -Dnative                 # native executable
-sonarqube {
-    properties {
-        property "sonar.projectKey", "HowRuck_NordSIRI"
-        property "sonar.organization", "nordsiri"
-        property "sonar.coverage.exclusions", "**"
-    }
-}
