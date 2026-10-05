@@ -11,7 +11,7 @@ protobuf = "4.36.2"
 # Jakarta EE APIs used by the framework-agnostic :shared module
 jakarta-inject = "2.0.1"
 jakarta-enterprise-cdi = "5.0.0"
-microprofile-config = "3.1.1"
+microprofile-config = "3.1.2"
 
 # Misc libraries
 lombok = "1.18.48"
