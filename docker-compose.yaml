@@ -76,7 +76,7 @@ services:
             - gtfsynq-store-data:/app/data
 
     kafka:
-        image: docker.io/apache/kafka:4.3.1
+        image: docker.io/apache/kafka-native:4.3.1
         container_name: kafka
         hostname: kafka
         ports:
