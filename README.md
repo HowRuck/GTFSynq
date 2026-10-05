@@ -173,7 +173,7 @@ GTFSynq/
 ```
 
 Each application module keeps its runtime configuration in
-`modules/<app>/src/main/resources/application.properties`, and `store-app` keeps
+`modules/<app>/src/main/resources/application.yaml`, and `store-app` keeps
 its Flyway migrations in `modules/store-app/src/main/resources/db/migration`.
 
 ## Modules
@@ -265,7 +265,7 @@ Storage is configured under `gtfsynq.storage.s3`:
 ## Configuration
 
 Runtime configuration lives in each app's
-`modules/<app>/src/main/resources/application.properties` and is overridden by
+`modules/<app>/src/main/resources/application.yaml` and is overridden by
 environment variables (Quarkus maps `gtfsynq.storage.s3.bucket` to
 `GTFSYNQ_STORAGE_S3_BUCKET`, `kafka.bootstrap.servers` to
 `KAFKA_BOOTSTRAP_SERVERS`, and so on).
@@ -335,7 +335,7 @@ Docker daemon needed:
 This produces local images named `ghcr.io/howruck/gtfsynq-<app>:0.0.1-SNAPSHOT`
 (e.g. `ghcr.io/howruck/gtfsynq-api-app:0.0.1-SNAPSHOT`), which `docker-compose.yaml`
 references directly. Registry, group, name and tag are configured per app in
-`application.properties` and can be overridden on the command line, e.g.:
+`application.yaml` and can be overridden on the command line, e.g.:
 
 ```bash
 ./gradlew :api-app:imageBuild -Dquarkus.container-image.push=true
@@ -362,7 +362,7 @@ required, ~8 GB RAM recommended, first build takes 5-15 min per service):
 emit a JAR and a native binary in the same build.
 
 `ingest-app` and `store-app` pass the shared-arena flag their off-heap state store
-requires via `quarkus.native.additional-build-args` in `application.properties`:
+requires via `quarkus.native.additional-build-args` in `application.yaml`:
 `-H:+UnlockExperimentalVMOptions -H:+SharedArenaSupport`
 (`OffHeapLongTable` uses `Arena.ofShared()`, which GraalVM disables by default).
 

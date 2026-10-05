@@ -41,6 +41,8 @@ quarkus-amazon-services-bom = { module = "io.quarkus.platform:quarkus-amazon-ser
 quarkus-arc = { module = "io.quarkus:quarkus-arc" }
 quarkus-vertx-http = { module = "io.quarkus:quarkus-vertx-http" }
 quarkus-scheduler = { module = "io.quarkus:quarkus-scheduler" }
+# Configuration (application.yaml instead of application.properties)
+quarkus-config-yaml = { module = "io.quarkus:quarkus-config-yaml" }
 # Web API & Validation
 quarkus-rest = { module = "io.quarkus:quarkus-rest" }
 quarkus-hibernate-validator = { module = "io.quarkus:quarkus-hibernate-validator" }

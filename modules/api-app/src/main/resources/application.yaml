@@ -1,0 +1,41 @@
+quarkus:
+  application:
+    name: GTFSynq-API
+    version: 0.0.1-SNAPSHOT
+  http:
+    port: 8080
+
+  # External infrastructure (TimescaleDB, Kafka, S3) is provided by Compose; never
+  # start throwaway Dev Services containers for it.
+  devservices:
+    enabled: false
+
+  # ---- Datasource ----------------------------------------------------------
+  datasource:
+    db-kind: postgresql
+    username: postgres
+    jdbc:
+      url: jdbc:postgresql://localhost:5432/gtfsynq
+      max-size: 10
+    # Connection pool metrics (agroal_*) for the Grafana dashboards.
+    metrics:
+      enabled: true
+
+  hibernate-orm:
+    schema-management:
+      strategy: validate
+
+  # ---- Observability (/q/health, /q/metrics) -------------------------------
+  # Details are always included in the health JSON.
+  # Count /q/* requests in http_server_requests_* (as the previous actuator did).
+  micrometer:
+    binder:
+      http-server:
+        suppress-non-application-uris: false
+
+  # ---- Container image (Jib) ----------------------------------------------
+  # ./gradlew :api-app:imageBuild -Dquarkus.container-image.push=true
+  container-image:
+    registry: ghcr.io
+    group: howruck
+    name: gtfsynq-api-app

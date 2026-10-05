@@ -1,0 +1,84 @@
+quarkus:
+  application:
+    name: GTFSynq-Store
+    version: 0.0.1-SNAPSHOT
+  http:
+    port: 8082
+
+  # External infrastructure (TimescaleDB, Kafka) is provided by Compose or the
+  # host; never start throwaway Dev Services containers for it.
+  devservices:
+    enabled: false
+
+  # ---- Datasource ----------------------------------------------------------
+  datasource:
+    db-kind: postgresql
+    username: postgres
+    jdbc:
+      url: jdbc:postgresql://localhost:5432/gtfsynq
+      max-size: 10
+    # Connection pool metrics (agroal_*) for the Grafana dashboards.
+    metrics:
+      enabled: true
+
+  # ---- Migrations ----------------------------------------------------------
+  flyway:
+    locations: classpath:db/migration
+    migrate-at-start: true
+    validate-on-migrate: true
+    baseline-on-migrate: true
+
+  # ---- Observability (/q/health, /q/metrics) -------------------------------
+  # Details are always included in the health JSON.
+  # Count /q/* requests in http_server_requests_* (as the previous actuator did).
+  micrometer:
+    binder:
+      http-server:
+        suppress-non-application-uris: false
+
+  # ---- Container image (Jib) ----------------------------------------------
+  # ./gradlew :store-app:imageBuild -Dquarkus.container-image.push=true
+  container-image:
+    registry: ghcr.io
+    group: howruck
+    name: gtfsynq-store-app
+
+  # ---- Native image --------------------------------------------------------
+  # OffHeapLongTable uses Arena.ofShared(); GraalVM disables shared arenas by
+  # default in native images. JDK 25 Mandrel removed the parallel GC, so the
+  # default serial GC is used (valid --gc values are epsilon and serial).
+  native:
+    additional-build-args: "-H:+UnlockExperimentalVMOptions,-H:+SharedArenaSupport"
+
+# ---- Kafka consumer ------------------------------------------------------
+kafka:
+  bootstrap:
+    servers: localhost:9092
+
+mp:
+  messaging:
+    incoming:
+      gtfs-trip-updates:
+        connector: smallrye-kafka
+        topic: gtfs-trip-updates
+        group:
+          id: gtfsynq-store
+        auto:
+          offset:
+            reset: earliest
+        key:
+          deserializer: org.apache.kafka.common.serialization.StringDeserializer
+        value:
+          deserializer: org.apache.kafka.common.serialization.ByteArrayDeserializer
+
+gtfsynq:
+  # ---- Buffered sink -------------------------------------------------------
+  sink:
+    enabled: true
+    flush-interval: 10s
+    max-buffer-size: 20000
+
+  # ---- Hot data retention --------------------------------------------------
+  retention:
+    hours: 1h
+    rate: 15m

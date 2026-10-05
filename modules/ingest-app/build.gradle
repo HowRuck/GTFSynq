@@ -9,6 +9,7 @@ dependencies {
     implementation project(':shared')
 
     implementation libs.quarkus.arc
+    implementation libs.quarkus.config.yaml
     implementation libs.quarkus.scheduler
     implementation libs.quarkus.vertx.http
     implementation libs.quarkus.kafka.client

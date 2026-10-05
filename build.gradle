@@ -56,7 +56,7 @@ subprojects {
 
 // Quarkus apps are packaged by the `io.quarkus` plugin (see modules/*/build.gradle)
 // and containerised by the Jib extension, configured in each app's
-// application.properties:
+// application.yaml:
 //
 //   ./gradlew :api-app:build                          # JVM fast-jar
 //   ./gradlew :api-app:imageBuild                     # local container image

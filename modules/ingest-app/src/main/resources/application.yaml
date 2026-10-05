@@ -1,0 +1,140 @@
+quarkus:
+  application:
+    name: GTFSynq-Ingest
+    version: 0.0.1-SNAPSHOT
+  http:
+    port: 8081
+
+  # External infrastructure (Kafka, S3) is provided by Compose or the host; never
+  # start throwaway Dev Services containers for it.
+  devservices:
+    enabled: false
+
+  # ---- Observability (/q/health, /q/metrics) -------------------------------
+  # Details are always included in the health JSON.
+  # Count /q/* requests in http_server_requests_* (as the previous actuator did).
+  micrometer:
+    binder:
+      http-server:
+        suppress-non-application-uris: false
+
+  # ---- Container image (Jib) ----------------------------------------------
+  # ./gradlew :ingest-app:imageBuild -Dquarkus.container-image.push=true
+  container-image:
+    registry: ghcr.io
+    group: howruck
+    name: gtfsynq-ingest-app
+
+  # ---- Native image --------------------------------------------------------
+  # OffHeapLongTable uses Arena.ofShared(); GraalVM disables shared arenas by
+  # default in native images. JDK 25 Mandrel removed the parallel GC, so the
+  # default serial GC is used (valid --gc values are epsilon and serial).
+  native:
+    additional-build-args: "-H:+UnlockExperimentalVMOptions,-H:+SharedArenaSupport"
+
+# ---- Kafka producer ------------------------------------------------------
+kafka:
+  bootstrap:
+    servers: localhost:9092
+  key:
+    serializer: org.apache.kafka.common.serialization.StringSerializer
+  value:
+    serializer: org.apache.kafka.common.serialization.ByteArraySerializer
+  # Batching/timeout tuning carried over from the Spring producer factory.
+  linger:
+    ms: 20
+  batch:
+    size: 32768
+  delivery:
+    timeout:
+      ms: 120000
+  request:
+    timeout:
+      ms: 30000
+
+gtfsynq:
+  kafka:
+    trip-updates-topic: gtfs-trip-updates
+    static-feeds-topic: gtfs-static-feeds
+
+  # ---- Polling -------------------------------------------------------------
+  # Durations; the realtime and static feeds run on independent schedules.
+  polling:
+    interval: 60s
+  static-polling:
+    enabled: true
+    interval: 24h
+
+  # ---- Static archive storage (S3 compatible) -----------------------------
+  storage:
+    s3:
+      enabled: true
+      endpoint: http://localhost:9000
+      region: us-east-1
+      bucket: gtfsynq-static
+      # access-key / secret-key are unset: the AWS default credentials provider chain is
+      # used, unless GTFSYNQ_STORAGE_S3_ACCESS_KEY / GTFSYNQ_STORAGE_S3_SECRET_KEY are set.
+      path-style-access: true
+
+  # ---- HTTP client (feed downloads) ---------------------------------------
+  http:
+    connect-timeout-seconds: 40
+    read-timeout-seconds: 120
+
+  # ---- Native parser tuning ------------------------------------------------
+  read-buffer-size: 8
+
+# ---- GTFS sources --------------------------------------------------------
+gtfs:
+  feed-timeout-seconds: 55
+  static-feed-timeout-seconds: 600
+
+  sources:
+    gtfs-de:
+      static-config:
+        url: https://download.gtfs.de/germany/free/latest.zip
+      realtime-config:
+        urls: https://realtime.gtfs.de/realtime-free.pb
+        poll-interval-seconds: 60
+
+    entur:
+      static-config:
+        url: https://storage.googleapis.com/marduk-production/outbound/gtfs/rb_norway-aggregated-gtfs-basic.zip
+      realtime-config:
+        urls: https://api.entur.io/realtime/v1/gtfs-rt/trip-updates
+        poll-interval-seconds: 60
+
+    helsinki-hsl:
+      static-config:
+        url: https://infopalvelut.storage.hsldev.com/gtfs/hsl.zip
+      realtime-config:
+        urls: https://realtime.hsl.fi/realtime/trip-updates/v2/hsl
+        poll-interval-seconds: 60
+
+    ovapi:
+      static-config:
+        url: https://gtfs.ovapi.nl/nl/gtfs-nl.zip
+      realtime-config:
+        urls: https://gtfs.ovapi.nl/nl/tripUpdates.pb
+        poll-interval-seconds: 60
+
+    sncf:
+      static-config:
+        url: https://eu.ftp.opendatasoft.com/sncf/plandata/Export_OpenData_SNCF_GTFS_NewTripId.zip
+      realtime-config:
+        urls: https://proxy.transport.data.gouv.fr/resource/sncf-gtfs-rt-trip-updates,https://proxy.transport.data.gouv.fr/resource/sncf-gtfs-rt-service-alerts
+        poll-interval-seconds: 60
+
+# ---- Tests ---------------------------------------------------------------
+# Polling is exercised in production; the context test must not run feeds, and the
+# Micrometer Kafka binder eagerly creates the producer, so it is disabled too.
+"%test":
+  quarkus:
+    scheduler:
+      enabled: false
+    micrometer:
+      binder:
+        kafka:
+          enabled: false
+    http:
+      test-port: 0
