@@ -1,6 +1,6 @@
 package org.example.gtfsynq.store.service;
 
-import jakarta.inject.Singleton;
+import jakarta.enterprise.context.ApplicationScoped;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +14,7 @@ import org.example.gtfsynq.shared.util.FeedHashing;
 /**
  * Service for deduplicating trip updates in the database
  */
-@Singleton
+@ApplicationScoped
 @Slf4j
 @RequiredArgsConstructor
 public class DatabaseDeduplicationService {

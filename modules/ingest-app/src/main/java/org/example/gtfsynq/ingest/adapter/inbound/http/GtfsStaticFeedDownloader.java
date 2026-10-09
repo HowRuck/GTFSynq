@@ -1,6 +1,6 @@
 package org.example.gtfsynq.ingest.adapter.inbound.http;
 
-import jakarta.inject.Singleton;
+import jakarta.enterprise.context.ApplicationScoped;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,7 +28,7 @@ import org.example.gtfsynq.shared.util.SizeFormat;
  * instead of being buffered in memory
  * <p>
  */
-@Singleton
+@ApplicationScoped
 @Slf4j
 @RequiredArgsConstructor
 public class GtfsStaticFeedDownloader {

@@ -1,6 +1,6 @@
 package org.example.gtfsynq.store.adapter.outbound.database;
 
-import jakarta.inject.Singleton;
+import jakarta.enterprise.context.ApplicationScoped;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
@@ -22,7 +22,7 @@ import org.example.gtfsynq.shared.model.dto.TripStopTimeUpdateDto;
  * <p>This class executes pre-shaped batches and does no row-shaping of its own; the "latest wins"
  * collapsing required by the batch rewrite is applied upstream by {@link TripUpdateBatchMapper}.
  */
-@Singleton
+@ApplicationScoped
 @RequiredArgsConstructor
 @Slf4j
 public class TripUpdateRepository {

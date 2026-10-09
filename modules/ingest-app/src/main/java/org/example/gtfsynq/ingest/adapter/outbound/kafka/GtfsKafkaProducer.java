@@ -1,7 +1,7 @@
 package org.example.gtfsynq.ingest.adapter.outbound.kafka;
 
 import com.google.transit.realtime.GtfsRealtime;
-import jakarta.inject.Singleton;
+import jakarta.enterprise.context.ApplicationScoped;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -12,7 +12,7 @@ import org.example.gtfsynq.shared.protocol.BinaryFeedEntityWithMetadata;
 /**
  * Kafka producer for GTFS trip updates
  */
-@Singleton
+@ApplicationScoped
 @Slf4j
 public class GtfsKafkaProducer {
 

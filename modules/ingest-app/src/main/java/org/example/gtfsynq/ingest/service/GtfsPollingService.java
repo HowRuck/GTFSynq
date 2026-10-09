@@ -1,7 +1,7 @@
 package org.example.gtfsynq.ingest.service;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-import jakarta.inject.Singleton;
+import jakarta.enterprise.context.ApplicationScoped;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
@@ -20,7 +20,7 @@ import org.example.gtfsynq.ingest.service.exception.GtfsIngestionException;
 import org.example.gtfsynq.shared.protocol.BinaryFeedEntityWithMetadata;
 import org.example.gtfsynq.shared.util.SizeFormat;
 
-@Singleton
+@ApplicationScoped
 @Slf4j
 @RequiredArgsConstructor
 public class GtfsPollingService {

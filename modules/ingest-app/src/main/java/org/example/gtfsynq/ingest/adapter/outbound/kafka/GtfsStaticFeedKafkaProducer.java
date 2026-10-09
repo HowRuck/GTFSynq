@@ -1,6 +1,6 @@
 package org.example.gtfsynq.ingest.adapter.outbound.kafka;
 
-import jakarta.inject.Singleton;
+import jakarta.enterprise.context.ApplicationScoped;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -13,7 +13,7 @@ import org.example.gtfsynq.shared.protocol.StaticFeedIngested;
  * Only the storage location and integrity metadata travel over Kafka; downstream
  * consumers fetch and validate the archive themselves
  */
-@Singleton
+@ApplicationScoped
 @Slf4j
 public class GtfsStaticFeedKafkaProducer {
 

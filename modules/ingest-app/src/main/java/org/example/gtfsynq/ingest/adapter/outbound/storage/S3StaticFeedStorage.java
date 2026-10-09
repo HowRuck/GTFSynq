@@ -1,6 +1,6 @@
 package org.example.gtfsynq.ingest.adapter.outbound.storage;
 
-import jakarta.inject.Singleton;
+import jakarta.enterprise.context.ApplicationScoped;
 import java.net.HttpURLConnection;
 import java.nio.file.Path;
 import java.util.Map;
@@ -21,7 +21,7 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
  * is kept side by side. Callers are expected to check {@link #exists(String)} before
  * uploading, which is what makes repeated polls of an unchanged feed cheap.
  */
-@Singleton
+@ApplicationScoped
 @Slf4j
 @RequiredArgsConstructor
 public class S3StaticFeedStorage {

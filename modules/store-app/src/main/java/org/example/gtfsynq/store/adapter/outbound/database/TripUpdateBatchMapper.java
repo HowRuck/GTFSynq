@@ -1,6 +1,6 @@
 package org.example.gtfsynq.store.adapter.outbound.database;
 
-import jakarta.inject.Singleton;
+import jakarta.enterprise.context.ApplicationScoped;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,7 +28,7 @@ import org.example.gtfsynq.store.adapter.outbound.database.TripUpdateRows.HotTri
  * <p>Each input list is traversed once: the descriptor and stop-time batches are each collapsed in
  * a single pass that also feeds the shared current-state trip accumulator.
  */
-@Singleton
+@ApplicationScoped
 public class TripUpdateBatchMapper {
 
     /**
