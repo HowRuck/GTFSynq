@@ -1,7 +1,10 @@
 {
   "title": "GTFSynq Kafka",
   "uid": "gtfsynq-kafka",
-  "tags": ["gtfsynq", "kafka"],
+  "tags": [
+    "gtfsynq",
+    "kafka"
+  ],
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 2,
@@ -10,59 +13,98 @@
       "id": 1,
       "type": "timeseries",
       "title": "Topic current offset",
-      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
       "targets": [
         {
           "expr": "kafka_topic_partition_current_offset{topic=\"gtfs-trip-updates\"}",
           "legendFormat": "partition {{partition}}"
         }
       ],
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      }
     },
     {
       "id": 2,
       "type": "timeseries",
       "title": "Consumer group lag",
-      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
       "targets": [
         {
           "expr": "kafka_consumergroup_lag",
           "legendFormat": "{{consumergroup}} {{topic}} p{{partition}}"
         }
       ],
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      }
     },
     {
       "id": 3,
       "type": "timeseries",
       "title": "Brokers up",
-      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
-      "targets": [{ "expr": "kafka_brokers" }],
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "targets": [
+        {
+          "expr": "kafka_brokers"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      }
     },
     {
       "id": 4,
       "type": "timeseries",
       "title": "Kafka client throughput (produced / consumed)",
-      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
       "targets": [
         {
-          "expr": "sum by (instance) (rate(kafka_producer_record_send_total[$__rate_interval]))",
-          "legendFormat": "produced {{instance}}"
+          "expr": "sum by (application) (rate(kafka_producer_record_send_total[$__rate_interval]))",
+          "legendFormat": "produced {{application}}"
         },
         {
-          "expr": "sum by (instance) (rate(kafka_consumer_fetch_manager_records_consumed_total[$__rate_interval]))",
-          "legendFormat": "consumed {{instance}}"
+          "expr": "sum by (application) (rate(kafka_consumer_fetch_manager_records_consumed_total[$__rate_interval]))",
+          "legendFormat": "consumed {{application}}"
         }
       ],
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      }
     },
     {
       "id": 5,
       "type": "timeseries",
       "title": "Static feed topic current offset",
       "description": "Offsets on the static feed topic. Flat means nothing new has been published; it only rises when a feed actually changed.",
-      "datasource": { "type": "victoriametrics-metrics-datasource", "uid": "VictoriaMetrics" },
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
       "targets": [
         {
           "expr": "kafka_topic_partition_current_offset{topic=\"gtfs-static-feeds\"}",
@@ -70,7 +112,12 @@
           "refId": "A"
         }
       ],
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 }
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      }
     }
   ]
 }

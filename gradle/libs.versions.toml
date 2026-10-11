@@ -54,7 +54,8 @@ quarkus-kafka-client = { module = "io.quarkus:quarkus-kafka-client" }
 quarkus-messaging-kafka = { module = "io.quarkus:quarkus-messaging-kafka" }
 # Observability & Operations
 quarkus-smallrye-health = { module = "io.quarkus:quarkus-smallrye-health" }
-quarkus-micrometer-registry-prometheus = { module = "io.quarkus:quarkus-micrometer-registry-prometheus" }
+quarkus-opentelemetry = { module = "io.quarkus:quarkus-opentelemetry" }
+quarkus-micrometer-opentelemetry = { module = "io.quarkus:quarkus-micrometer-opentelemetry" }
 # Build, Containerization & Testing
 quarkus-container-image-jib = { module = "io.quarkus:quarkus-container-image-jib" }
 quarkus-junit5 = { module = "io.quarkus:quarkus-junit5" }

@@ -37,47 +37,47 @@ services:
       - victoria-logs-data:/victoria-logs-data
     restart: unless-stopped
 
-  # Loki-compatible read API in front of VictoriaLogs so Grafana's built-in
-  # Loki datasource, Explore and Logs Drilldown work without running Loki.
-  loki-vl-proxy:
-    image: docker.io/reliablyobserve/loki-vl-proxy:2.0.0
-    container_name: loki-vl-proxy
+  # Single OTLP intake for all three signals. The Quarkus apps export
+  # metrics (via the micrometer->opentelemetry bridge), logs and traces as OTLP
+  # here; the collector batches and fans each signal out to its Victoria* store.
+  otel-collector:
+    image: otel/opentelemetry-collector:1.68.0
+    container_name: otel-collector
     depends_on:
-      - victorialogs
+      victoriametrics:
+        condition: service_started
+      victorialogs:
+        condition: service_started
+      victoriatraces:
+        condition: service_started
     command:
-      - -listen=:3100
-      - -backend=http://victorialogs:9428
-      - -label-style=underscores
-      - -metadata-field-mode=translated
-      - -emit-structured-metadata=true
-      - -patterns-enabled=true
-      - -stream-fields=service_name,source_type
+      - --config=/etc/otel/config.yaml
+    volumes:
+      - ./monitoring/otel-collector:/etc/otel:ro,Z
     ports:
-      - "127.0.0.1:3100:3100"
+      # OTLP intake (gRPC + HTTP). The apps point quarkus.otel.exporter.otlp at this.
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
     restart: unless-stopped
 
-  vector:
-    image: docker.io/timberio/vector:0.58.0-debian
-    container_name: vector
-    security_opt:
-      - label=disable
-    depends_on:
-      - victorialogs
-    volumes:
-      # Rootless Podman socket by default; override PODMAN_SOCKET for Docker
-      # (/var/run/docker.sock) or a different setup (see .env.template).
-      - ${PODMAN_SOCKET:-/run/user/1000/podman/podman.sock}:/var/run/docker.sock
-      - ./monitoring/vector:/etc/vector:ro,Z
+  # Trace storage. Ingests OTLP traces from the collector and serves the Jaeger
+  # query API consumed by Grafana's Jaeger datasource (and a Jaeger UI on :10428).
+  victoriatraces:
+    image: docker.io/victoriametrics/victoria-traces:v0.12.0
+    container_name: victoriatraces
+    command:
+      - -storageDataPath=/victoria-traces-data
     ports:
-      - "127.0.0.1:8686:8686"
+      - "127.0.0.1:10428:10428"
+    volumes:
+      - victoria-traces-data:/victoria-traces-data
     restart: unless-stopped
 
   # Per-container + Podman-specific metrics (pods, images, volumes, networks,
   # container cgroup stats). Talks to the host's Podman over the socket.
   # The host's rootless Podman socket is bind-mounted to /var/run/docker.sock
-  # inside the container, mirroring how Vector is configured in this file.
-  # Override the host path via a .env file (PODMAN_SOCKET) for rootful Podman
-  # (/run/podman/podman.sock) or Docker (/var/run/docker.sock).
+  # inside the container. Override the host path via a .env file (PODMAN_SOCKET)
+  # for rootful Podman (/run/podman/podman.sock) or Docker (/var/run/docker.sock).
   prometheus-podman-exporter:
     image: quay.io/navidys/prometheus-podman-exporter:v2.0.0
     container_name: prometheus-podman-exporter
@@ -187,7 +187,7 @@ services:
         condition: service_started
       victorialogs:
         condition: service_started
-      loki-vl-proxy:
+      victoriatraces:
         condition: service_started
     environment:
       GF_SECURITY_ADMIN_USER: ${GF_SECURITY_ADMIN_USER:-admin}

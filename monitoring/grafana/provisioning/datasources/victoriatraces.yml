@@ -1,0 +1,12 @@
+apiVersion: 1
+
+datasources:
+  # VictoriaTraces serves the Jaeger query API, so Grafana's built-in Jaeger
+  # datasource connects to it directly. The uid is referenced by trace-facing
+  # dashboards and enables trace -> logs / metric correlation.
+  - name: VictoriaTraces
+    uid: VictoriaTraces
+    type: jaeger
+    access: proxy
+    url: http://victoriatraces:10428
+    editable: true

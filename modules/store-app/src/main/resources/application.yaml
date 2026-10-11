@@ -28,13 +28,35 @@ quarkus:
     validate-on-migrate: true
     baseline-on-migrate: true
 
-  # ---- Observability (/q/health, /q/metrics) -------------------------------
+  # ---- Observability (/q/health) -------------------------------------------
   # Details are always included in the health JSON.
-  # Count /q/* requests in http_server_requests_* (as the previous actuator did).
+  # Metrics, logs and traces are exported via OpenTelemetry (OTLP); this app no
+  # longer exposes a Prometheus /q/metrics endpoint (see build.gradle).
   micrometer:
     binder:
       http-server:
         suppress-non-application-uris: false
+
+  # ---- OpenTelemetry -------------------------------------------------------
+  # Traces are on by default; logs are enabled here (tech preview); metrics are
+  # produced by Micrometer and bridged to OTLP by quarkus-micrometer-opentelemetry.
+  # Every signal is exported as OTLP to the collector, which fans out to
+  # VictoriaMetrics / VictoriaLogs / VictoriaTraces. service.name defaults to
+  # quarkus.application.name.
+  otel:
+    logs:
+      enabled: true
+    exporter:
+      otlp:
+        # The collector defined in docker-compose.monitoring.yaml.
+        endpoint: http://otel-collector:4317
+        protocol: grpc
+
+  log:
+    console:
+      # Inject the active trace context into stdout so container logs stay
+      # correlatable with traces in Grafana.
+      format: "%d{HH:mm:ss} %-5p traceId=%X{traceId}, spanId=%X{spanId}, sampled=%X{sampled} [%c{2.}] (%t) %s%e%n"
 
   # ---- Container image (Jib) ----------------------------------------------
   # ./gradlew :store-app:imageBuild -Dquarkus.container-image.push=true

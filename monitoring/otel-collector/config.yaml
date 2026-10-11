@@ -1,0 +1,50 @@
+# OpenTelemetry Collector — the single OTLP intake for all GTFSynq signals.
+#
+# The three Quarkus apps export metrics (via the quarkus-micrometer-opentelemetry
+# bridge), logs (quarkus-opentelemetry) and traces as OTLP here. This collector
+# batches each signal and fans it out to its dedicated Victoria* store, replacing
+# the previous Prometheus scrape (metrics) + Vector docker_logs pipeline (logs).
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+
+exporters:
+  # Metrics -> VictoriaMetrics (single-node OTLP HTTP ingestion endpoint).
+  otlphttp/victoriametrics:
+    metrics_endpoint: http://victoriametrics:8428/insert/opentelemetry/v1/metrics
+    compression: gzip
+  # Logs -> VictoriaLogs.
+  otlphttp/victorialogs:
+    logs_endpoint: http://victorialogs:9428/insert/opentelemetry/v1/logs
+    compression: gzip
+  # Traces -> VictoriaTraces.
+  otlphttp/victoriatraces:
+    traces_endpoint: http://victoriatraces:10428/insert/opentelemetry/v1/traces
+    compression: gzip
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+service:
+  extensions: [health_check]
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/victoriametrics]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/victorialogs]
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/victoriatraces]

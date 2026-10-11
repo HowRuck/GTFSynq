@@ -23,29 +23,8 @@
           "type": "victoriametrics-metrics-datasource",
           "uid": "VictoriaMetrics"
         },
-        "definition": "label_values(up{job=\"gtfsynq-apps\"}, application)",
-        "query": "label_values(up{job=\"gtfsynq-apps\"}, application)",
-        "refresh": 1,
-        "sort": 1,
-        "multi": true,
-        "includeAll": true,
-        "allValue": ".*",
-        "current": {
-          "selected": true,
-          "text": "All",
-          "value": "$__all"
-        }
-      },
-      {
-        "name": "instance",
-        "label": "Instance",
-        "type": "query",
-        "datasource": {
-          "type": "victoriametrics-metrics-datasource",
-          "uid": "VictoriaMetrics"
-        },
-        "definition": "label_values(up{job=\"gtfsynq-apps\",application=~\"$application\"}, instance)",
-        "query": "label_values(up{job=\"gtfsynq-apps\",application=~\"$application\"}, instance)",
+        "definition": "label_values(application)",
+        "query": "label_values(application)",
         "refresh": 1,
         "sort": 1,
         "multi": true,
@@ -63,7 +42,7 @@
     {
       "id": 1,
       "type": "timeseries",
-      "title": "HTTP request rate (per instance)",
+      "title": "HTTP request rate (per application)",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
@@ -81,8 +60,8 @@
       },
       "targets": [
         {
-          "expr": "sum by (application, instance) (rate(http_server_requests_seconds_count{application=~\"$application\",instance=~\"$instance\"}[$__rate_interval]))",
-          "legendFormat": "{{application}} {{instance}}"
+          "expr": "sum by (application) (rate(http_server_requests_seconds_count{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "{{application}}"
         }
       ],
       "gridPos": {
@@ -124,8 +103,8 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum by (application, instance, le) (rate(http_server_requests_seconds_bucket{application=~\"$application\",instance=~\"$instance\"}[$__rate_interval])))",
-          "legendFormat": "{{application}} {{instance}}"
+          "expr": "histogram_quantile(0.95, sum by (application, instance, le) (rate(http_server_requests_seconds_bucket{application=~\"$application\"}[$__rate_interval])))",
+          "legendFormat": "{{application}}"
         }
       ],
       "gridPos": {
@@ -177,8 +156,8 @@
       },
       "targets": [
         {
-          "expr": "up{job=\"gtfsynq-apps\",application=~\"$application\",instance=~\"$instance\"}",
-          "legendFormat": "{{application}} {{instance}}"
+          "expr": "count({application=~\"$application\"})",
+          "legendFormat": "{{application}}"
         }
       ],
       "gridPos": {
@@ -210,12 +189,12 @@
       },
       "targets": [
         {
-          "expr": "process_cpu_usage{application=~\"$application\",instance=~\"$instance\"}",
-          "legendFormat": "process {{application}} {{instance}}"
+          "expr": "process_cpu_usage{application=~\"$application\"}",
+          "legendFormat": "process {{application}}"
         },
         {
-          "expr": "system_cpu_usage{application=~\"$application\",instance=~\"$instance\"}",
-          "legendFormat": "system {{application}} {{instance}}"
+          "expr": "system_cpu_usage{application=~\"$application\"}",
+          "legendFormat": "system {{application}}"
         }
       ],
       "gridPos": {
@@ -260,20 +239,20 @@
       },
       "targets": [
         {
-          "expr": "agroal_active_count{application=~\"$application\",instance=~\"$instance\"}",
-          "legendFormat": "active {{application}} {{instance}}"
+          "expr": "agroal_active_count{application=~\"$application\"}",
+          "legendFormat": "active {{application}}"
         },
         {
-          "expr": "agroal_available_count{application=~\"$application\",instance=~\"$instance\"}",
-          "legendFormat": "idle {{application}} {{instance}}"
+          "expr": "agroal_available_count{application=~\"$application\"}",
+          "legendFormat": "idle {{application}}"
         },
         {
-          "expr": "agroal_awaiting_count{application=~\"$application\",instance=~\"$instance\"}",
-          "legendFormat": "pending {{application}} {{instance}}"
+          "expr": "agroal_awaiting_count{application=~\"$application\"}",
+          "legendFormat": "pending {{application}}"
         },
         {
-          "expr": "agroal_max_used_count{application=~\"$application\",instance=~\"$instance\"}",
-          "legendFormat": "max {{application}} {{instance}}"
+          "expr": "agroal_max_used_count{application=~\"$application\"}",
+          "legendFormat": "max {{application}}"
         }
       ],
       "gridPos": {
@@ -315,12 +294,12 @@
       },
       "targets": [
         {
-          "expr": "jvm_classes_loaded_classes{application=~\"$application\",instance=~\"$instance\"}",
-          "legendFormat": "loaded classes {{application}} {{instance}}"
+          "expr": "jvm_classes_loaded_classes{application=~\"$application\"}",
+          "legendFormat": "loaded classes {{application}}"
         },
         {
-          "expr": "jvm_classes_unloaded_classes{application=~\"$application\",instance=~\"$instance\"}",
-          "legendFormat": "unloaded classes {{application}} {{instance}}"
+          "expr": "jvm_classes_unloaded_classes{application=~\"$application\"}",
+          "legendFormat": "unloaded classes {{application}}"
         }
       ],
       "gridPos": {
@@ -362,16 +341,16 @@
       },
       "targets": [
         {
-          "expr": "sum by (application, instance) (jvm_memory_used_bytes{application=~\"$application\",instance=~\"$instance\",area=\"heap\"})",
-          "legendFormat": "used {{application}} {{instance}}"
+          "expr": "sum by (application) (jvm_memory_used_bytes{application=~\"$application\",area=\"heap\"})",
+          "legendFormat": "used {{application}}"
         },
         {
-          "expr": "sum by (application, instance) (jvm_memory_committed_bytes{application=~\"$application\",instance=~\"$instance\",area=\"heap\"})",
-          "legendFormat": "committed {{application}} {{instance}}"
+          "expr": "sum by (application) (jvm_memory_committed_bytes{application=~\"$application\",area=\"heap\"})",
+          "legendFormat": "committed {{application}}"
         },
         {
-          "expr": "sum by (application, instance) (jvm_memory_max_bytes{application=~\"$application\",instance=~\"$instance\",area=\"heap\"})",
-          "legendFormat": "max {{application}} {{instance}}"
+          "expr": "sum by (application) (jvm_memory_max_bytes{application=~\"$application\",area=\"heap\"})",
+          "legendFormat": "max {{application}}"
         }
       ],
       "gridPos": {
@@ -413,16 +392,16 @@
       },
       "targets": [
         {
-          "expr": "sum by (application, instance) (jvm_memory_used_bytes{application=~\"$application\",instance=~\"$instance\",area=\"nonheap\"})",
-          "legendFormat": "non-heap used {{application}} {{instance}}"
+          "expr": "sum by (application) (jvm_memory_used_bytes{application=~\"$application\",area=\"nonheap\"})",
+          "legendFormat": "non-heap used {{application}}"
         },
         {
-          "expr": "jvm_buffer_memory_used_bytes{application=~\"$application\",instance=~\"$instance\",id=\"direct\"}",
-          "legendFormat": "direct {{application}} {{instance}}"
+          "expr": "jvm_buffer_memory_used_bytes{application=~\"$application\",id=\"direct\"}",
+          "legendFormat": "direct {{application}}"
         },
         {
-          "expr": "jvm_buffer_memory_used_bytes{application=~\"$application\",instance=~\"$instance\",id=\"mapped\"}",
-          "legendFormat": "mapped {{application}} {{instance}}"
+          "expr": "jvm_buffer_memory_used_bytes{application=~\"$application\",id=\"mapped\"}",
+          "legendFormat": "mapped {{application}}"
         }
       ],
       "gridPos": {
@@ -525,8 +504,8 @@
       },
       "targets": [
         {
-          "expr": "process_memory_rss_bytes{application=~\"$application\",instance=~\"$instance\"}",
-          "legendFormat": "rss {{application}} {{instance}}"
+          "expr": "process_memory_rss_bytes{application=~\"$application\"}",
+          "legendFormat": "rss {{application}}"
         }
       ],
       "gridPos": {
@@ -568,16 +547,16 @@
       },
       "targets": [
         {
-          "expr": "jvm_threads_live_threads{application=~\"$application\",instance=~\"$instance\"}",
-          "legendFormat": "live {{application}} {{instance}}"
+          "expr": "jvm_threads_live_threads{application=~\"$application\"}",
+          "legendFormat": "live {{application}}"
         },
         {
-          "expr": "jvm_threads_daemon_threads{application=~\"$application\",instance=~\"$instance\"}",
-          "legendFormat": "daemon {{application}} {{instance}}"
+          "expr": "jvm_threads_daemon_threads{application=~\"$application\"}",
+          "legendFormat": "daemon {{application}}"
         },
         {
-          "expr": "jvm_threads_peak_threads{application=~\"$application\",instance=~\"$instance\"}",
-          "legendFormat": "peak {{application}} {{instance}}"
+          "expr": "jvm_threads_peak_threads{application=~\"$application\"}",
+          "legendFormat": "peak {{application}}"
         }
       ],
       "gridPos": {
@@ -619,12 +598,12 @@
       },
       "targets": [
         {
-          "expr": "rate(jvm_gc_pause_seconds_sum{application=~\"$application\",instance=~\"$instance\"}[$__rate_interval])",
-          "legendFormat": "gc pause {{application}} {{instance}}"
+          "expr": "rate(jvm_gc_pause_seconds_sum{application=~\"$application\"}[$__rate_interval])",
+          "legendFormat": "gc pause {{application}}"
         },
         {
-          "expr": "rate(jvm_gc_pause_seconds_count{application=~\"$application\",instance=~\"$instance\"}[$__rate_interval])",
-          "legendFormat": "gc count {{application}} {{instance}}"
+          "expr": "rate(jvm_gc_pause_seconds_count{application=~\"$application\"}[$__rate_interval])",
+          "legendFormat": "gc count {{application}}"
         }
       ],
       "gridPos": {
@@ -666,12 +645,12 @@
       },
       "targets": [
         {
-          "expr": "offheap_store_bytes{application=~\"$application\",instance=~\"$instance\"}",
-          "legendFormat": "total {{application}} {{instance}}"
+          "expr": "offheap_store_bytes{application=~\"$application\"}",
+          "legendFormat": "total {{application}}"
         },
         {
-          "expr": "offheap_store_retired_bytes{application=~\"$application\",instance=~\"$instance\"}",
-          "legendFormat": "retired {{application}} {{instance}}"
+          "expr": "offheap_store_retired_bytes{application=~\"$application\"}",
+          "legendFormat": "retired {{application}}"
         }
       ],
       "gridPos": {
@@ -713,12 +692,12 @@
       },
       "targets": [
         {
-          "expr": "offheap_store_size{application=~\"$application\",instance=~\"$instance\"}",
-          "legendFormat": "size {{application}} {{instance}}"
+          "expr": "offheap_store_size{application=~\"$application\"}",
+          "legendFormat": "size {{application}}"
         },
         {
-          "expr": "offheap_store_capacity{application=~\"$application\",instance=~\"$instance\"}",
-          "legendFormat": "capacity {{application}} {{instance}}"
+          "expr": "offheap_store_capacity{application=~\"$application\"}",
+          "legendFormat": "capacity {{application}}"
         }
       ],
       "gridPos": {

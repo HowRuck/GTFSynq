@@ -3,15 +3,8 @@ global:
   scrape_timeout: 10s
 
 scrape_configs:
-  - job_name: gtfsynq-apps
-    metrics_path: /q/metrics
-    static_configs:
-      # Each app exports its own `application` label (quarkus.application.name),
-      # so no target labels are added here.
-      - targets: ["api-app:8080"]
-      - targets: ["ingest-app:8081"]
-      - targets: ["store-app:8082"]
-
+  # The GTFSynq apps push OTLP metrics through the otel-collector (they no longer
+  # expose a Prometheus /q/metrics endpoint), so they are not scraped here.
   - job_name: postgres
     static_configs:
       - targets: ["postgres-exporter:9187"]
