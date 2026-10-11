@@ -17,8 +17,10 @@ processors:
 
 exporters:
   # Metrics -> VictoriaMetrics (single-node OTLP HTTP ingestion endpoint).
+  # Single-node takes OTLP metrics at /opentelemetry/v1/metrics (the /insert/...
+  # path is for vminsert/cluster and returns 400 here).
   otlphttp/victoriametrics:
-    metrics_endpoint: http://victoriametrics:8428/insert/opentelemetry/v1/metrics
+    metrics_endpoint: http://victoriametrics:8428/opentelemetry/v1/metrics
     compression: gzip
   # Logs -> VictoriaLogs.
   otlphttp/victorialogs:
