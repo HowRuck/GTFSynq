@@ -225,6 +225,7 @@ services:
 volumes:
   victoria-metrics-data:
   victoria-logs-data:
+  victoria-traces-data:
   grafana-data:
   pgadmin-data:
 
