@@ -15,8 +15,10 @@ import software.amazon.awssdk.services.s3.S3ClientBuilder;
  * Wires the S3 client used to store downloaded GTFS static feed archives.
  * <p>
  * The builder is provided by the Quarkus Amazon S3 extension, which also supplies the
- * GraalVM substitutions that make the AWS SDK native-image friendly. This producer only
- * applies the application's own {@code gtfsynq.storage.s3.*} settings on top of it.
+ * GraalVM substitutions that make the AWS SDK native-image friendly. This producer applies the
+ * application's own region, endpoint and credentials on top of it. Path-style access is left to the
+ * extension's {@code quarkus.s3.path-style-access} setting, which it applies at the S3 service
+ * level; setting it here as well would make the SDK reject the client.
  * <p>
  * The client is always created; whether static ingestion actually runs is decided at
  * runtime from {@link S3StorageProperties#enabled()}. Building the client performs no
@@ -38,7 +40,7 @@ public class S3StorageConfig {
     @Produces
     @Singleton
     public S3Client s3Client(S3ClientBuilder builder) {
-        builder.region(Region.of(properties.region())).forcePathStyle(properties.pathStyleAccess());
+        builder.region(Region.of(properties.region()));
 
         properties
                 .endpoint()

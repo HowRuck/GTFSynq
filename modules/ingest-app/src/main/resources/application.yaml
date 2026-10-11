@@ -10,6 +10,9 @@ quarkus:
   devservices:
     enabled: false
 
+  s3:
+    path-style-access: true
+
   # ---- Observability (/q/health, /q/metrics) -------------------------------
   # Details are always included in the health JSON.
   # Count /q/* requests in http_server_requests_* (as the previous actuator did).
@@ -73,8 +76,7 @@ gtfsynq:
       region: us-east-1
       bucket: gtfsynq-static
       # access-key / secret-key are unset: the AWS default credentials provider chain is
-      # used, unless GTFSYNQ_STORAGE_S3_ACCESS_KEY / GTFSYNQ_STORAGE_S3_SECRET_KEY are set.
-      path-style-access: true
+      # used, unless GTFSYNQ_STORAGE_S3_ACCESS_KEY / GTFSYNQ_STORAGE_S3_SECRET_KEY are set
 
   # ---- HTTP client (feed downloads) ---------------------------------------
   http:

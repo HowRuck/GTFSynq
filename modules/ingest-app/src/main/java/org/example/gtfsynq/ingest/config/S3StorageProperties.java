@@ -56,12 +56,4 @@ public interface S3StorageProperties {
      * Secret access key. See {@link #accessKey()}.
      */
     Optional<String> secretKey();
-
-    /**
-     * Whether to address buckets as {@code endpoint/bucket} instead of
-     * {@code bucket.endpoint}. Defaults to {@code true}, which is what local S3-compatible
-     * services need.
-     */
-    @WithDefault("true")
-    boolean pathStyleAccess();
 }
