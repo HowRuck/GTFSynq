@@ -214,7 +214,8 @@ public class GtfsTripUpdateSink {
         var mapNanos = System.nanoTime() - mapStart;
         metrics.recordMap(mapNanos);
 
-        metrics.recordEntities(rows.descriptors().size(), rows.historyStopTimes().size());
+        metrics.recordEntities(
+                rows.descriptors().size(), rows.historyStopTimes().size());
 
         // One shared-connection write for descriptors, history, and hot tables.
         var timings = tripUpdateRepository.write(rows);
