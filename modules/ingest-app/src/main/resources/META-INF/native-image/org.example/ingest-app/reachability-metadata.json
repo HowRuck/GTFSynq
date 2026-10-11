@@ -1,0 +1,13 @@
+{
+  "reflection": [
+    {
+      "type": "io.quarkus.runtime.ConfigConfig",
+      "methods": [
+        {
+          "name": "buildTimeMismatchAtRuntime",
+          "parameterTypes": []
+        }
+      ]
+    }
+  ]
+}
