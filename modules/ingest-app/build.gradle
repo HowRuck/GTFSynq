@@ -15,6 +15,7 @@ dependencies {
     implementation libs.quarkus.smallrye.health
     implementation libs.quarkus.micrometer.registry.prometheus
     implementation libs.quarkus.container.image.jib
+    implementation libs.zero.allocation.hashing
 
     implementation libs.quarkus.amazon.s3
     implementation libs.aws.sdk.url.connection.client
