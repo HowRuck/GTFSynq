@@ -19,6 +19,10 @@ import java.util.List;
  * native images built with GraalVM 25.1+, so the application fails to start
  * (see <a href="https://github.com/quarkusio/quarkus/issues/57050">quarkusio/quarkus#57050</a>).
  * YAVI is reflection-free and has no such integration.
+ * <p>
+ * <b>Revisit:</b> this is a workaround. Once quarkusio/quarkus#57050 is fixed and released it can be
+ * reverted: restore the {@code @URL} / {@code @NotBlank} constraints on the config mappings, re-add
+ * {@code quarkus-hibernate-validator} (and remove {@code am.ik.yavi:yavi}), then delete this class.
  */
 @ApplicationScoped
 public class IngestConfigValidation {
