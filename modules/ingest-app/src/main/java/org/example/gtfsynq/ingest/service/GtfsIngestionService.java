@@ -1,5 +1,6 @@
 package org.example.gtfsynq.ingest.service;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.quarkus.scheduler.Scheduled;
 import jakarta.inject.Singleton;
 import java.util.Set;
@@ -34,6 +35,7 @@ public class GtfsIngestionService {
      * behind on every tick.
      */
     @Scheduled(every = "{gtfsynq.polling.interval}")
+    @WithSpan
     public void process() {
         if (!isRunning.compareAndSet(false, true)) {
             log.info("Previous polling is still running, skipping this iteration");

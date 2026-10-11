@@ -1,6 +1,7 @@
 package org.example.gtfsynq.ingest.service;
 
 import com.google.protobuf.InvalidProtocolBufferException;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -57,6 +58,7 @@ public class GtfsPollingService {
         }
     }
 
+    @WithSpan
     public List<BinaryFeedEntityWithMetadata> pollStream(String feedId, String feedUrl) {
         var startTime = System.currentTimeMillis();
         log.debug("Polling GTFS feed stream for feed {} from {}", feedId, feedUrl);

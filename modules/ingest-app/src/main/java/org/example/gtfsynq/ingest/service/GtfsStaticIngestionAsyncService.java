@@ -1,5 +1,7 @@
 package org.example.gtfsynq.ingest.service;
 
+import io.opentelemetry.context.Context;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.quarkus.runtime.ShutdownEvent;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Singleton;
@@ -55,29 +57,32 @@ public class GtfsStaticIngestionAsyncService {
             return CompletableFuture.completedFuture(null);
         }
 
-        return CompletableFuture.runAsync(
-                () -> {
-                    var downloadStart = System.nanoTime();
+        // Carry the caller's span (the static poll cycle) onto the virtual thread.
+        var context = Context.current();
+        return CompletableFuture.runAsync(context.wrap(() -> ingestOne(feedId, sourceUrl)), executor);
+    }
 
-                    try {
-                        var feed = staticFeedDownloader.download(feedId, sourceUrl);
-                        metrics.recordDownload(feedId, System.nanoTime() - downloadStart, feed.sizeBytes());
+    @WithSpan
+    void ingestOne(String feedId, String sourceUrl) {
+        var downloadStart = System.nanoTime();
 
-                        try {
-                            storeAndPublish(feedId, sourceUrl, feed);
-                        } finally {
-                            staticFeedDownloader.discard(feed);
-                        }
-                    } catch (StaticFeedDownloadException e) {
-                        metrics.recordDownloadFailure(feedId, System.nanoTime() - downloadStart);
-                        metrics.recordOutcome(feedId, Outcome.FAILED);
-                        log.error("Static feed {} ({}) could not be downloaded", feedId, sourceUrl, e);
-                    } catch (Exception e) {
-                        metrics.recordOutcome(feedId, Outcome.FAILED);
-                        log.error("Unexpected error ingesting static feed {} ({})", feedId, sourceUrl, e);
-                    }
-                },
-                executor);
+        try {
+            var feed = staticFeedDownloader.download(feedId, sourceUrl);
+            metrics.recordDownload(feedId, System.nanoTime() - downloadStart, feed.sizeBytes());
+
+            try {
+                storeAndPublish(feedId, sourceUrl, feed);
+            } finally {
+                staticFeedDownloader.discard(feed);
+            }
+        } catch (StaticFeedDownloadException e) {
+            metrics.recordDownloadFailure(feedId, System.nanoTime() - downloadStart);
+            metrics.recordOutcome(feedId, Outcome.FAILED);
+            log.error("Static feed {} ({}) could not be downloaded", feedId, sourceUrl, e);
+        } catch (Exception e) {
+            metrics.recordOutcome(feedId, Outcome.FAILED);
+            log.error("Unexpected error ingesting static feed {} ({})", feedId, sourceUrl, e);
+        }
     }
 
     void shutdown(@Observes ShutdownEvent event) {

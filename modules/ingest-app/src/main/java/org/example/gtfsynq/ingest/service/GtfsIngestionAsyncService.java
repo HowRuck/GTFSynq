@@ -1,5 +1,7 @@
 package org.example.gtfsynq.ingest.service;
 
+import io.opentelemetry.context.Context;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.quarkus.runtime.ShutdownEvent;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Singleton;
@@ -21,20 +23,24 @@ public class GtfsIngestionAsyncService {
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
     public CompletableFuture<Void> processFeedUrlAsync(String feedId, String feedUrl) {
-        return CompletableFuture.runAsync(
-                () -> {
-                    try {
-                        var entities = gtfsPollingService.pollStream(feedId, feedUrl);
+        // Carry the caller's span (the poll cycle) onto the virtual thread; otherwise
+        // the task would start an unrelated root trace.
+        var context = Context.current();
+        return CompletableFuture.runAsync(context.wrap(() -> processFeed(feedId, feedUrl)), executor);
+    }
 
-                        if (entities == null || entities.isEmpty()) {
-                            return;
-                        }
-                        gtfsKafkaProducer.sendTripUpdates(feedId, entities);
-                    } catch (Exception e) {
-                        log.error("Unexpected error processing feed {} ({})", feedId, feedUrl, e);
-                    }
-                },
-                executor);
+    @WithSpan
+    void processFeed(String feedId, String feedUrl) {
+        try {
+            var entities = gtfsPollingService.pollStream(feedId, feedUrl);
+
+            if (entities == null || entities.isEmpty()) {
+                return;
+            }
+            gtfsKafkaProducer.sendTripUpdates(feedId, entities);
+        } catch (Exception e) {
+            log.error("Unexpected error processing feed {} ({})", feedId, feedUrl, e);
+        }
     }
 
     void shutdown(@Observes ShutdownEvent event) {

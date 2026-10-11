@@ -1,5 +1,6 @@
 package org.example.gtfsynq.ingest.service;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.quarkus.scheduler.Scheduled;
 import jakarta.inject.Singleton;
 import java.util.concurrent.CompletableFuture;
@@ -51,6 +52,7 @@ public class GtfsStaticIngestionService {
      * Scheduled task to ingest the static feed of every source that has one configured.
      */
     @Scheduled(every = "{gtfsynq.static-polling.interval}")
+    @WithSpan
     public void process() {
         if (!staticPollingEnabled || !storageProperties.enabled()) {
             log.debug("Static polling is disabled, skipping this iteration");

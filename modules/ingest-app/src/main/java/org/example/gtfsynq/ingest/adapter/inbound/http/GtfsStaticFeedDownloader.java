@@ -1,5 +1,6 @@
 package org.example.gtfsynq.ingest.adapter.inbound.http;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -51,6 +52,7 @@ public class GtfsStaticFeedDownloader {
      *     back via {@link #discard(DownloadedStaticFeed)} when done with it
      * @throws StaticFeedDownloadException when the archive could not be fetched
      */
+    @WithSpan
     public DownloadedStaticFeed download(String feedId, String sourceUrl) {
         Path target = null;
         var handedOver = false;
