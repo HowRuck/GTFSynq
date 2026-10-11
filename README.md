@@ -87,7 +87,7 @@ java -jar modules/api-app/build/quarkus-app/quarkus-run.jar
 
 Each app listens on its own port:
 
-- `api-app`: `http://localhost:8080` (health: `/q/health`, metrics: `/q/metrics`)
+- `api-app`: `http://localhost:8080` (health: `/q/health`)
 - `ingest-app`: `http://localhost:8081`
 - `store-app`: `http://localhost:8082`
 
@@ -280,7 +280,7 @@ Important defaults:
 - S3-compatible object storage: `http://localhost:9000`, bucket `gtfsynq-static`
 - Realtime polling interval: `60s`; static polling interval: `24h`
 - Buffered sink flush interval: `10s`, hot data retention `1h`
-- Management endpoints: `/q/health`, `/q/metrics` (the apps never start Dev
+- Management endpoints: `/q/health` (the apps never start Dev
   Services containers; external infrastructure comes from Compose)
 
 When running through Docker Compose, these values are overridden with container hostnames.

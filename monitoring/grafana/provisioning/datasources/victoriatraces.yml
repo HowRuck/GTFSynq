@@ -8,5 +8,5 @@ datasources:
     uid: VictoriaTraces
     type: jaeger
     access: proxy
-    url: http://victoriatraces:10428
+    url: http://victoriatraces:10428/select/jaeger
     editable: true

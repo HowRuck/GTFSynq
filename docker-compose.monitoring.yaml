@@ -102,7 +102,7 @@ services:
 
   # Host-level metrics (CPU, memory, disk, filesystem, network, load).
   # pid: host + / mounted read-only is the standard node-exporter pattern.
-  # security_opt label=disable matches Vector (line 62) so the read-only
+  # security_opt label=disable so the read-only
   # bind of / works on SELinux-enforcing hosts (CentOS / RHEL) without
   # needing recursive :Z relabels, which podman refuses for /.
   node-exporter:
