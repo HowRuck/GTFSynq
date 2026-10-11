@@ -11,11 +11,12 @@ dependencies {
     implementation libs.quarkus.config.yaml
     implementation libs.quarkus.scheduler
     implementation libs.quarkus.kafka.client
-    implementation libs.quarkus.hibernate.validator
+
     implementation libs.quarkus.smallrye.health
     implementation libs.quarkus.micrometer.registry.prometheus
     implementation libs.quarkus.container.image.jib
     implementation libs.zero.allocation.hashing
+    implementation libs.yavi
 
     implementation libs.quarkus.amazon.s3
     implementation libs.aws.sdk.url.connection.client

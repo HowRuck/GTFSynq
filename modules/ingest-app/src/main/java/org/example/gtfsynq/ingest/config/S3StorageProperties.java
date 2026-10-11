@@ -2,7 +2,6 @@ package org.example.gtfsynq.ingest.config;
 
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
-import jakarta.validation.constraints.NotBlank;
 import java.util.Optional;
 
 /**
@@ -44,7 +43,6 @@ public interface S3StorageProperties {
     /**
      * Bucket that holds the static feed archives. Must not be blank.
      */
-    @NotBlank
     @WithDefault("gtfsynq-static")
     String bucket();
 

@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.example.gtfsynq.ingest.config.enums.GtfsStaticFeedFile;
-import org.hibernate.validator.constraints.URL;
 
 /**
  * Configuration properties for GTFS ingestion.
@@ -79,16 +78,15 @@ public interface GtfsProperties {
     interface StaticConfig {
 
         /**
-         * URL to the GTFS static feed ZIP file. Must be a valid URL.
+         * URL to the GTFS static feed ZIP file. Validated when the application starts.
          */
-        @URL
         String url();
 
         /**
          * Map of GTFS static feed files to their respective URLs. Allows specifying custom
          * URLs for individual GTFS files.
          */
-        Map<GtfsStaticFeedFile, @URL String> fileUrls();
+        Map<GtfsStaticFeedFile, String> fileUrls();
 
         /**
          * Custom name mappings for GTFS files. Maps custom filenames to standard GTFS file
@@ -114,7 +112,7 @@ public interface GtfsProperties {
          * List of URLs for GTFS-RT feeds. Can include TripUpdates, VehiclePositions, Alerts,
          * etc.
          */
-        List<@URL String> urls();
+        List<String> urls();
 
         /**
          * Name of the HTTP header to use for authentication. Empty when the feed is public.

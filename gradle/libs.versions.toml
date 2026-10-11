@@ -20,6 +20,7 @@ javatuples = "2.0.1"
 zero-allocation-hashing = "2026.0"
 jspecify = "1.0.1"
 micrometer-jvm-extras = "0.3.0"
+yavi = "0.17.1"
 
 [libraries]
 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
@@ -43,7 +44,7 @@ quarkus-scheduler = { module = "io.quarkus:quarkus-scheduler" }
 quarkus-config-yaml = { module = "io.quarkus:quarkus-config-yaml" }
 # Web API & Validation
 quarkus-rest = { module = "io.quarkus:quarkus-rest" }
-quarkus-hibernate-validator = { module = "io.quarkus:quarkus-hibernate-validator" }
+
 # Persistence & Relational Databases
 quarkus-hibernate-orm = { module = "io.quarkus:quarkus-hibernate-orm" }
 quarkus-jdbc-postgresql = { module = "io.quarkus:quarkus-jdbc-postgresql" }
@@ -80,6 +81,7 @@ protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "p
 # Misc libraries
 javatuples = { module = "io.arxila.javatuples:javatuples", version.ref = "javatuples" }
 zero-allocation-hashing = { module = "net.openhft:zero-allocation-hashing", version.ref = "zero-allocation-hashing" }
+yavi = { module = "am.ik.yavi:yavi", version.ref = "yavi" }
 
 [bundles]
 lombok = ["lombok"]
