@@ -6,9 +6,9 @@ plugins {
 dependencies {
     api libs.protobuf.java
     api libs.javatuples
-    api libs.zero.allocation.hashing
     api libs.micrometer.core
-    api libs.micrometer.jvm.extras
+    implementation libs.zero.allocation.hashing
+    implementation libs.micrometer.jvm.extras
 
     // Provided by the Quarkus applications that consume this library.
     compileOnly libs.jakarta.inject.api
