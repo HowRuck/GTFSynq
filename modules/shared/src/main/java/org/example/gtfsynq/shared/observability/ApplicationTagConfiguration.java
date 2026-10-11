@@ -13,9 +13,8 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
  * <p>
  * Quarkus Micrometer only applies common tags that are contributed by a
  * {@code MeterFilter} bean, so without this every metric would be indistinguishable
- * between the three apps in the shared Prometheus registry. The dashboards select on
- * {@code application}, and the VictoriaMetrics scrape config labels each target with
- * the same value.
+ * between the three apps. The dashboards select on {@code application}; the
+ * micrometer-to-OpenTelemetry bridge carries the tag through as an OTLP attribute.
  */
 @Singleton
 public class ApplicationTagConfiguration {

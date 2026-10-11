@@ -26,7 +26,7 @@ It is built with **Gradle**, runs on **Java 25**, and is designed to work with *
 - **Kafka integration**: Stream transit payloads through Apache Kafka
 - **Protobuf support**: Encode and decode GTFS-RT messages efficiently
 - **GraalVM native images**: Ahead-of-time compile any app into a standalone native executable for fast startup and low memory
-- **Observability**: SmallRye Health and Micrometer/Prometheus metrics
+- **Observability**: OpenTelemetry metrics, logs and traces (Micrometer metrics and OTLP export) stored in the VictoriaMetrics stack
 - **Docker-based runtime**: Run the full stack with a single Compose command
 
 ## Tech Stack
@@ -39,7 +39,7 @@ It is built with **Gradle**, runs on **Java 25**, and is designed to work with *
 | Streaming | Apache Kafka | Event streaming and transport |
 | Database | TimescaleDB | Time-series PostgreSQL storage |
 | Serialization | Protobuf 4 | GTFS-RT message encoding |
-| Monitoring | SmallRye Health + Micrometer/Prometheus | Health and metrics |
+| Monitoring | SmallRye Health + OpenTelemetry (OTLP) | Health, metrics, logs and traces |
 | Images | Quarkus container-image Jib | Container image build (no Dockerfile) |
 | Native image | GraalVM / Mandrel 25 | Ahead-of-time compiled native executables |
 
@@ -137,10 +137,11 @@ docker compose down
 
 ### Viewing logs
 
-Container logs are shipped by Vector to VictoriaLogs and are queryable in Grafana
-under the **GTFSynq Logs** dashboard and **Drilldown > Logs** (Logs Drilldown),
-which is backed by the Loki-compatible `loki-vl-proxy` in front of VictoriaLogs
-(`http://localhost:3000`, credentials from `GF_SECURITY_ADMIN_*` in your `.env`). You can also still tail them directly:
+Application logs are exported over OTLP to VictoriaLogs and are queryable in
+Grafana under the **GTFSynq Logs** dashboard and **Explore** (`http://localhost:3000`,
+credentials from `GF_SECURITY_ADMIN_*` in your `.env`). Each log line also carries
+its `traceId`/`spanId`, so it can be correlated with a trace in VictoriaTraces. You
+can also still tail them directly:
 
 ```bash
 docker compose logs -f api-app
@@ -386,33 +387,42 @@ replaced (e.g. a Docker `httpGet`-style check).
 
 ## Monitoring
 
-The `docker-compose.monitoring.yaml` stack provides metrics and logs:
+The `docker-compose.monitoring.yaml` stack provides metrics, logs and traces. All
+three signals are exported by the apps as OTLP and fanned out by a single
+OpenTelemetry Collector to dedicated VictoriaMetrics stores:
 
 | Component | URL | Purpose |
 |---|---|---|
-| Grafana | http://localhost:3000 | Dashboards for metrics and logs (credentials from `GF_SECURITY_ADMIN_*` in `.env`) |
-| VictoriaMetrics | http://localhost:8428 | Metrics storage (Prometheus-compatible) |
-| VictoriaLogs | http://localhost:9428 | Log storage (LogsQL) |
-| Loki-VL-proxy | http://localhost:3100 | Loki-compatible read API for Explore/Logs Drilldown |
-| Vector | http://localhost:8686 | Collects container logs into VictoriaLogs |
+| Grafana | http://localhost:3000 | Dashboards for metrics, logs and traces (credentials from `GF_SECURITY_ADMIN_*` in `.env`) |
+| OpenTelemetry Collector | http://localhost:4317 | Single OTLP intake (gRPC `:4317`, HTTP `:4318`) fanning out to the stores below |
+| VictoriaMetrics | http://localhost:8428 | Metrics storage (Prometheus/MetricsQL-compatible; ingests OTLP) |
+| VictoriaLogs | http://localhost:9428 | Log storage (LogsQL; ingests OTLP) |
+| VictoriaTraces | http://localhost:10428 | Trace storage; serves the Jaeger query API (Grafana Jaeger datasource) |
 
-Vector reads container logs through the engine's Docker-compatible API. The
-socket defaults to the rootless Podman socket; override `PODMAN_SOCKET` in `.env`
-for other setups:
+The apps export telemetry via OpenTelemetry:
+
+- **Metrics** are produced by Micrometer — including the custom `gtfs.*` /
+  `offheap.*` domain meters, JVM extras, Agroal pool and Kafka client metrics — and
+  exported over OTLP by the `quarkus-micrometer-opentelemetry` bridge.
+- **Logs** are exported over OTLP by `quarkus-opentelemetry` (`quarkus.otel.logs.enabled`).
+- **Traces** are on by default and cover the HTTP → Kafka → JDBC path.
+
+Because metrics are pushed rather than scraped, the apps no longer expose a
+Prometheus `/q/metrics` endpoint and there is no scrape job for them.
+
+The applications expose health endpoints on their own port:
+
+- `GET /q/health`
+- `GET /q/health/live`
+- `GET /q/health/ready`
+
+The host's rootless Podman socket (via `PODMAN_SOCKET` in `.env`) is read by the
+`prometheus-podman-exporter` for container metrics:
 
 ```bash
 PODMAN_SOCKET=/var/run/docker.sock docker compose up -d          # Docker
 PODMAN_SOCKET=/run/podman/podman.sock docker compose up -d       # rootful Podman
 ```
-
-The applications expose management endpoints on their own port:
-
-- `GET /q/health`
-- `GET /q/health/live`
-- `GET /q/health/ready`
-- `GET /q/metrics`
-
-VictoriaMetrics scrapes `/q/metrics` on all three apps.
 
 ## Educational Project
 
