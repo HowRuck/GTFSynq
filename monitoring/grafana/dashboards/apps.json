@@ -42,7 +42,7 @@
     {
       "id": 1,
       "type": "timeseries",
-      "title": "HTTP request rate (per application)",
+      "title": "HTTP requests (per interval)",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
@@ -60,7 +60,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (application) (rate(http_server_requests_seconds_count{application=~\"$application\"}[$__rate_interval]))",
+          "expr": "sum by (application) (increase(http.server.requests_count{application=~\"$application\"}[$__rate_interval]))",
           "legendFormat": "{{application}}"
         }
       ],
@@ -85,7 +85,7 @@
     {
       "id": 2,
       "type": "timeseries",
-      "title": "HTTP p95 latency",
+      "title": "HTTP average latency",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
@@ -103,7 +103,7 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum by (application, instance, le) (rate(http_server_requests_seconds_bucket{application=~\"$application\"}[$__rate_interval])))",
+          "expr": "sum by (application) (increase(http.server.requests_sum{application=~\"$application\"}[$__rate_interval])) / sum by (application) (increase(http.server.requests_count{application=~\"$application\"}[$__rate_interval]))",
           "legendFormat": "{{application}}"
         }
       ],
@@ -189,11 +189,11 @@
       },
       "targets": [
         {
-          "expr": "process_cpu_usage{application=~\"$application\"}",
+          "expr": "process.cpu.usage{application=~\"$application\"}",
           "legendFormat": "process {{application}}"
         },
         {
-          "expr": "system_cpu_usage{application=~\"$application\"}",
+          "expr": "system.cpu.usage{application=~\"$application\"}",
           "legendFormat": "system {{application}}"
         }
       ],
@@ -239,19 +239,19 @@
       },
       "targets": [
         {
-          "expr": "agroal_active_count{application=~\"$application\"}",
+          "expr": "agroal.active.count{application=~\"$application\"}",
           "legendFormat": "active {{application}}"
         },
         {
-          "expr": "agroal_available_count{application=~\"$application\"}",
+          "expr": "agroal.available.count{application=~\"$application\"}",
           "legendFormat": "idle {{application}}"
         },
         {
-          "expr": "agroal_awaiting_count{application=~\"$application\"}",
+          "expr": "agroal.awaiting.count{application=~\"$application\"}",
           "legendFormat": "pending {{application}}"
         },
         {
-          "expr": "agroal_max_used_count{application=~\"$application\"}",
+          "expr": "agroal.max.used.count{application=~\"$application\"}",
           "legendFormat": "max {{application}}"
         }
       ],
@@ -294,11 +294,11 @@
       },
       "targets": [
         {
-          "expr": "jvm_classes_loaded_classes{application=~\"$application\"}",
+          "expr": "jvm.classes.loaded{application=~\"$application\"}",
           "legendFormat": "loaded classes {{application}}"
         },
         {
-          "expr": "jvm_classes_unloaded_classes{application=~\"$application\"}",
+          "expr": "jvm.classes.unloaded{application=~\"$application\"}",
           "legendFormat": "unloaded classes {{application}}"
         }
       ],
@@ -341,15 +341,15 @@
       },
       "targets": [
         {
-          "expr": "sum by (application) (jvm_memory_used_bytes{application=~\"$application\",area=\"heap\"})",
+          "expr": "sum by (application) (jvm.memory.used{application=~\"$application\",area=\"heap\"})",
           "legendFormat": "used {{application}}"
         },
         {
-          "expr": "sum by (application) (jvm_memory_committed_bytes{application=~\"$application\",area=\"heap\"})",
+          "expr": "sum by (application) (jvm.memory.committed{application=~\"$application\",area=\"heap\"})",
           "legendFormat": "committed {{application}}"
         },
         {
-          "expr": "sum by (application) (jvm_memory_max_bytes{application=~\"$application\",area=\"heap\"})",
+          "expr": "sum by (application) (jvm.memory.max{application=~\"$application\",area=\"heap\"})",
           "legendFormat": "max {{application}}"
         }
       ],
@@ -392,15 +392,15 @@
       },
       "targets": [
         {
-          "expr": "sum by (application) (jvm_memory_used_bytes{application=~\"$application\",area=\"nonheap\"})",
+          "expr": "sum by (application) (jvm.memory.used{application=~\"$application\",area=\"nonheap\"})",
           "legendFormat": "non-heap used {{application}}"
         },
         {
-          "expr": "jvm_buffer_memory_used_bytes{application=~\"$application\",id=\"direct\"}",
+          "expr": "jvm.buffer.memory.used{application=~\"$application\",id=\"direct\"}",
           "legendFormat": "direct {{application}}"
         },
         {
-          "expr": "jvm_buffer_memory_used_bytes{application=~\"$application\",id=\"mapped\"}",
+          "expr": "jvm.buffer.memory.used{application=~\"$application\",id=\"mapped\"}",
           "legendFormat": "mapped {{application}}"
         }
       ],
@@ -504,7 +504,7 @@
       },
       "targets": [
         {
-          "expr": "process_memory_rss_bytes{application=~\"$application\"}",
+          "expr": "process.memory.rss{application=~\"$application\"}",
           "legendFormat": "rss {{application}}"
         }
       ],
@@ -547,15 +547,15 @@
       },
       "targets": [
         {
-          "expr": "jvm_threads_live_threads{application=~\"$application\"}",
+          "expr": "jvm.threads.live{application=~\"$application\"}",
           "legendFormat": "live {{application}}"
         },
         {
-          "expr": "jvm_threads_daemon_threads{application=~\"$application\"}",
+          "expr": "jvm.threads.daemon{application=~\"$application\"}",
           "legendFormat": "daemon {{application}}"
         },
         {
-          "expr": "jvm_threads_peak_threads{application=~\"$application\"}",
+          "expr": "jvm.threads.peak{application=~\"$application\"}",
           "legendFormat": "peak {{application}}"
         }
       ],
@@ -569,7 +569,7 @@
     {
       "id": 13,
       "type": "timeseries",
-      "title": "GC pause rate",
+      "title": "GC pauses (per interval)",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
@@ -598,11 +598,11 @@
       },
       "targets": [
         {
-          "expr": "rate(jvm_gc_pause_seconds_sum{application=~\"$application\"}[$__rate_interval])",
+          "expr": "increase(jvm.gc.pause_sum{application=~\"$application\"}[$__rate_interval])",
           "legendFormat": "gc pause {{application}}"
         },
         {
-          "expr": "rate(jvm_gc_pause_seconds_count{application=~\"$application\"}[$__rate_interval])",
+          "expr": "increase(jvm.gc.pause_count{application=~\"$application\"}[$__rate_interval])",
           "legendFormat": "gc count {{application}}"
         }
       ],
@@ -645,11 +645,11 @@
       },
       "targets": [
         {
-          "expr": "offheap_store_bytes{application=~\"$application\"}",
+          "expr": "offheap.store.bytes{application=~\"$application\"}",
           "legendFormat": "total {{application}}"
         },
         {
-          "expr": "offheap_store_retired_bytes{application=~\"$application\"}",
+          "expr": "offheap.store.retired.bytes{application=~\"$application\"}",
           "legendFormat": "retired {{application}}"
         }
       ],
@@ -692,11 +692,11 @@
       },
       "targets": [
         {
-          "expr": "offheap_store_size{application=~\"$application\"}",
+          "expr": "offheap.store.size{application=~\"$application\"}",
           "legendFormat": "size {{application}}"
         },
         {
-          "expr": "offheap_store_capacity{application=~\"$application\"}",
+          "expr": "offheap.store.capacity{application=~\"$application\"}",
           "legendFormat": "capacity {{application}}"
         }
       ],
