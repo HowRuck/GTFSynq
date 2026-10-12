@@ -21,6 +21,11 @@ quarkus:
     metrics:
       enabled: true
 
+  # ---- Object storage ------------------------------------------------------
+  # Path-style access is required by local S3-compatible services (see ingest-app).
+  s3:
+    path-style-access: true
+
   # ---- Migrations ----------------------------------------------------------
   flyway:
     locations: classpath:db/migration
@@ -92,8 +97,31 @@ mp:
           deserializer: org.apache.kafka.common.serialization.StringDeserializer
         value:
           deserializer: org.apache.kafka.common.serialization.ByteArrayDeserializer
+      # Static feed revisions are validated, not persisted yet; the group is separate from the
+      # realtime consumer so a rebalance in one path cannot stall the other.
+      gtfs-static-feeds:
+        connector: smallrye-kafka
+        topic: gtfs-static-feeds
+        group:
+          id: gtfsynq-store-static
+        auto:
+          offset:
+            reset: earliest
+        key:
+          deserializer: org.apache.kafka.common.serialization.StringDeserializer
+        value:
+          deserializer: org.apache.kafka.common.serialization.ByteArrayDeserializer
 
 gtfsynq:
+  # ---- Static archive storage (read path) ----------------------------------
+  # Same keys as ingest-app, so one set of deployment values serves both apps.
+  storage:
+    s3:
+      enabled: true
+      endpoint: http://localhost:9000
+      region: us-east-1
+      bucket: gtfsynq-static
+
   # ---- Buffered sink -------------------------------------------------------
   sink:
     enabled: true
