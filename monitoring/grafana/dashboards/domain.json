@@ -122,7 +122,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (application) (increase(gtfs.ingest.skipped.invalid{application=~\"$application\"}[$__rate_interval]))",
+          "expr": "sum by (application) (rate(gtfs.ingest.skipped.invalid{application=~\"$application\"}[$__rate_interval]))",
           "legendFormat": "{{application}}",
           "refId": "A"
         }
@@ -248,7 +248,7 @@
     {
       "id": 24,
       "type": "timeseries",
-      "title": "Static ingestion attempts (per interval)",
+      "title": "Static ingestion attempts by outcome",
       "description": "Attempts per second: success (new revision stored and published), unchanged (archive already stored) and failed.",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
@@ -256,7 +256,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (outcome) (increase(gtfs.static.ingest{application=~\"$application\"}[$__rate_interval]))",
+          "expr": "sum by (outcome) (rate(gtfs.static.ingest{application=~\"$application\"}[$__rate_interval]))",
           "legendFormat": "{{outcome}}",
           "refId": "A"
         }
@@ -284,7 +284,7 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(gtfs.static.download.duration_sum{application=~\"$application\"}[$__rate_interval])) / sum(increase(gtfs.static.download.duration_count{application=~\"$application\"}[$__rate_interval]))",
+          "expr": "sum(rate(gtfs.static.download.duration_sum{application=~\"$application\"}[$__rate_interval])) / sum(rate(gtfs.static.download.duration_count{application=~\"$application\"}[$__rate_interval]))",
           "legendFormat": "average",
           "refId": "A"
         }
@@ -368,7 +368,7 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(gtfs.static.cycle.duration_sum{application=~\"$application\"}[$__rate_interval])) / sum(increase(gtfs.static.cycle.duration_count{application=~\"$application\"}[$__rate_interval]))",
+          "expr": "sum(rate(gtfs.static.cycle.duration_sum{application=~\"$application\"}[$__rate_interval])) / sum(rate(gtfs.static.cycle.duration_count{application=~\"$application\"}[$__rate_interval]))",
           "legendFormat": "average",
           "refId": "A"
         }
@@ -433,7 +433,7 @@
     {
       "id": 6,
       "type": "timeseries",
-      "title": "Database writes (per interval)",
+      "title": "Database write rate",
       "description": "Database writes completed per second, broken down by operation.",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
@@ -441,7 +441,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (op) (increase(gtfs.sink.db.write_count{application=~\"$application\"}[$__rate_interval]))",
+          "expr": "sum by (op) (rate(gtfs.sink.db.write_count{application=~\"$application\"}[$__rate_interval]))",
           "legendFormat": "{{op}}",
           "refId": "A"
         }
@@ -469,7 +469,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (op) (increase(gtfs.sink.db.write_sum{application=~\"$application\"}[$__rate_interval])) / sum by (op) (increase(gtfs.sink.db.write_count{application=~\"$application\"}[$__rate_interval]))",
+          "expr": "sum by (op) (rate(gtfs.sink.db.write_sum{application=~\"$application\"}[$__rate_interval])) / sum by (op) (rate(gtfs.sink.db.write_count{application=~\"$application\"}[$__rate_interval]))",
           "legendFormat": "{{op}}",
           "refId": "A"
         }
@@ -525,7 +525,7 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(gtfs.sink.flush.duration_sum{application=~\"$application\"}[$__rate_interval])) / sum(increase(gtfs.sink.flush.duration_count{application=~\"$application\"}[$__rate_interval]))",
+          "expr": "sum(rate(gtfs.sink.flush.duration_sum{application=~\"$application\"}[$__rate_interval])) / sum(rate(gtfs.sink.flush.duration_count{application=~\"$application\"}[$__rate_interval]))",
           "legendFormat": "average",
           "refId": "A"
         },
@@ -550,7 +550,7 @@
     {
       "id": 11,
       "type": "timeseries",
-      "title": "Flushes (per interval)",
+      "title": "Flushes per second",
       "description": "Number of buffer flushes completed per second.",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
@@ -558,7 +558,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (application) (increase(gtfs.sink.flush.duration_count{application=~\"$application\"}[$__rate_interval]))",
+          "expr": "sum by (application) (rate(gtfs.sink.flush.duration_count{application=~\"$application\"}[$__rate_interval]))",
           "legendFormat": "{{application}}",
           "refId": "A"
         }
@@ -586,7 +586,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (type) (increase(gtfs.sink.entities.count_sum{application=~\"$application\"}[$__rate_interval])) / sum by (type) (increase(gtfs.sink.entities.count_count{application=~\"$application\"}[$__rate_interval]))",
+          "expr": "sum by (type) (rate(gtfs.sink.entities.count_sum{application=~\"$application\"}[$__rate_interval])) / sum by (type) (rate(gtfs.sink.entities.count_count{application=~\"$application\"}[$__rate_interval]))",
           "legendFormat": "avg {{type}}",
           "refId": "A"
         },
@@ -614,7 +614,7 @@
     {
       "id": 13,
       "type": "timeseries",
-      "title": "Entities processed (per interval)",
+      "title": "Entities processed per second",
       "description": "Descriptors and stop-time updates processed per second.",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
@@ -622,7 +622,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (type) (increase(gtfs.sink.entities.count_sum{application=~\"$application\"}[$__rate_interval]))",
+          "expr": "sum by (type) (rate(gtfs.sink.entities.count_sum{application=~\"$application\"}[$__rate_interval]))",
           "legendFormat": "{{type}} per second",
           "refId": "A"
         }
@@ -642,7 +642,7 @@
     {
       "id": 14,
       "type": "timeseries",
-      "title": "Duplicate updates dropped (per interval)",
+      "title": "Duplicate updates dropped per second",
       "description": "Duplicate trip updates discarded per second before they are buffered.",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
@@ -650,7 +650,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (reason, instance) (increase(gtfs.sink.dropped{application=~\"$application\"}[$__rate_interval]))",
+          "expr": "sum by (reason, instance) (rate(gtfs.sink.dropped{application=~\"$application\"}[$__rate_interval]))",
           "legendFormat": "{{reason}} {{application}}",
           "refId": "A"
         }
@@ -716,12 +716,12 @@
       },
       "targets": [
         {
-          "expr": "increase(gtfs.sink.map.duration_sum{application=~\"$application\"}[$__rate_interval]) / increase(gtfs.sink.map.duration_count{application=~\"$application\"}[$__rate_interval])",
+          "expr": "rate(gtfs.sink.map.duration_sum{application=~\"$application\"}[$__rate_interval]) / rate(gtfs.sink.map.duration_count{application=~\"$application\"}[$__rate_interval])",
           "legendFormat": "map",
           "refId": "A"
         },
         {
-          "expr": "sum by (op) (increase(gtfs.sink.db.write_sum{application=~\"$application\"}[$__rate_interval])) / sum by (op) (increase(gtfs.sink.db.write_count{application=~\"$application\"}[$__rate_interval]))",
+          "expr": "sum by (op) (rate(gtfs.sink.db.write_sum{application=~\"$application\"}[$__rate_interval])) / sum by (op) (rate(gtfs.sink.db.write_count{application=~\"$application\"}[$__rate_interval]))",
           "legendFormat": "db {{op}}",
           "refId": "B"
         }
@@ -939,7 +939,7 @@
     {
       "id": 32,
       "type": "timeseries",
-      "title": "Validation outcomes (per interval)",
+      "title": "Validation outcomes per second",
       "description": "Attempts per second: success (new revision stored and published), unchanged (archive already stored) and failed.",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
@@ -947,7 +947,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (result) (increase(gtfs.static.validation.feeds{application=~\"$application\"}[$__rate_interval]))",
+          "expr": "sum by (result) (rate(gtfs.static.validation.feeds{application=~\"$application\"}[$__rate_interval]))",
           "refId": "A",
           "legendFormat": "{{result}}"
         }
@@ -1057,7 +1057,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (stage) (increase(gtfs.static.validation.duration_sum{application=~\"$application\"}[$__rate_interval])) / sum by (stage) (increase(gtfs.static.validation.duration_count{application=~\"$application\"}[$__rate_interval]))",
+          "expr": "sum by (stage) (rate(gtfs.static.validation.duration_sum{application=~\"$application\"}[$__rate_interval])) / sum by (stage) (rate(gtfs.static.validation.duration_count{application=~\"$application\"}[$__rate_interval]))",
           "refId": "A",
           "legendFormat": "{{stage}}"
         }
@@ -1085,7 +1085,7 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(gtfs.static.validation.rows_sum{application=~\"$application\"}[$__rate_interval])) / sum(increase(gtfs.static.validation.rows_count{application=~\"$application\"}[$__rate_interval]))",
+          "expr": "sum(rate(gtfs.static.validation.rows_sum{application=~\"$application\"}[$__rate_interval])) / sum(rate(gtfs.static.validation.rows_count{application=~\"$application\"}[$__rate_interval]))",
           "refId": "A",
           "legendFormat": "average"
         }
@@ -1105,7 +1105,7 @@
     {
       "id": 38,
       "type": "timeseries",
-      "title": "Violations (per interval) by file",
+      "title": "Violations per second by file",
       "description": "Attempts per second: success (new revision stored and published), unchanged (archive already stored) and failed.",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
@@ -1113,7 +1113,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (file) (increase(gtfs.static.validation.violations{application=~\"$application\"}[$__rate_interval]))",
+          "expr": "sum by (file) (rate(gtfs.static.validation.violations{application=~\"$application\"}[$__rate_interval]))",
           "refId": "A",
           "legendFormat": "{{file}}"
         }

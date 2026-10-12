@@ -42,7 +42,7 @@
     {
       "id": 1,
       "type": "timeseries",
-      "title": "HTTP requests (per interval)",
+      "title": "HTTP request rate (per application)",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
@@ -60,7 +60,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (application) (increase(http.server.requests_count{application=~\"$application\"}[$__rate_interval]))",
+          "expr": "sum by (application) (rate(http.server.requests_count{application=~\"$application\"}[$__rate_interval]))",
           "legendFormat": "{{application}}"
         }
       ],
@@ -103,7 +103,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (application) (increase(http.server.requests_sum{application=~\"$application\"}[$__rate_interval])) / sum by (application) (increase(http.server.requests_count{application=~\"$application\"}[$__rate_interval]))",
+          "expr": "sum by (application) (rate(http.server.requests_sum{application=~\"$application\"}[$__rate_interval])) / sum by (application) (rate(http.server.requests_count{application=~\"$application\"}[$__rate_interval]))",
           "legendFormat": "{{application}}"
         }
       ],
@@ -569,7 +569,7 @@
     {
       "id": 13,
       "type": "timeseries",
-      "title": "GC pauses (per interval)",
+      "title": "GC pause rate",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
@@ -598,11 +598,11 @@
       },
       "targets": [
         {
-          "expr": "increase(jvm.gc.pause_sum{application=~\"$application\"}[$__rate_interval])",
+          "expr": "rate(jvm.gc.pause_sum{application=~\"$application\"}[$__rate_interval])",
           "legendFormat": "gc pause {{application}}"
         },
         {
-          "expr": "increase(jvm.gc.pause_count{application=~\"$application\"}[$__rate_interval])",
+          "expr": "rate(jvm.gc.pause_count{application=~\"$application\"}[$__rate_interval])",
           "legendFormat": "gc count {{application}}"
         }
       ],
