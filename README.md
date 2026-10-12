@@ -205,6 +205,7 @@ Responsible for getting data into Kafka and object storage:
 Responsible for getting data out of Kafka and into PostgreSQL/TimescaleDB:
 
 - Kafka consumer (SmallRye Reactive Messaging)
+- GTFS static feed validation (fetch from object storage, verify the digest, stream-validate)
 - deduplication
 - batch persistence
 - Flyway migrations
@@ -227,9 +228,11 @@ GTFS-RT sources                        GTFS static (CSV) sources
         │             gtfs-trip-updates         │  archive
         ↓                      │                ↓
       Kafka  ────────────────► store-app      S3 storage
-                               │                │
+                               │                │  fetch + digest check
                                │   gtfs-static-feeds (object location + digest)
                                └────────────────┘
+                                ↓
+                     gtfs-static validation (shared validator)
                                 ↓
                         PostgreSQL / TimescaleDB
                                 ↓
@@ -254,16 +257,47 @@ are both skipped: downstream consumers are only woken up by an actual revision c
 The archive itself never travels over Kafka - consumers fetch and validate the referenced
 object themselves.
 
-Storage is configured under `gtfsynq.storage.s3`:
+## Static Feed Validation
+
+`store-app` consumes `gtfs-static-feeds` and validates each revision before anything is
+persisted, so rows only reach the database once they are known good:
+
+1. The archive is streamed out of object storage to a temporary file while its SHA-256 digest
+   is computed.
+2. The digest is compared against the one recorded at ingestion. A mismatch means the object is
+   not the revision the event describes, so the archive is rejected unvalidated.
+3. The archive is validated by the `shared` streaming validator (`GtfsStaticArchiveValidator`),
+   which walks each entry once, checks row-level rules with YAVI, and answers referential
+   questions - duplicate primary keys, `trips.route_id`, `stop_times.trip_id`/`stop_id`, and
+   per-trip `stop_sequence` ordering - from hashed id indexes.
+4. The outcome is reported as metrics and logs; an invalid feed is not handed on for
+   persistence, so the last good revision stays in place.
+
+The validator reads the archive exactly once per entry and holds only hashed ids, so peak
+memory does not grow with archive size. Two guards bound it further: violation details are
+capped per file, and both the per-trip sequence tracking and the id indexes stop growing at a
+configured limit - when that limit is hit the affected files are reported as *not fully
+checked* rather than validated against partial state.
+
+Every outcome is acknowledged. Validation is idempotent and repeatable, so retrying would
+re-fetch the same archive without changing the answer; failures surface through the
+`gtfs.static.validation.*` meters (`feeds{result=...}`, `violations{file=...}`, `duration`,
+`rows`) instead of a retry loop.
+
+Persistence of validated static data is not implemented yet: the consumer currently stops at
+validation, and no static tables exist.
+
+Storage is configured under `gtfsynq.storage.s3` in both apps - `ingest-app` writes archives
+to it, `store-app` reads them back - so one set of deployment values serves both:
 
 | Property | Default | Purpose |
 |---|---|---|
-| `enabled` | `true` | Master switch for static ingestion; when false no archives are polled or uploaded |
+| `enabled` | `true` | Master switch; when false, `ingest-app` polls and uploads nothing and `store-app` acknowledges static events without fetching |
 | `endpoint` | `http://localhost:9000` | Endpoint of the S3-compatible service; leave empty for AWS S3 |
 | `region` | `us-east-1` | Region requests are signed for |
-| `bucket` | `gtfsynq-static` | Bucket holding the archives; created on first upload when missing |
+| `bucket` | `gtfsynq-static` | Bucket holding the archives; created on first upload when missing, and only used as a fallback on the read path, which prefers the bucket named by the event |
 | `access-key` / `secret-key` | empty | Static credentials; when empty the AWS default credentials chain is used |
-| `path-style-access` | `true` | Address buckets as `endpoint/bucket`, as local S3 services require |
+| `path-style-access` | `true` | Address buckets as `endpoint/bucket`, as local S3 services require (`quarkus.s3.path-style-access`) |
 
 ## Configuration
 
