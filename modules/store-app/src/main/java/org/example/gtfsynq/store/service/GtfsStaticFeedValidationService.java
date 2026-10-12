@@ -75,7 +75,7 @@ public class GtfsStaticFeedValidationService {
     public Outcome validate(StaticFeedIngested event) {
         if (!storageProperties.enabled()) {
             log.debug("Static feed validation is disabled, skipping {}", event.getFeedId());
-            metrics.recordResult(StaticValidationMetrics.Result.DISABLED);
+            metrics.recordResult(event.getFeedId(), StaticValidationMetrics.Result.DISABLED);
             return Outcome.DISABLED;
         }
 
@@ -84,7 +84,7 @@ public class GtfsStaticFeedValidationService {
         try {
             staged = fetch(event);
         } catch (SdkException | IOException e) {
-            metrics.recordResult(StaticValidationMetrics.Result.FETCH_FAILED);
+            metrics.recordResult(event.getFeedId(), StaticValidationMetrics.Result.FETCH_FAILED);
             log.error(
                     "Static feed {} ({}) could not be staged from s3://{}/{}",
                     event.getFeedId(),
@@ -98,7 +98,7 @@ public class GtfsStaticFeedValidationService {
 
         try {
             if (!staged.sha256().equalsIgnoreCase(event.getSha256())) {
-                metrics.recordResult(StaticValidationMetrics.Result.CHECKSUM_MISMATCH);
+                metrics.recordResult(event.getFeedId(), StaticValidationMetrics.Result.CHECKSUM_MISMATCH);
                 log.warn(
                         "Static feed {} ({}) does not match the digest recorded at ingestion "
                                 + "(expected {}, got {}), refusing to validate",
@@ -147,7 +147,7 @@ public class GtfsStaticFeedValidationService {
         } catch (IOException e) {
             // Unreadable as a zip: a property of the feed, not a fault on our side, so this counts
             // as invalid rather than as an operational failure.
-            metrics.recordResult(StaticValidationMetrics.Result.INVALID);
+            metrics.recordResult(event.getFeedId(), StaticValidationMetrics.Result.INVALID);
             log.error(
                     "Static feed {} ({}) could not be read as a zip archive, treating as invalid",
                     event.getFeedId(),
@@ -155,10 +155,10 @@ public class GtfsStaticFeedValidationService {
                     e);
             return Outcome.INVALID;
         }
-        metrics.recordValidation(System.nanoTime() - start, report);
+        metrics.recordValidation(event.getFeedId(), System.nanoTime() - start, report);
 
         if (report.valid()) {
-            metrics.recordResult(StaticValidationMetrics.Result.VALID);
+            metrics.recordResult(event.getFeedId(), StaticValidationMetrics.Result.VALID);
             log.info(
                     "Static feed {} ({}) of size {} is valid, {} rows checked",
                     event.getFeedId(),
@@ -168,7 +168,7 @@ public class GtfsStaticFeedValidationService {
             return Outcome.VALID;
         }
 
-        metrics.recordResult(StaticValidationMetrics.Result.INVALID);
+        metrics.recordResult(event.getFeedId(), StaticValidationMetrics.Result.INVALID);
         log.warn(
                 "Static feed {} ({}) is invalid: {} violations in {} rows checked{}",
                 event.getFeedId(),

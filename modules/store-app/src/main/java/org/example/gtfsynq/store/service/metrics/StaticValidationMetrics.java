@@ -48,7 +48,7 @@ public class StaticValidationMetrics {
 
     private final MeterRegistry registry;
 
-    private final Map<Result, Counter> outcomes = new ConcurrentHashMap<>();
+    private final Map<String, Counter> outcomes = new ConcurrentHashMap<>();
 
     private final Map<String, Counter> violationsByFile = new ConcurrentHashMap<>();
 
@@ -79,30 +79,34 @@ public class StaticValidationMetrics {
                 .description("Rows checked per validated archive")
                 .register(registry);
 
-        this.violationsSummary = DistributionSummary.builder("gtfs.static.validation.violations.total")
+        this.violationsSummary = DistributionSummary.builder("gtfs.static.validation.violations.per.feed")
                 .description("Violations found per validated archive")
                 .register(registry);
     }
 
-    public void recordResult(Result result) {
-        // Pre-registering every result keeps the series present at zero, so a dashboard shows
-        // "no invalid feeds" rather than nothing at all.
-        for (var known : Result.values()) {
-            outcomes.computeIfAbsent(
-                    known,
-                    value -> Counter.builder(FEEDS)
-                            .description("Ingested static archives by validation result")
-                            .tag("result", value.tag())
-                            .register(registry));
-        }
-        outcomes.get(result).increment();
+    /**
+     * Counts one archive by result.
+     *
+     * <p>Counters are created on first use rather than pre-registered: with a feed tag the set of
+     * series depends on the configured sources, so it cannot be registered up front.
+     *
+     * @param feedId feed the archive belongs to, so a failing source can be singled out
+     */
+    public void recordResult(String feedId, Result result) {
+        outcomes.computeIfAbsent(
+                        result.tag() + '\u0000' + feedId,
+                        ignored -> Counter.builder(FEEDS)
+                                .description("Ingested static archives by validation result")
+                                .tags("result", result.tag(), "feed", feedId)
+                                .register(registry))
+                .increment();
     }
 
     public void recordFetch(long nanos) {
         fetchTimer.record(nanos, TimeUnit.NANOSECONDS);
     }
 
-    public void recordValidation(long nanos, StaticValidationReport report) {
+    public void recordValidation(String feedId, long nanos, StaticValidationReport report) {
         validationTimer.record(nanos, TimeUnit.NANOSECONDS);
         rowsSummary.record(report.rowsChecked());
         violationsSummary.record(report.violations());
@@ -110,10 +114,10 @@ public class StaticValidationMetrics {
             if (outcome.violations() > 0) {
                 violationsByFile
                         .computeIfAbsent(
-                                file,
-                                name -> Counter.builder(VIOLATIONS)
+                                file + '\u0000' + feedId,
+                                ignored -> Counter.builder(VIOLATIONS)
                                         .description("Violations found in a static file")
-                                        .tag("file", name)
+                                        .tags("file", file, "feed", feedId)
                                         .register(registry))
                         .increment(outcome.violations());
             }

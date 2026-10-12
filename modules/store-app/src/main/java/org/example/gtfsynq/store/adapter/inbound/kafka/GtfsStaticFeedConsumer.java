@@ -46,18 +46,24 @@ public class GtfsStaticFeedConsumer {
         try {
             event = StaticFeedIngested.parseFrom(value);
         } catch (InvalidProtocolBufferException e) {
-            metrics.recordResult(StaticValidationMetrics.Result.MALFORMED_EVENT);
+            metrics.recordResult(keyOrUnknown(record), StaticValidationMetrics.Result.MALFORMED_EVENT);
             log.error("Discarding malformed static feed ingestion event (key {})", record.key(), e);
             return;
         }
 
         if (event.getFeedId().isEmpty() || event.getObjectKey().isEmpty()) {
-            metrics.recordResult(StaticValidationMetrics.Result.MALFORMED_EVENT);
+            metrics.recordResult(keyOrUnknown(record), StaticValidationMetrics.Result.MALFORMED_EVENT);
             log.error("Discarding static feed ingestion event without a feed id or object key (key {})", record.key());
             return;
         }
 
         var outcome = validationService.validate(event);
         log.debug("Static feed {} ({}) validation outcome: {}", event.getFeedId(), event.getObjectKey(), outcome);
+    }
+
+    /** A malformed event may not carry a feed id, so fall back to the record key for the metric tag. */
+    private static String keyOrUnknown(Record<String, byte[]> record) {
+        var key = record.key();
+        return key == null || key.isEmpty() ? "unknown" : key;
     }
 }
