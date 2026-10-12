@@ -20,6 +20,8 @@ javatuples = "2.0.1"
 zero-allocation-hashing = "2026.0"
 jspecify = "1.0.1"
 micrometer-jvm-extras = "0.3.0"
+fastcsv = "4.3.1"
+junitJupiter = "6.1.3"
 yavi = "0.17.1"
 
 [libraries]
@@ -59,6 +61,9 @@ quarkus-micrometer-opentelemetry = { module = "io.quarkus:quarkus-micrometer-ope
 # Build, Containerization & Testing
 quarkus-container-image-jib = { module = "io.quarkus:quarkus-container-image-jib" }
 quarkus-junit5 = { module = "io.quarkus:quarkus-junit5" }
+junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junitJupiter" }
+junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junitJupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junitJupiter" }
 
 # Managed S3 client plus the GraalVM substitutions that make the AWS SDK v2
 # native-image friendly (strips the optional aws-crt checksum references when
@@ -83,6 +88,7 @@ protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "p
 javatuples = { module = "io.arxila.javatuples:javatuples", version.ref = "javatuples" }
 zero-allocation-hashing = { module = "net.openhft:zero-allocation-hashing", version.ref = "zero-allocation-hashing" }
 yavi = { module = "am.ik.yavi:yavi", version.ref = "yavi" }
+fastcsv = { module = "de.siegmar:fastcsv", version.ref = "fastcsv" }
 
 [bundles]
 lombok = ["lombok"]

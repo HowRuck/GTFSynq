@@ -6,7 +6,8 @@ plugins {
 dependencies {
     api libs.protobuf.java
     api libs.javatuples
-    api libs.micrometer.core
+    api libs.yavi
+    api libs.fastcsv
     implementation libs.zero.allocation.hashing
     implementation libs.micrometer.jvm.extras
 
@@ -19,6 +20,10 @@ dependencies {
     compileOnly libs.jspecify
     compileOnly libs.bundles.lombok
     annotationProcessor libs.bundles.lombok
+
+    testImplementation libs.junit.jupiter.api
+    testRuntimeOnly libs.junit.jupiter.engine
+    testRuntimeOnly libs.junit.platform.launcher
 }
 
 protobuf {
