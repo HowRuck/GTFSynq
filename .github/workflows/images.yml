@@ -40,7 +40,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Cache Jib Layers
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/google-cloud-tools-jib
           key: ${{ runner.os }}-jib-${{ matrix.app }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/gradle.properties') }}
