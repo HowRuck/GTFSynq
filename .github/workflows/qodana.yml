@@ -50,7 +50,7 @@ jobs:
       - name: Generate proto sources
         run: ./gradlew :shared:generateProto
       - name: "Qodana Scan"
-        uses: JetBrains/qodana-action@v2026.2.1
+        uses: JetBrains/qodana-action@v2026.2.2
         with:
           # Same as the SARIF upload below: a fork PR gets a read-only
           # GITHUB_TOKEN, so commenting there would always fail
