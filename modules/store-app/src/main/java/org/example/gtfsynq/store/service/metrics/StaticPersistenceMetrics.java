@@ -25,6 +25,8 @@ public class StaticPersistenceMetrics {
 
     private static final String ROWS = "gtfs.static.persistence.rows";
 
+    private static final String ROWS_BY_TABLE = "gtfs.static.persistence.rows.by_table";
+
     /** What happened to one validated archive. */
     public enum Result {
         LOADED("loaded"),
@@ -104,7 +106,7 @@ public class StaticPersistenceMetrics {
     private Counter rowsByTableMetric(String table, String feedId) {
         return rowsByTable.computeIfAbsent(
                 table + '\u0000' + feedId,
-                ignored -> Counter.builder(ROWS)
+                ignored -> Counter.builder(ROWS_BY_TABLE)
                         .description("Rows written per static table")
                         .tags("table", table, "feed", feedId)
                         .register(registry));
