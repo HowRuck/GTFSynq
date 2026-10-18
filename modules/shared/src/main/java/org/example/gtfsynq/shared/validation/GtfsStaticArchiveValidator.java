@@ -9,10 +9,8 @@ import static org.example.gtfsynq.shared.validation.GtfsStaticFile.TRIPS;
 import am.ik.yavi.core.ConstraintViolation;
 import de.siegmar.fastcsv.reader.CsvParseException;
 import de.siegmar.fastcsv.reader.CsvReader;
-import de.siegmar.fastcsv.reader.FieldMismatchStrategy;
 import de.siegmar.fastcsv.reader.NamedCsvRecord;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -330,41 +328,11 @@ public final class GtfsStaticArchiveValidator {
     }
 
     private ZipEntry findEntry(ZipFile zip, GtfsStaticFile file) {
-        // Archives sometimes nest the files under a directory; match on the leaf name.
-        var name = file.fileName();
-        var direct = zip.getEntry(name);
-        if (direct != null) {
-            return direct;
-        }
-        var entries = zip.entries();
-        while (entries.hasMoreElements()) {
-            var entry = entries.nextElement();
-            var path = entry.getName();
-            if (path.endsWith("/" + name) || path.endsWith("\\" + name)) {
-                return entry;
-            }
-        }
-        return null;
+        return GtfsStaticEntries.find(zip, file);
     }
 
     private CsvReader<NamedCsvRecord> open(ZipFile zip, ZipEntry entry) throws IOException {
-        InputStream in = zip.getInputStream(entry);
-        var handedOver = false;
-        try {
-            // IGNORE keeps ragged rows flowing: a short row must be reported by the row validators,
-            // not abort the file. STRICT would throw on the first mismatch.
-            var reader = CsvReader.builder()
-                    .detectBomHeader(true)
-                    .extraFieldStrategy(FieldMismatchStrategy.IGNORE)
-                    .missingFieldStrategy(FieldMismatchStrategy.IGNORE)
-                    .ofNamedCsvRecord(in, StandardCharsets.UTF_8);
-            handedOver = true;
-            return reader;
-        } finally {
-            if (!handedOver) {
-                in.close();
-            }
-        }
+        return GtfsStaticEntries.open(zip, entry);
     }
 
     private boolean checkHeader(GtfsStaticColumns columns, FileAccumulator outcome) {

@@ -97,7 +97,7 @@ mp:
           deserializer: org.apache.kafka.common.serialization.StringDeserializer
         value:
           deserializer: org.apache.kafka.common.serialization.ByteArrayDeserializer
-      # Static feed revisions are validated, not persisted yet; the group is separate from the
+      # Static feed revisions are validated before they are written; the group is separate from the
       # realtime consumer so a rebalance in one path cannot stall the other.
       gtfs-static-feeds:
         connector: smallrye-kafka
@@ -121,6 +121,15 @@ gtfsynq:
       endpoint: http://localhost:9000
       region: us-east-1
       bucket: gtfsynq-static
+
+  # ---- Static persistence --------------------------------------------------
+  # A validated revision replaces the feed's previous one in a single transaction; a redelivered
+  # event for the revision already loaded is recognised by its digest and writes nothing.
+  static:
+    persistence:
+      enabled: true
+      # Rows handed from the archive reader to the database writer per batch.
+      batch-size: 5000
 
   # ---- Buffered sink -------------------------------------------------------
   sink:

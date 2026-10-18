@@ -206,6 +206,7 @@ Responsible for getting data out of Kafka and into PostgreSQL/TimescaleDB:
 
 - Kafka consumer (SmallRye Reactive Messaging)
 - GTFS static feed validation (fetch from object storage, verify the digest, stream-validate)
+- GTFS static feed persistence (stream the validated archive into the `static_*` tables)
 - deduplication
 - batch persistence
 - Flyway migrations
@@ -284,8 +285,48 @@ re-fetch the same archive without changing the answer; failures surface through 
 `gtfs.static.validation.*` meters (`feeds{result=...}`, `violations{file=...}`, `duration`,
 `rows`) instead of a retry loop.
 
-Persistence of validated static data is not implemented yet: the consumer currently stops at
-validation, and no static tables exist.
+## Static Feed Persistence
+
+A revision that passed validation is written to the `static_*` tables. Validation gates it, so
+the feed in the database is always a revision that was checked end to end:
+
+1. `StaticFeedRepository` compares the digest the event carries against the one recorded in
+   `static_feeds`. An event for the revision already loaded opens a writer that discards the
+   rows it is handed, so a redelivery after a restart costs a fetch and a validation, not a
+   rewrite.
+2. Any other revision clears that feed's rows from every `static_*` table and streams the
+   archive back in through `GtfsStaticArchiveReader`, the same entry order the validator used,
+   into `StaticFeedWriter`.
+3. The `static_feeds` row naming the loaded revision is written last, so the revision marker and
+   the rows it describes are committed together.
+
+The replace and the insert share one transaction on a single pooled connection, so a feed is
+either fully at the new revision or fully at the old one - a failure halfway through a
+multi-million row load rolls back and the previous revision stays queryable. Loads are
+serialised per feed with a transaction-scoped advisory lock, so two events for one feed cannot
+interleave even when consumed concurrently, while loads of different feeds never block each
+other.
+
+Rows stream entry by entry in batches (`gtfsynq.static.persistence.batch-size`, 5000 by
+default) from the reader into JDBC batches, so peak memory depends on the batch size rather than
+on archive size. `gtfsynq.static.persistence.enabled=false` stops after validation and leaves
+the stored revision untouched.
+
+A GTFS time may run past midnight (`25:10:00`), which a `TIME` column cannot hold, so
+`static_stop_times` stores the time of day beside the day overflow - the same split the realtime
+tables use for a trip descriptor's start time. Cells are typed at that boundary: the row shapes
+the validator checked are all strings, and the writer converts them once, per row, on the way in.
+A cell that will not convert means the validator and the reader disagree about the same bytes;
+the load fails loudly rather than writing a placeholder.
+
+The stage reports through `gtfs.static.persistence.*` meters - `revisions{result=loaded |
+unchanged | failed | disabled}`, `duration`, `rows` and `rows{table=...}` - where `unchanged`
+keeps a redelivery visibly distinct from a real replacement.
+
+| Property | Default | Purpose |
+|---|---|---|
+| `gtfsynq.static.persistence.enabled` | `true` | Master switch for the write stage; when false, a validated archive is dropped and the stored revision stays |
+| `gtfsynq.static.persistence.batch-size` | `5000` | Rows per reader callback and JDBC batch |
 
 Storage is configured under `gtfsynq.storage.s3` in both apps - `ingest-app` writes archives
 to it, `store-app` reads them back - so one set of deployment values serves both:
@@ -312,6 +353,7 @@ Important defaults:
 - Kafka bootstrap server: `localhost:9092`
 - PostgreSQL / TimescaleDB: `localhost:5432`, database `gtfsynq`
 - S3-compatible object storage: `http://localhost:9000`, bucket `gtfsynq-static`
+- Static persistence: enabled, batch size `5000` rows
 - Realtime polling interval: `60s`; static polling interval: `24h`
 - Buffered sink flush interval: `10s`, hot data retention `1h`
 - Management endpoints: `/q/health` (the apps never start Dev

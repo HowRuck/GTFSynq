@@ -23,7 +23,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 
 /**
- * Validates a GTFS static archive referenced by an ingestion event.
+ * Stages and validates a GTFS static archive referenced by an ingestion event.
  *
  * <p>The archive never travels over Kafka, so this fetches it from object storage, verifies the
  * SHA-256 digest carried by the event, and streams it through {@link GtfsStaticArchiveValidator}.
@@ -31,9 +31,11 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
  * they are known good, and a revision that fails validation leaves the previous one in place.
  *
  * <p>The archive is streamed to a temporary file while its digest is computed, so peak memory does
- * not depend on archive size. Nothing is retained between events: a redelivered event is re-fetched
- * and re-validated, which is idempotent, if wasteful, which is why this is safe to acknowledge
- * after a failure.
+ * not depend on archive size. Staging and validating are one call and the staged file is handed
+ * back rather than deleted here, because the stage that follows - persistence - needs the very same
+ * bytes; the caller owns the file and releases it with {@link #discard}. Nothing is retained
+ * between events: a redelivered event is re-fetched and re-validated, which is idempotent, if
+ * wasteful, which is why this is safe to acknowledge after a failure.
  */
 @Singleton
 @Slf4j
@@ -63,20 +65,39 @@ public class GtfsStaticFeedValidationService {
         DISABLED
     }
 
+    /**
+     * Outcome of {@link #stage}, with the staged archive when there is one.
+     *
+     * @param outcome whether the archive may be persisted
+     * @param archive staged file, {@code null} unless the archive was fetched and validated
+     * @param report per-file validation detail, {@code null} unless the archive was read
+     */
+    public record Validation(Outcome outcome, Path archive, StaticValidationReport report) {
+
+        /** Whether the archive behind this result may be handed on for persistence. */
+        public boolean valid() {
+            return outcome == Outcome.VALID;
+        }
+    }
+
     /** A fetched archive plus the digest computed while streaming it to disk. */
     private record StagedArchive(Path path, String sha256) {}
 
     /**
-     * Validates the archive an ingestion event points at.
+     * Stages the archive an ingestion event points at and validates it.
+     *
+     * <p>The caller owns the returned archive and must release it with {@link #discard}; anything
+     * but {@link Outcome#VALID} hands back no file, because an archive that was rejected must not
+     * reach the database.
      *
      * @param event ingestion event carrying the bucket, key and digest of the stored archive
-     * @return the outcome, which is the gate a persistence stage should key on
+     * @return the outcome, which is the gate the persistence stage keys on
      */
-    public Outcome validate(StaticFeedIngested event) {
+    public Validation stage(StaticFeedIngested event) {
         if (!storageProperties.enabled()) {
             log.debug("Static feed validation is disabled, skipping {}", event.getFeedId());
             metrics.recordResult(event.getFeedId(), StaticValidationMetrics.Result.DISABLED);
-            return Outcome.DISABLED;
+            return new Validation(Outcome.DISABLED, null, null);
         }
 
         var fetchStart = System.nanoTime();
@@ -92,25 +113,34 @@ public class GtfsStaticFeedValidationService {
                     event.getBucket(),
                     event.getObjectKey(),
                     e);
-            return Outcome.FETCH_FAILED;
+            return new Validation(Outcome.FETCH_FAILED, null, null);
         }
         metrics.recordFetch(System.nanoTime() - fetchStart);
 
-        try {
-            if (!staged.sha256().equalsIgnoreCase(event.getSha256())) {
-                metrics.recordResult(event.getFeedId(), StaticValidationMetrics.Result.CHECKSUM_MISMATCH);
-                log.warn(
-                        "Static feed {} ({}) does not match the digest recorded at ingestion "
-                                + "(expected {}, got {}), refusing to validate",
-                        event.getFeedId(),
-                        event.getObjectKey(),
-                        event.getSha256(),
-                        staged.sha256());
-                return Outcome.CHECKSUM_MISMATCH;
-            }
-            return validateArchive(event, staged.path());
-        } finally {
+        if (!staged.sha256().equalsIgnoreCase(event.getSha256())) {
+            metrics.recordResult(event.getFeedId(), StaticValidationMetrics.Result.CHECKSUM_MISMATCH);
+            log.warn(
+                    "Static feed {} ({}) does not match the digest recorded at ingestion "
+                            + "(expected {}, got {}), refusing to validate",
+                    event.getFeedId(),
+                    event.getObjectKey(),
+                    event.getSha256(),
+                    staged.sha256());
             discard(staged.path());
+            return new Validation(Outcome.CHECKSUM_MISMATCH, null, null);
+        }
+        return validateArchive(event, staged.path());
+    }
+
+    /** Releases a staged archive; a {@code null} path is accepted so callers need no null check. */
+    public void discard(Path archive) {
+        if (archive == null) {
+            return;
+        }
+        try {
+            Files.deleteIfExists(archive);
+        } catch (IOException e) {
+            log.warn("Could not delete temporary static archive {}", archive, e);
         }
     }
 
@@ -139,7 +169,7 @@ public class GtfsStaticFeedValidationService {
         }
     }
 
-    private Outcome validateArchive(StaticFeedIngested event, Path archive) {
+    private Validation validateArchive(StaticFeedIngested event, Path archive) {
         var start = System.nanoTime();
         StaticValidationReport report;
         try {
@@ -153,7 +183,8 @@ public class GtfsStaticFeedValidationService {
                     event.getFeedId(),
                     event.getObjectKey(),
                     e);
-            return Outcome.INVALID;
+            discard(archive);
+            return new Validation(Outcome.INVALID, null, null);
         }
         metrics.recordValidation(event.getFeedId(), System.nanoTime() - start, report);
 
@@ -165,7 +196,7 @@ public class GtfsStaticFeedValidationService {
                     event.getObjectKey(),
                     SizeFormat.humanBytes(event.getSizeBytes()),
                     report.rowsChecked());
-            return Outcome.VALID;
+            return new Validation(Outcome.VALID, archive, report);
         }
 
         metrics.recordResult(event.getFeedId(), StaticValidationMetrics.Result.INVALID);
@@ -181,7 +212,9 @@ public class GtfsStaticFeedValidationService {
                 .forEach((file, outcome) -> outcome.samples()
                         .forEach(violation -> log.warn(
                                 "  {}:{} {}: {}", file, violation.line(), violation.field(), violation.message())));
-        return Outcome.INVALID;
+        // An archive that failed validation must not reach the database, so the staged copy goes now.
+        discard(archive);
+        return new Validation(Outcome.INVALID, null, report);
     }
 
     /** Names the files whose checks did not run to completion, so a green report is not over-read. */
@@ -191,13 +224,5 @@ public class GtfsStaticFeedValidationService {
                 .map(Map.Entry::getKey)
                 .toList();
         return incomplete.isEmpty() ? "" : ", not fully checked: " + incomplete;
-    }
-
-    private void discard(Path archive) {
-        try {
-            Files.deleteIfExists(archive);
-        } catch (IOException e) {
-            log.warn("Could not delete temporary static archive {}", archive, e);
-        }
     }
 }
