@@ -319,9 +319,13 @@ the validator checked are all strings, and the writer converts them once, per ro
 A cell that will not convert means the validator and the reader disagree about the same bytes;
 the load fails loudly rather than writing a placeholder.
 
-The stage reports through `gtfs.static.persistence.*` meters - `revisions{result=loaded |
-unchanged | failed | disabled}`, `duration`, `rows` and `rows{table=...}` - where `unchanged`
-keeps a redelivery visibly distinct from a real replacement.
+The persistence stage reports through `gtfs.static.persistence.*` meters - `revisions{result=loaded |
+unchanged | failed | disabled}`, total and per-table `rows`, per-table `batch.duration`, `batch.rows`,
+`batch.attempts` and `batch.failures`, plus `transaction.phase.duration{phase=...}` for connection
+acquisition, advisory-lock wait, revision lookup, clearing, commit and rollback. Ingestion-wide
+`gtfs.static.ingestion.*` meters track `queue.age`, `archive.size`, end-to-end `duration{outcome=...}`,
+and the active `in_flight` long-task timer. The `GTFSynq Domain` Grafana dashboard includes panels
+for these signals. The `unchanged` outcome keeps a redelivery visibly distinct from a real replacement.
 
 | Property | Default | Purpose |
 |---|---|---|

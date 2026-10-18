@@ -42,6 +42,7 @@ public class GtfsStaticFeedIngestionService {
         var outcome = "error";
         Path archive = null;
         try {
+            metrics.recordEventMetadata(event.getSizeBytes(), event.getIngestedAtEpochSeconds());
             var validation = validationService.stage(event);
             archive = validation.archive();
             if (!validation.valid()) {

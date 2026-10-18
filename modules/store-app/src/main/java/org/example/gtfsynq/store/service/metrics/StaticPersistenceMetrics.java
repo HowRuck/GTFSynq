@@ -51,6 +51,16 @@ public class StaticPersistenceMetrics {
 
     private final Map<String, Counter> rowsByTable = new ConcurrentHashMap<>();
 
+    private final Map<String, Timer> batchDurations = new ConcurrentHashMap<>();
+
+    private final Map<String, Counter> batchAttempts = new ConcurrentHashMap<>();
+
+    private final Map<String, Counter> batchFailures = new ConcurrentHashMap<>();
+
+    private final Map<String, DistributionSummary> batchRows = new ConcurrentHashMap<>();
+
+    private final Map<TransactionPhase, Timer> transactionPhaseDurations = new ConcurrentHashMap<>();
+
     private final Timer loadTimer;
 
     private final DistributionSummary rowsSummary;
@@ -91,6 +101,47 @@ public class StaticPersistenceMetrics {
         loadTimer.record(nanos, TimeUnit.NANOSECONDS);
     }
 
+    public void recordBatch(String table, long rows, long nanos, boolean failed) {
+        batchAttemptsMetric(table).increment();
+        batchRowsMetric(table).record(rows);
+        batchDurationMetric(table).record(nanos, TimeUnit.NANOSECONDS);
+        if (failed) {
+            batchFailuresMetric(table).increment();
+        }
+    }
+
+    public void recordTransactionPhase(TransactionPhase phase, long nanos) {
+        transactionPhaseDurations
+                .computeIfAbsent(
+                        phase,
+                        ignored -> Timer.builder("gtfs.static.persistence.transaction.phase.duration")
+                                .description("Time spent in a static-feed database transaction phase")
+                                .tag("phase", phase.tag())
+                                .publishPercentileHistogram()
+                                .register(registry))
+                .record(nanos, TimeUnit.NANOSECONDS);
+    }
+
+    /** What happened during setup or completion of a static persistence transaction. */
+    public enum TransactionPhase {
+        CONNECTION("connection"),
+        ADVISORY_LOCK("advisory_lock"),
+        REVISION_LOOKUP("revision_lookup"),
+        CLEAR("clear"),
+        COMMIT("commit"),
+        ROLLBACK("rollback");
+
+        private final String tag;
+
+        TransactionPhase(String tag) {
+            this.tag = tag;
+        }
+
+        String tag() {
+            return tag;
+        }
+    }
+
     /**
      * Records the rows written by one load.
      *
@@ -101,6 +152,44 @@ public class StaticPersistenceMetrics {
     public void recordRows(String feedId, long rows, Map<String, Long> perTable) {
         rowsSummary.record(rows);
         perTable.forEach((table, count) -> rowsByTableMetric(table, feedId).increment(count));
+    }
+
+    private Timer batchDurationMetric(String table) {
+        return batchDurations.computeIfAbsent(
+                table,
+                ignored -> Timer.builder("gtfs.static.persistence.batch.duration")
+                        .description("Time to bind and execute one static table batch")
+                        .tag("table", table)
+                        .publishPercentileHistogram()
+                        .register(registry));
+    }
+
+    private Counter batchAttemptsMetric(String table) {
+        return batchAttempts.computeIfAbsent(
+                table,
+                ignored -> Counter.builder("gtfs.static.persistence.batch.attempts")
+                        .description("Static table batch insert attempts")
+                        .tag("table", table)
+                        .register(registry));
+    }
+
+    private Counter batchFailuresMetric(String table) {
+        return batchFailures.computeIfAbsent(
+                table,
+                ignored -> Counter.builder("gtfs.static.persistence.batch.failures")
+                        .description("Failed static table batch insert attempts")
+                        .tag("table", table)
+                        .register(registry));
+    }
+
+    private DistributionSummary batchRowsMetric(String table) {
+        return batchRows.computeIfAbsent(
+                table,
+                ignored -> DistributionSummary.builder("gtfs.static.persistence.batch.rows")
+                        .description("Rows handed to one static table batch insert")
+                        .tag("table", table)
+                        .publishPercentileHistogram()
+                        .register(registry));
     }
 
     private Counter rowsByTableMetric(String table, String feedId) {

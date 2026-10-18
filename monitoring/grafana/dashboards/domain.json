@@ -7,7 +7,7 @@
   ],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 6,
+  "version": 8,
   "editable": true,
   "refresh": "30s",
   "graphTooltip": 1,
@@ -1184,6 +1184,316 @@
         "w": 12,
         "x": 12,
         "y": 137
+      }
+    },
+    {
+      "id": 41,
+      "type": "row",
+      "title": "Static ingestion",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 145
+      },
+      "targets": [],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 42,
+      "type": "stat",
+      "title": "Static ingestions in flight",
+      "description": "Number of static-feed events currently being fetched, validated, or persisted.",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "targets": [
+        {
+          "expr": "sum(gtfs.static.ingestion.in_flight.active{application=~\"$application\"})",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value_and_name",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 146
+      }
+    },
+    {
+      "id": 43,
+      "type": "stat",
+      "title": "In-flight ingestion duration",
+      "description": "Elapsed time accumulated across active static-feed ingestions. Yellow at 1 minute and red at 9 minutes, before the 10-minute Kafka threshold.",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "targets": [
+        {
+          "expr": "max(gtfs.static.ingestion.in_flight.duration{application=~\"$application\"})",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 60
+              },
+              {
+                "color": "red",
+                "value": 540
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value_and_name",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 146
+      }
+    },
+    {
+      "id": 44,
+      "type": "timeseries",
+      "title": "End-to-end ingestion duration (average by outcome)",
+      "description": "Average time from staging through validation and persistence, grouped by the final result.",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "targets": [
+        {
+          "expr": "sum by (outcome) (rate(gtfs.static.ingestion.duration_sum{application=~\"$application\"}[$__rate_interval])) / sum by (outcome) (rate(gtfs.static.ingestion.duration_count{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "{{outcome}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 146
+      }
+    },
+    {
+      "id": 45,
+      "type": "timeseries",
+      "title": "Event age at processing start",
+      "description": "Average time since the archive was uploaded and its event was published, before this consumer started processing it.",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "targets": [
+        {
+          "expr": "rate(gtfs.static.ingestion.queue.age_sum{application=~\"$application\"}[$__rate_interval]) / rate(gtfs.static.ingestion.queue.age_count{application=~\"$application\"}[$__rate_interval])",
+          "legendFormat": "average",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 154
+      }
+    },
+    {
+      "id": 46,
+      "type": "timeseries",
+      "title": "Static archive size (average)",
+      "description": "Average compressed archive size reported on ingestion events.",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "targets": [
+        {
+          "expr": "rate(gtfs.static.ingestion.archive.size_sum{application=~\"$application\"}[$__rate_interval]) / rate(gtfs.static.ingestion.archive.size_count{application=~\"$application\"}[$__rate_interval])",
+          "legendFormat": "average",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 154
+      }
+    },
+    {
+      "id": 47,
+      "type": "timeseries",
+      "title": "Database batch duration (average by table)",
+      "description": "Time spent binding rows and executing JDBC batches, grouped by target table.",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "targets": [
+        {
+          "expr": "sum by (table) (rate(gtfs.static.persistence.batch.duration_sum{application=~\"$application\"}[$__rate_interval])) / sum by (table) (rate(gtfs.static.persistence.batch.duration_count{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "{{table}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 162
+      }
+    },
+    {
+      "id": 48,
+      "type": "timeseries",
+      "title": "Rows per database batch (average by table)",
+      "description": "Average number of rows submitted per JDBC batch by target table.",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "targets": [
+        {
+          "expr": "sum by (table) (rate(gtfs.static.persistence.batch.rows_sum{application=~\"$application\"}[$__rate_interval])) / sum by (table) (rate(gtfs.static.persistence.batch.rows_count{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "{{table}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 162
+      }
+    },
+    {
+      "id": 49,
+      "type": "timeseries",
+      "title": "Database transaction phase duration (average)",
+      "description": "Average time spent acquiring a connection, waiting for the per-feed lock, looking up the revision, clearing old rows, committing, and rolling back.",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "targets": [
+        {
+          "expr": "sum by (phase) (rate(gtfs.static.persistence.transaction.phase.duration_sum{application=~\"$application\"}[$__rate_interval])) / sum by (phase) (rate(gtfs.static.persistence.transaction.phase.duration_count{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "{{phase}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 170
+      }
+    },
+    {
+      "id": 50,
+      "type": "timeseries",
+      "title": "Database batch attempts and failures per second",
+      "description": "Batch insert attempts and failed batch operations, grouped by target table.",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "targets": [
+        {
+          "expr": "sum by (table) (rate(gtfs.static.persistence.batch.attempts{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "{{table}} attempts",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (table) (rate(gtfs.static.persistence.batch.failures{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "{{table}} failures",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 170
       }
     }
   ]

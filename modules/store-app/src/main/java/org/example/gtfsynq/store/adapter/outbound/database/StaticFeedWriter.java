@@ -23,6 +23,7 @@ import org.example.gtfsynq.shared.validation.GtfsStaticRows.RouteRow;
 import org.example.gtfsynq.shared.validation.GtfsStaticRows.StopRow;
 import org.example.gtfsynq.shared.validation.GtfsStaticRows.StopTimeRow;
 import org.example.gtfsynq.shared.validation.GtfsStaticRows.TripRow;
+import org.example.gtfsynq.store.service.metrics.StaticPersistenceMetrics;
 
 /**
  * Writes one static feed revision, replacing whatever revision that feed held before.
@@ -232,17 +233,21 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
     /** True when this digest is already the loaded revision, in which case rows are dropped. */
     private final boolean unchanged;
 
+    private final StaticPersistenceMetrics metrics;
+
     private final Map<String, PreparedStatement> statements = new HashMap<>();
 
     private final Map<String, Long> rowsByTable = new LinkedHashMap<>();
 
     private boolean committed;
 
-    StaticFeedWriter(Connection connection, StaticFeedIngested event, boolean unchanged) {
+    StaticFeedWriter(
+            Connection connection, StaticFeedIngested event, boolean unchanged, StaticPersistenceMetrics metrics) {
         this.connection = connection;
         this.event = event;
         this.feedId = event.getFeedId();
         this.unchanged = unchanged;
+        this.metrics = metrics;
     }
 
     /** Whether the feed already holds this revision, so the archive is discarded instead of written. */
@@ -256,6 +261,7 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
      * @throws WriteFailed if the rows or the revision marker cannot be committed
      */
     public void commit() throws WriteFailed {
+        var start = System.nanoTime();
         try {
             if (!unchanged) {
                 recordRevision();
@@ -264,6 +270,9 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
             committed = true;
         } catch (SQLException e) {
             throw new WriteFailed("could not commit static revision of feed " + feedId, e);
+        } finally {
+            metrics.recordTransactionPhase(
+                    StaticPersistenceMetrics.TransactionPhase.COMMIT, System.nanoTime() - start);
         }
     }
 
@@ -271,7 +280,13 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
     public void close() {
         try {
             if (!committed && !connection.getAutoCommit()) {
-                connection.rollback();
+                var start = System.nanoTime();
+                try {
+                    connection.rollback();
+                } finally {
+                    metrics.recordTransactionPhase(
+                            StaticPersistenceMetrics.TransactionPhase.ROLLBACK, System.nanoTime() - start);
+                }
             }
         } catch (SQLException e) {
             // The connection is being discarded anyway; Agroal resets it on return to the pool.
@@ -375,6 +390,8 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
         }
         rowsByTable.merge(table, (long) rows.size(), Long::sum);
 
+        var start = System.nanoTime();
+        var failed = true;
         try {
             var statement = statementFor(table);
             for (var row : rows) {
@@ -383,8 +400,11 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
             }
             statement.executeBatch();
             statement.clearBatch();
+            failed = false;
         } catch (SQLException e) {
             throw new WriteFailed("could not write " + rows.size() + " rows to " + table, e);
+        } finally {
+            metrics.recordBatch(table, rows.size(), System.nanoTime() - start, failed);
         }
     }
 

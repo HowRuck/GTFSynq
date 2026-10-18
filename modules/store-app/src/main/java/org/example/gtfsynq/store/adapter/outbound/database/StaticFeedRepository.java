@@ -11,6 +11,7 @@ import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gtfsynq.shared.protocol.StaticFeedIngested;
+import org.example.gtfsynq.store.service.metrics.StaticPersistenceMetrics;
 
 /**
  * Persistence for GTFS static feed revisions.
@@ -53,6 +54,8 @@ public class StaticFeedRepository {
 
     private final DataSource dataSource;
 
+    private final StaticPersistenceMetrics metrics;
+
     /**
      * Opens a writer for the revision an event describes, clearing the feed's current rows first.
      *
@@ -62,7 +65,14 @@ public class StaticFeedRepository {
      */
     public StaticFeedWriter openRevision(StaticFeedIngested event) {
         try {
-            var connection = dataSource.getConnection();
+            Connection connection;
+            var connectionStart = System.nanoTime();
+            try {
+                connection = dataSource.getConnection();
+            } finally {
+                metrics.recordTransactionPhase(
+                        StaticPersistenceMetrics.TransactionPhase.CONNECTION, System.nanoTime() - connectionStart);
+            }
             var handedOver = false;
             try {
                 connection.setAutoCommit(false);
@@ -71,7 +81,7 @@ public class StaticFeedRepository {
                 if (!unchanged) {
                     clearFeed(connection, event.getFeedId());
                 }
-                var writer = new StaticFeedWriter(connection, event, unchanged);
+                var writer = new StaticFeedWriter(connection, event, unchanged, metrics);
                 handedOver = true;
                 return writer;
             } catch (SQLException e) {
@@ -88,15 +98,20 @@ public class StaticFeedRepository {
     }
 
     private void lockFeed(Connection connection, String feedId) throws SQLException {
+        var start = System.nanoTime();
         try (PreparedStatement preparedStatement = connection.prepareStatement(LOCK_FEED_SQL)) {
             // hashtext is the database's own string hash, so the lock name needs no second hashing
             // scheme here and stays identical across processes for the same feed id.
             preparedStatement.setString(1, feedId);
             preparedStatement.executeQuery().close();
+        } finally {
+            metrics.recordTransactionPhase(
+                    StaticPersistenceMetrics.TransactionPhase.ADVISORY_LOCK, System.nanoTime() - start);
         }
     }
 
     private boolean isCurrentRevision(Connection connection, StaticFeedIngested event) throws SQLException {
+        var start = System.nanoTime();
         try (PreparedStatement preparedStatement = connection.prepareStatement(CURRENT_DIGEST_SQL)) {
             preparedStatement.setObject(1, event.getFeedId(), Types.OTHER);
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -106,27 +121,40 @@ public class StaticFeedRepository {
                 var loaded = resultSet.getString(1);
                 return loaded != null && loaded.equalsIgnoreCase(event.getSha256());
             }
+        } finally {
+            metrics.recordTransactionPhase(
+                    StaticPersistenceMetrics.TransactionPhase.REVISION_LOOKUP, System.nanoTime() - start);
         }
     }
 
     private void clearFeed(Connection connection, String feedId) throws SQLException {
-        for (var table : ROW_TABLES) {
-            try (PreparedStatement preparedStatement =
-                    connection.prepareStatement("DELETE FROM " + table + " WHERE feed_id = ?")) {
-                preparedStatement.setObject(1, feedId, Types.OTHER);
-                var deleted = preparedStatement.executeUpdate();
-                if (deleted > 0) {
-                    log.debug("Cleared {} rows of the previous revision of feed {} from {}", deleted, feedId, table);
+        var start = System.nanoTime();
+        try {
+            for (var table : ROW_TABLES) {
+                try (PreparedStatement preparedStatement =
+                        connection.prepareStatement("DELETE FROM " + table + " WHERE feed_id = ?")) {
+                    preparedStatement.setObject(1, feedId, Types.OTHER);
+                    var deleted = preparedStatement.executeUpdate();
+                    if (deleted > 0) {
+                        log.debug("Cleared {} rows of the previous revision of feed {} from {}", deleted, feedId, table);
+                    }
                 }
             }
+        } finally {
+            metrics.recordTransactionPhase(
+                    StaticPersistenceMetrics.TransactionPhase.CLEAR, System.nanoTime() - start);
         }
     }
 
-    private static void rollback(Connection connection) {
+    private void rollback(Connection connection) {
+        var start = System.nanoTime();
         try {
             connection.rollback();
         } catch (SQLException e) {
             // The connection is discarded afterwards; Agroal resets it on return to the pool.
+        } finally {
+            metrics.recordTransactionPhase(
+                    StaticPersistenceMetrics.TransactionPhase.ROLLBACK, System.nanoTime() - start);
         }
     }
 

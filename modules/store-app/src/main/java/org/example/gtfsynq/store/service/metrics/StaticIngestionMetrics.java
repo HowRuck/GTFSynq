@@ -1,11 +1,14 @@
 package org.example.gtfsynq.store.service.metrics;
 
+import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.LongTaskTimer;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import jakarta.inject.Singleton;
+import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /** Metrics for one static-feed event across staging, validation, and persistence. */
 @Singleton
@@ -17,6 +20,10 @@ public class StaticIngestionMetrics {
 
     private final LongTaskTimer inFlight;
 
+    private final Timer queueAge;
+
+    private final DistributionSummary archiveSize;
+
     private final Map<String, Timer> durationsByOutcome = new ConcurrentHashMap<>();
 
     public StaticIngestionMetrics(MeterRegistry registry) {
@@ -24,6 +31,25 @@ public class StaticIngestionMetrics {
         this.inFlight = LongTaskTimer.builder("gtfs.static.ingestion.in_flight")
                 .description("Active static-feed ingestions and their elapsed time")
                 .register(registry);
+        this.queueAge = Timer.builder("gtfs.static.ingestion.queue.age")
+                .description("Time from static archive publication to the start of processing")
+                .publishPercentileHistogram()
+                .register(registry);
+        this.archiveSize = DistributionSummary.builder("gtfs.static.ingestion.archive.size")
+                .description("Compressed static archive size in bytes as reported by the ingestion event")
+                .publishPercentileHistogram()
+                .register(registry);
+    }
+
+    /** Records event age at processing start and the archive size carried in the event. */
+    public void recordEventMetadata(long sizeBytes, long ingestedAtEpochSeconds) {
+        if (sizeBytes > 0) {
+            archiveSize.record(sizeBytes);
+        }
+        if (ingestedAtEpochSeconds > 0) {
+            var queueAgeSeconds = Math.max(0, Instant.now().getEpochSecond() - ingestedAtEpochSeconds);
+            queueAge.record(queueAgeSeconds, TimeUnit.SECONDS);
+        }
     }
 
     /** Starts tracking both active age and the eventual end-to-end duration. */
