@@ -136,13 +136,13 @@ public class StaticFeedRepository {
                     preparedStatement.setObject(1, feedId, Types.OTHER);
                     var deleted = preparedStatement.executeUpdate();
                     if (deleted > 0) {
-                        log.debug("Cleared {} rows of the previous revision of feed {} from {}", deleted, feedId, table);
+                        log.debug(
+                                "Cleared {} rows of the previous revision of feed {} from {}", deleted, feedId, table);
                     }
                 }
             }
         } finally {
-            metrics.recordTransactionPhase(
-                    StaticPersistenceMetrics.TransactionPhase.CLEAR, System.nanoTime() - start);
+            metrics.recordTransactionPhase(StaticPersistenceMetrics.TransactionPhase.CLEAR, System.nanoTime() - start);
         }
     }
 

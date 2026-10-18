@@ -271,8 +271,7 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
         } catch (SQLException e) {
             throw new WriteFailed("could not commit static revision of feed " + feedId, e);
         } finally {
-            metrics.recordTransactionPhase(
-                    StaticPersistenceMetrics.TransactionPhase.COMMIT, System.nanoTime() - start);
+            metrics.recordTransactionPhase(StaticPersistenceMetrics.TransactionPhase.COMMIT, System.nanoTime() - start);
         }
     }
 
