@@ -5,7 +5,7 @@ palantir-java-format = "2.102.0"
 
 # Frameworks & runtimes
 quarkus = "4.0.0.Beta1"
-quarkus-amazon-services = "4.0.0.Beta2"
+quarkus-amazon-services = "4.0.0.Beta3"
 protobuf = "4.36.2"
 
 # Jakarta EE APIs used by the framework-agnostic :shared module
