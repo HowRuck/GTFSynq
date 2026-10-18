@@ -1,9 +1,12 @@
 package org.example.gtfsynq.store.service;
 
 import jakarta.inject.Singleton;
+import java.nio.file.Path;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gtfsynq.shared.protocol.StaticFeedIngested;
+import org.example.gtfsynq.store.service.metrics.StaticIngestionMetrics;
 
 /**
  * Runs a GTFS static feed revision through its stages: fetch, validate, persist.
@@ -27,27 +30,38 @@ public class GtfsStaticFeedIngestionService {
 
     private final GtfsStaticFeedPersistenceService persistenceService;
 
+    private final StaticIngestionMetrics metrics;
+
     /**
      * Takes one ingestion event through fetch, validation and persistence.
      *
      * @param event ingestion event naming the archive in object storage
      */
     public void ingest(StaticFeedIngested event) {
-        var validation = validationService.stage(event);
-        var archive = validation.archive();
+        var sample = metrics.start();
+        var outcome = "error";
+        Path archive = null;
         try {
+            var validation = validationService.stage(event);
+            archive = validation.archive();
             if (!validation.valid()) {
+                outcome = validation.outcome().name().toLowerCase(Locale.ROOT);
                 return;
             }
-            var outcome = persistenceService.persist(event, archive);
+            var persistenceOutcome = persistenceService.persist(event, archive);
+            outcome = persistenceOutcome.name().toLowerCase(Locale.ROOT);
             log.debug(
                     "Static feed {} ({}) validation {} and persistence {}",
                     event.getFeedId(),
                     event.getObjectKey(),
                     validation.outcome(),
-                    outcome);
+                    persistenceOutcome);
         } finally {
-            validationService.discard(archive);
+            try {
+                validationService.discard(archive);
+            } finally {
+                metrics.complete(sample, outcome);
+            }
         }
     }
 }
