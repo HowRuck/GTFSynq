@@ -41,7 +41,7 @@ quarkus:
     console:
       # Inject the active trace context into stdout so container logs stay
       # correlatable with traces in Grafana.
-      format: "%d{HH:mm:ss} %-5p traceId=%X{traceId}, spanId=%X{spanId}, sampled=%X{sampled} [%c{2.}] (%t) %s%e%n"
+      format: "%d{HH:mm:ss} %-5p traceId=%X{traceId}, spanId=%X{spanId}, sampled=%X{sampled} [%c{1}] (%t) %s%e%n"
 
   # ---- Container image (Jib) ----------------------------------------------
   # ./gradlew :ingest-app:imageBuild -Dquarkus.container-image.push=true
