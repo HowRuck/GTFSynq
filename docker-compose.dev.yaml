@@ -51,7 +51,7 @@ services:
         restart: "no"
 
     s3:
-        image: docker.io/versity/versitygw:v1.8.0
+        image: docker.io/versity/versitygw:v1.9.0
         container_name: gtfsynq-s3
         # S3-compatible object store for downloaded GTFS static feed archives.
         ports:
