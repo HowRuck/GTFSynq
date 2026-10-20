@@ -1,5 +1,5 @@
 pluginManagement {
-    includeBuild('build-logic')
+    includeBuild("build-logic")
     repositories {
         gradlePluginPortal()
         mavenCentral()
@@ -30,13 +30,13 @@ develocity {
     }
 }
 
-enableFeaturePreview('NO_IMPLICIT_LOOKUP_IN_PARENT_PROJECTS')
+enableFeaturePreview("NO_IMPLICIT_LOOKUP_IN_PARENT_PROJECTS")
 
-rootProject.name = 'GTFSynq'
+rootProject.name = "GTFSynq"
 
-include 'shared', 'ingest-app', 'store-app', 'api-app'
+include("shared", "ingest-app", "store-app", "api-app")
 
-project(':shared').projectDir = file('modules/shared')
-project(':ingest-app').projectDir = file('modules/ingest-app')
-project(':store-app').projectDir = file('modules/store-app')
-project(':api-app').projectDir = file('modules/api-app')
+project(":shared").projectDir = file("modules/shared")
+project(":ingest-app").projectDir = file("modules/ingest-app")
+project(":store-app").projectDir = file("modules/store-app")
+project(":api-app").projectDir = file("modules/api-app")

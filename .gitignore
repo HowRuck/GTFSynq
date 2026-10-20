@@ -44,3 +44,4 @@ out/
 state_dump.bin
 
 .opencode
+.kotlin

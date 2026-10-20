@@ -1,10 +1,14 @@
+import org.gradle.api.artifacts.VersionCatalogsExtension
+
 plugins {
-    id 'java'
-    id 'com.diffplug.spotless'
+    java
+    id("com.diffplug.spotless")
 }
 
-group = 'org.example'
-version = '0.0.1-SNAPSHOT'
+val catalog = extensions.getByType<VersionCatalogsExtension>().named("libs")
+
+group = "org.example"
+version = "0.0.1-SNAPSHOT"
 
 java {
     targetCompatibility = JavaVersion.VERSION_25
@@ -17,14 +21,14 @@ java {
 
 spotless {
     java {
-        targetExclude 'build/generated/**'
-        palantirJavaFormat(libs.versions.palantir.java.format.get())
+        targetExclude("build/generated/**")
+        palantirJavaFormat(catalog.findVersion("palantir-java-format").get().requiredVersion)
         removeUnusedImports()
         importOrder()
     }
 }
 
-tasks.withType(Test).configureEach {
+tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 }
 
@@ -32,9 +36,9 @@ tasks.withType(Test).configureEach {
 // least as new as the protoc that produced it, so the runtime must not be
 // downgraded by a platform/BOM constraint.
 configurations.configureEach {
-    resolutionStrategy.eachDependency { details ->
-        if (details.requested.group == 'com.google.protobuf') {
-            details.useVersion(libs.versions.protobuf.get())
+    resolutionStrategy.eachDependency {
+        if (requested.group == "com.google.protobuf") {
+            useVersion(catalog.findVersion("protobuf").get().requiredVersion)
         }
     }
 }

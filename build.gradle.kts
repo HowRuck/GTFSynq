@@ -1,9 +1,9 @@
 plugins {
-    id 'io.github.ben-manes.versions' version '0.66.0'
+    id("io.github.ben-manes.versions") version "0.66.0"
     alias(libs.plugins.spotless) apply false
 }
 
-// Quarkus apps are packaged by the `io.quarkus` plugin (see modules/*/build.gradle)
+// Quarkus apps are packaged by the `io.quarkus` plugin (see modules/*/build.gradle.kts)
 // and containerised by the Jib extension, configured in each app's
 // application.yaml:
 //
