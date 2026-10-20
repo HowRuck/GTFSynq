@@ -3,7 +3,7 @@ version: "1.0"
 linter: qodana-jvm-community
 
 profile:
-  name: qodana.recommended
+  name: qodana.recommended.all
 
 include:
   - name: SpellCheckingInspection
