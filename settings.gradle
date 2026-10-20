@@ -1,4 +1,5 @@
 pluginManagement {
+    includeBuild('build-logic')
     repositories {
         gradlePluginPortal()
         mavenCentral()
@@ -9,6 +10,12 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
     id("com.gradle.develocity") version "4.6.0"
     id("com.autonomousapps.build-health") version "3.19.2"
+}
+
+dependencyResolutionManagement {
+    repositories {
+        mavenCentral()
+    }
 }
 
 // Publish a build scan to the free public service (https://scans.gradle.com) for
@@ -22,6 +29,8 @@ develocity {
         publishing.onlyIf { true }
     }
 }
+
+enableFeaturePreview('NO_IMPLICIT_LOOKUP_IN_PARENT_PROJECTS')
 
 rootProject.name = 'GTFSynq'
 

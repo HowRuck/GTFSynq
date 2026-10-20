@@ -1,0 +1,40 @@
+plugins {
+    id 'java'
+    id 'com.diffplug.spotless'
+}
+
+group = 'org.example'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    targetCompatibility = JavaVersion.VERSION_25
+    sourceCompatibility = JavaVersion.VERSION_25
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+        vendor = JvmVendorSpec.ADOPTIUM
+    }
+}
+
+spotless {
+    java {
+        targetExclude 'build/generated/**'
+        palantirJavaFormat(libs.versions.palantir.java.format.get())
+        removeUnusedImports()
+        importOrder()
+    }
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+}
+
+// The generated protobuf code validates at runtime that protobuf-java is at
+// least as new as the protoc that produced it, so the runtime must not be
+// downgraded by a platform/BOM constraint.
+configurations.configureEach {
+    resolutionStrategy.eachDependency { details ->
+        if (details.requested.group == 'com.google.protobuf') {
+            details.useVersion(libs.versions.protobuf.get())
+        }
+    }
+}
