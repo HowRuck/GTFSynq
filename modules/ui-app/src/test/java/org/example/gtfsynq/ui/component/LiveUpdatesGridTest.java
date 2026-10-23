@@ -63,8 +63,7 @@ class LiveUpdatesGridTest {
             assertNotNull(grid.getColumnByKey("feedTs"));
             assertTrue(grid.getColumns().stream().allMatch(Grid.Column::isAutoWidth));
             assertTrue(grid.getColumns().stream().allMatch(column -> column.getFlexGrow() == 1));
-            assertTrue(grid.getColumns().stream()
-                    .allMatch(column -> column.getTextAlign() == ColumnTextAlign.START));
+            assertTrue(grid.getColumns().stream().allMatch(column -> column.getTextAlign() == ColumnTextAlign.START));
         } finally {
             UI.setCurrent(null);
         }
