@@ -1,4 +1,5 @@
 plugins {
+    alias(libs.plugins.quarkus)
     id("gtfsynq.java-conventions")
 }
 
