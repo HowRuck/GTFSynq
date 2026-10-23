@@ -23,7 +23,7 @@ It is built with **Gradle**, runs on **Java 25**, and is designed to work with *
 - **Static feed ingestion**: Download GTFS static (CSV) archives, store them in S3-compatible object storage, and publish an ingestion event for validation
 - **Event-driven handoff**: Kafka carries GTFS-RT payloads and static feed storage references
 - **Time-series storage**: Store transit data efficiently in TimescaleDB
-- **Web console**: A server-side Vaadin Flow console with an overview, lazy-loaded static feed / route / stop / trip tables, and a live trip-update tree that refreshes every 10 seconds
+- **Web console**: A server-side Vaadin Flow console with an overview, lazy-loaded static feed / route / stop / trip tables, and a live trip-update tree that refreshes every minute
 - **Kafka integration**: Stream transit payloads through Apache Kafka
 - **Protobuf support**: Encode and decode GTFS-RT messages efficiently
 - **GraalVM native images**: Ahead-of-time compile any app into a standalone native executable for fast startup and low memory
@@ -207,7 +207,7 @@ Behaviour shared by the tables:
   any remaining width.
 - Routes, stops and trips offer a feed selector and a search box (three or more
   characters, matching the API).
-- The live view polls every 10 seconds through server push, keeps expanded trips
+- The live view polls every minute through server push, keeps expanded trips
   open across refreshes, and has a manual refresh button. Expanding a trip shows
   a loading row with an indeterminate progress bar until its stop time updates
   arrive, so the UI never waits on the backend with the session lock held.
@@ -290,8 +290,8 @@ The Vaadin Flow web console (see [Web Console](#web-console)):
   server-side sorting, content-sized columns that fill the grid, feed filters and
   search
 - an expandable live tree: trip updates load lazily and expand to their stop time
-  updates (with a progress-bar loading row while they fetch), refreshed every 10
-  seconds through server push
+  updates (with a progress-bar loading row while they fetch), refreshed every
+  minute through server push
 - English translations via Vaadin I18N, Aura theme with the Geist font
 - no database access and no REST calls — it is a pure gRPC client of `api-app`
 
