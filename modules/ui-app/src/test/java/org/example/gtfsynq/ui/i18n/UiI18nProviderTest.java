@@ -20,7 +20,7 @@ class UiI18nProviderTest {
     @Test
     void providesEnglishAndResolvesTranslations() {
         assertEquals(List.of(Locale.ENGLISH), provider.getProvidedLocales());
-        assertEquals("Static feeds", provider.getTranslation("nav.feeds", Locale.ENGLISH));
+        assertEquals("Static Feeds", provider.getTranslation("nav.feeds", Locale.ENGLISH));
         assertEquals("Stops · GTFSynq", provider.getTranslation("document.title", Locale.ENGLISH, "Stops"));
     }
 }
