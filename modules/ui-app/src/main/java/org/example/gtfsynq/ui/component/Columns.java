@@ -1,7 +1,6 @@
 package org.example.gtfsynq.ui.component;
 
 import com.vaadin.flow.component.Component;
-import com.vaadin.flow.component.grid.ColumnTextAlign;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
@@ -156,7 +155,6 @@ public final class Columns {
 
         grid.addColumn(row -> row instanceof TripUpdateRow trip ? currentDelay(trip.update()) : "")
                 .setHeader(grid.getTranslation("column.currentDelay"))
-                .setTextAlign(ColumnTextAlign.END)
                 .setPartNameGenerator(row -> row instanceof TripUpdateRow trip
                         ? delayPart(
                                 trip.update().hasCurrentDelay() ? trip.update().getCurrentDelay() : null)
@@ -165,15 +163,13 @@ public final class Columns {
         grid.addColumn(row -> row instanceof StopTimeUpdateRow stop
                         ? String.valueOf(stop.update().getStopSequence())
                         : "")
-                .setHeader(grid.getTranslation("column.stopSequence"))
-                .setTextAlign(ColumnTextAlign.END);
+                .setHeader(grid.getTranslation("column.stopSequence"));
 
         grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? eventTime(stop.update(), true) : "")
                 .setHeader(grid.getTranslation("column.arrivalTime"));
 
         grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? delay(stop.update(), true) : "")
                 .setHeader(grid.getTranslation("column.arrivalDelay"))
-                .setTextAlign(ColumnTextAlign.END)
                 .setPartNameGenerator(
                         row -> row instanceof StopTimeUpdateRow stop ? delayPart(stop.update(), true) : null);
 
@@ -182,7 +178,6 @@ public final class Columns {
 
         grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? delay(stop.update(), false) : "")
                 .setHeader(grid.getTranslation("column.departureDelay"))
-                .setTextAlign(ColumnTextAlign.END)
                 .setPartNameGenerator(
                         row -> row instanceof StopTimeUpdateRow stop ? delayPart(stop.update(), false) : null);
 

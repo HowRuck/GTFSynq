@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.vaadin.flow.component.UI;
+import com.vaadin.flow.component.grid.ColumnTextAlign;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.data.provider.SortDirection;
 import org.example.gtfsynq.shared.protocol.query.StopTimeUpdate;
@@ -62,6 +63,8 @@ class LiveUpdatesGridTest {
             assertNotNull(grid.getColumnByKey("feedTs"));
             assertTrue(grid.getColumns().stream().allMatch(Grid.Column::isAutoWidth));
             assertTrue(grid.getColumns().stream().allMatch(column -> column.getFlexGrow() == 1));
+            assertTrue(grid.getColumns().stream()
+                    .allMatch(column -> column.getTextAlign() == ColumnTextAlign.START));
         } finally {
             UI.setCurrent(null);
         }
