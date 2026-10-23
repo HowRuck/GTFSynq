@@ -51,7 +51,35 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
             UI.getCurrent().navigate(routes.get(tab).view());
         });
 
-        addToNavbar(brand, tabs);
+        var navbar = new HorizontalLayout(brand, tabs, clock());
+        navbar.setPadding(false);
+        navbar.setWidthFull();
+        navbar.setAlignItems(Alignment.CENTER);
+        // The tabs take the free space so the clock stays at the far right.
+        navbar.expand(tabs);
+
+        addToNavbar(navbar);
+    }
+
+    /**
+     * A wall clock that ticks in the browser: formatting there avoids a server round trip every
+     * second and shows the user's own time zone, matching the timestamps in the tables.
+     */
+    private static Span clock() {
+        var clock = new Span();
+        clock.addClassName("app-clock");
+        clock.getElement().executeJs("""
+                const clock = this;
+                const formatter = new Intl.DateTimeFormat(undefined, {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                const tick = () => clock.textContent = formatter.format(new Date());
+                tick();
+                setInterval(tick, 1000);
+                """);
+        return clock;
     }
 
     private void addTab(String label, String path, Class<? extends Component> view) {
