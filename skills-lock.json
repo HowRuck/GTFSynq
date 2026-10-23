@@ -1,0 +1,119 @@
+{
+  "version": 1,
+  "skills": {
+    "aura-theme": {
+      "source": "vaadin/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/aura-theme/SKILL.md",
+      "computedHash": "3ca0d9fc49619561dd6efe10d082efe55723e8fa6fc3b9f216a2b5a0712c98ca"
+    },
+    "design-postgis-tables": {
+      "source": "timescale/pg-aiguide",
+      "sourceType": "github",
+      "skillPath": "skills/design-postgis-tables/SKILL.md",
+      "computedHash": "54b10ad9c978b475e12073fa7a9c0bbced2edabed5d599b2c214878ec2f08493"
+    },
+    "design-postgres-tables": {
+      "source": "timescale/pg-aiguide",
+      "sourceType": "github",
+      "skillPath": "skills/design-postgres-tables/SKILL.md",
+      "computedHash": "6b44a27f3c448af8da01562da39f32846222f5ad53ee61a7d12f520c83df56b1"
+    },
+    "find-hypertable-candidates": {
+      "source": "timescale/pg-aiguide",
+      "sourceType": "github",
+      "skillPath": "skills/find-hypertable-candidates/SKILL.md",
+      "computedHash": "b405eb4cad7f67b64acc3f25f85e877df3663519f93e75dad026d7d41df27aa5"
+    },
+    "gradle-best-practices": {
+      "source": "gradle/gradle-skills",
+      "sourceType": "github",
+      "skillPath": "skills/gradle-best-practices/SKILL.md",
+      "computedHash": "b09ae5efef7d30c7c2802026db580ef727aba1e08c610810fe4daa9464b2328d"
+    },
+    "gradle-wrapper-upgrade": {
+      "source": "gradle/gradle-skills",
+      "sourceType": "github",
+      "skillPath": "skills/gradle-wrapper-upgrade/SKILL.md",
+      "computedHash": "fe67a0ec5f69c05d4e4e9ed354e9460b511491a8d823a664579c871bc95f5df7"
+    },
+    "migrate-postgres-tables-to-hypertables": {
+      "source": "timescale/pg-aiguide",
+      "sourceType": "github",
+      "skillPath": "skills/migrate-postgres-tables-to-hypertables/SKILL.md",
+      "computedHash": "932e88b5789317f95052e681a095758411baad70a7d76147d1d5caaa8117913a"
+    },
+    "migrate-spring-to-quarkus": {
+      "source": "quarkusio/skills",
+      "sourceType": "github",
+      "skillPath": "skills/migrate-spring-to-quarkus/SKILL.md",
+      "computedHash": "4611b0fd670d7710806f7909040e94010c23c0830f7fc3fb58f538dccce08915"
+    },
+    "pgvector-semantic-search": {
+      "source": "timescale/pg-aiguide",
+      "sourceType": "github",
+      "skillPath": "skills/pgvector-semantic-search/SKILL.md",
+      "computedHash": "ea00b6af03fd3565dca37b282de9b786bd00711db190b671e6e729d9d9972622"
+    },
+    "postgres": {
+      "source": "timescale/pg-aiguide",
+      "sourceType": "github",
+      "skillPath": "skills/postgres/SKILL.md",
+      "computedHash": "f4e49a29027d2d1d822f2f32b22809c121b01bb6d38fdb7e801623e242068b94"
+    },
+    "postgres-database-migration": {
+      "source": "timescale/pg-aiguide",
+      "sourceType": "github",
+      "skillPath": "skills/postgres-database-migration/SKILL.md",
+      "computedHash": "a9295c7f3f9b8b8b836af8d98b708d1728011f4bb4b13a20352aba9a8df36c28"
+    },
+    "postgres-hybrid-text-search": {
+      "source": "timescale/pg-aiguide",
+      "sourceType": "github",
+      "skillPath": "skills/postgres-hybrid-text-search/SKILL.md",
+      "computedHash": "38477f02bfa87a76e2438dadb150f678ebde45b5a4c327faf1b673dc13cfcbf2"
+    },
+    "quarkus-update": {
+      "source": "quarkusio/skills",
+      "sourceType": "github",
+      "skillPath": "skills/quarkus-update/SKILL.md",
+      "computedHash": "d8ece887dde1dc31d9a455ba0770bb70434e4c5f513597fa361cf32e08568539"
+    },
+    "scaffold-quarkus-mcp-server": {
+      "source": "quarkusio/skills",
+      "sourceType": "github",
+      "skillPath": "skills/scaffold-quarkus-mcp-server/SKILL.md",
+      "computedHash": "6f24276d070ddbe16ea15733ba361218491032a3e69e660a56c17c68049f4bc1"
+    },
+    "schema-exploration": {
+      "source": "timescale/pg-aiguide",
+      "sourceType": "github",
+      "skillPath": "skills/schema-exploration/SKILL.md",
+      "computedHash": "4de9c1264c045a7c6622b6827e4421912ace3d7b6f569c182e04efe462f0fef2"
+    },
+    "setup-timescaledb-hypertables": {
+      "source": "timescale/pg-aiguide",
+      "sourceType": "github",
+      "skillPath": "skills/setup-timescaledb-hypertables/SKILL.md",
+      "computedHash": "aa653ac968541c1457940711be92fbe9b971ba0ba05c03d97be1353b1122baef"
+    },
+    "timescaledb-hyperfunctions": {
+      "source": "timescale/pg-aiguide",
+      "sourceType": "github",
+      "skillPath": "skills/timescaledb-hyperfunctions/SKILL.md",
+      "computedHash": "a1948017849e76277ca82e34744f9a4917a94d2e164a7c4ffcd3f347c89f8c9d"
+    },
+    "vaadin-form-layout": {
+      "source": "vaadin/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/vaadin-form-layout/SKILL.md",
+      "computedHash": "8a0a8d989049b23933d21142a6c4d0f9625fa678d3d289c2ddb0c4cd952cda62"
+    },
+    "vaadin-frontend-design": {
+      "source": "vaadin/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/vaadin-frontend-design/SKILL.md",
+      "computedHash": "81f3cbb7a334dff07df74d69f24663d482029f6a0165a4b927016f42531d573d"
+    }
+  }
+}
