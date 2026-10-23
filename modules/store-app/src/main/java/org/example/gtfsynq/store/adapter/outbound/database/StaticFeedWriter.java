@@ -79,15 +79,19 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
                     agency_timezone,
                     agency_lang,
                     agency_fare_url,
-                    agency_email
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    agency_email,
+                    agency_phone,
+                    cemv_support
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (feed_id, agency_id) DO UPDATE SET
                     agency_name = EXCLUDED.agency_name,
                     agency_url = EXCLUDED.agency_url,
                     agency_timezone = EXCLUDED.agency_timezone,
                     agency_lang = EXCLUDED.agency_lang,
                     agency_fare_url = EXCLUDED.agency_fare_url,
-                    agency_email = EXCLUDED.agency_email
+                    agency_email = EXCLUDED.agency_email,
+                    agency_phone = EXCLUDED.agency_phone,
+                    cemv_support = EXCLUDED.cemv_support
                 """);
 
         sql.put(STOPS, """
@@ -101,8 +105,15 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
                     location_type,
                     parent_station,
                     stop_timezone,
-                    wheelchair_boarding
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    wheelchair_boarding,
+                    stop_code,
+                    tts_stop_name,
+                    stop_desc,
+                    zone_id,
+                    level_id,
+                    platform_code,
+                    stop_access
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (feed_id, stop_id) DO UPDATE SET
                     stop_name = EXCLUDED.stop_name,
                     stop_lat = EXCLUDED.stop_lat,
@@ -111,7 +122,14 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
                     location_type = EXCLUDED.location_type,
                     parent_station = EXCLUDED.parent_station,
                     stop_timezone = EXCLUDED.stop_timezone,
-                    wheelchair_boarding = EXCLUDED.wheelchair_boarding
+                    wheelchair_boarding = EXCLUDED.wheelchair_boarding,
+                    stop_code = EXCLUDED.stop_code,
+                    tts_stop_name = EXCLUDED.tts_stop_name,
+                    stop_desc = EXCLUDED.stop_desc,
+                    zone_id = EXCLUDED.zone_id,
+                    level_id = EXCLUDED.level_id,
+                    platform_code = EXCLUDED.platform_code,
+                    stop_access = EXCLUDED.stop_access
                 """);
 
         sql.put(ROUTES, """
@@ -126,8 +144,12 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
                     route_text_color,
                     route_sort_order,
                     continuous_pickup,
-                    continuous_drop_off
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    continuous_drop_off,
+                    agency_id,
+                    route_desc,
+                    network_id,
+                    cemv_support
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (feed_id, route_id) DO UPDATE SET
                     route_short_name = EXCLUDED.route_short_name,
                     route_long_name = EXCLUDED.route_long_name,
@@ -137,7 +159,11 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
                     route_text_color = EXCLUDED.route_text_color,
                     route_sort_order = EXCLUDED.route_sort_order,
                     continuous_pickup = EXCLUDED.continuous_pickup,
-                    continuous_drop_off = EXCLUDED.continuous_drop_off
+                    continuous_drop_off = EXCLUDED.continuous_drop_off,
+                    agency_id = EXCLUDED.agency_id,
+                    route_desc = EXCLUDED.route_desc,
+                    network_id = EXCLUDED.network_id,
+                    cemv_support = EXCLUDED.cemv_support
                 """);
 
         sql.put(TRIPS, """
@@ -148,14 +174,28 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
                     service_id,
                     direction_id,
                     wheelchair_accessible,
-                    bikes_allowed
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    bikes_allowed,
+                    trip_headsign,
+                    trip_short_name,
+                    block_id,
+                    shape_id,
+                    cars_allowed,
+                    safe_duration_factor,
+                    safe_duration_offset
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (feed_id, trip_id) DO UPDATE SET
                     route_id = EXCLUDED.route_id,
                     service_id = EXCLUDED.service_id,
                     direction_id = EXCLUDED.direction_id,
                     wheelchair_accessible = EXCLUDED.wheelchair_accessible,
-                    bikes_allowed = EXCLUDED.bikes_allowed
+                    bikes_allowed = EXCLUDED.bikes_allowed,
+                    trip_headsign = EXCLUDED.trip_headsign,
+                    trip_short_name = EXCLUDED.trip_short_name,
+                    block_id = EXCLUDED.block_id,
+                    shape_id = EXCLUDED.shape_id,
+                    cars_allowed = EXCLUDED.cars_allowed,
+                    safe_duration_factor = EXCLUDED.safe_duration_factor,
+                    safe_duration_offset = EXCLUDED.safe_duration_offset
                 """);
 
         sql.put(STOP_TIMES, """
@@ -171,8 +211,19 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
                     pickup_type,
                     drop_off_type,
                     shape_dist_traveled,
-                    timepoint
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    timepoint,
+                    location_group_id,
+                    location_id,
+                    stop_headsign,
+                    start_pickup_drop_off_window,
+                    start_pickup_drop_off_window_overflow_days,
+                    end_pickup_drop_off_window,
+                    end_pickup_drop_off_window_overflow_days,
+                    continuous_pickup,
+                    continuous_drop_off,
+                    pickup_booking_rule_id,
+                    drop_off_booking_rule_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (feed_id, trip_id, stop_sequence) DO UPDATE SET
                     stop_id = EXCLUDED.stop_id,
                     arrival_time = EXCLUDED.arrival_time,
@@ -182,7 +233,20 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
                     pickup_type = EXCLUDED.pickup_type,
                     drop_off_type = EXCLUDED.drop_off_type,
                     shape_dist_traveled = EXCLUDED.shape_dist_traveled,
-                    timepoint = EXCLUDED.timepoint
+                    timepoint = EXCLUDED.timepoint,
+                    location_group_id = EXCLUDED.location_group_id,
+                    location_id = EXCLUDED.location_id,
+                    stop_headsign = EXCLUDED.stop_headsign,
+                    start_pickup_drop_off_window = EXCLUDED.start_pickup_drop_off_window,
+                    start_pickup_drop_off_window_overflow_days =
+                        EXCLUDED.start_pickup_drop_off_window_overflow_days,
+                    end_pickup_drop_off_window = EXCLUDED.end_pickup_drop_off_window,
+                    end_pickup_drop_off_window_overflow_days =
+                        EXCLUDED.end_pickup_drop_off_window_overflow_days,
+                    continuous_pickup = EXCLUDED.continuous_pickup,
+                    continuous_drop_off = EXCLUDED.continuous_drop_off,
+                    pickup_booking_rule_id = EXCLUDED.pickup_booking_rule_id,
+                    drop_off_booking_rule_id = EXCLUDED.drop_off_booking_rule_id
                 """);
 
         sql.put(CALENDAR, """
@@ -436,6 +500,8 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
         ps.setString(6, row.agencyLang());
         ps.setString(7, row.agencyFareUrl());
         ps.setString(8, row.agencyEmail());
+        ps.setString(9, row.agencyPhone());
+        setNullableShort(ps, 10, row.cemvSupport(), "cemv_support");
     }
 
     private void bindStop(PreparedStatement ps, StopRow row) throws SQLException {
@@ -449,6 +515,13 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
         ps.setString(8, row.parentStation());
         ps.setString(9, row.stopTimezone());
         setNullableShort(ps, 10, row.wheelchairBoarding(), "wheelchair_boarding");
+        ps.setString(11, row.stopCode());
+        ps.setString(12, row.ttsStopName());
+        ps.setString(13, row.stopDesc());
+        ps.setString(14, row.zoneId());
+        ps.setString(15, row.levelId());
+        ps.setString(16, row.platformCode());
+        setNullableShort(ps, 17, row.stopAccess(), "stop_access");
     }
 
     private void bindRoute(PreparedStatement ps, RouteRow row) throws SQLException {
@@ -463,6 +536,10 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
         setNullableInteger(ps, 9, row.routeSortOrder(), "route_sort_order");
         setNullableShort(ps, 10, row.continuousPickup(), "continuous_pickup");
         setNullableShort(ps, 11, row.continuousDropOff(), "continuous_drop_off");
+        ps.setString(12, row.agencyId());
+        ps.setString(13, row.routeDesc());
+        ps.setString(14, row.networkId());
+        setNullableShort(ps, 15, row.cemvSupport(), "cemv_support");
     }
 
     private void bindTrip(PreparedStatement ps, TripRow row) throws SQLException {
@@ -473,6 +550,13 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
         setNullableShort(ps, 5, row.directionId(), "direction_id");
         setNullableShort(ps, 6, row.wheelchairAccessible(), "wheelchair_accessible");
         setNullableShort(ps, 7, row.bikesAllowed(), "bikes_allowed");
+        ps.setString(8, row.tripHeadsign());
+        ps.setString(9, row.tripShortName());
+        ps.setString(10, row.blockId());
+        ps.setString(11, row.shapeId());
+        setNullableShort(ps, 12, row.carsAllowed(), "cars_allowed");
+        setNullableDouble(ps, 13, row.safeDurationFactor(), "safe_duration_factor");
+        setNullableDouble(ps, 14, row.safeDurationOffset(), "safe_duration_offset");
     }
 
     private void bindStopTime(PreparedStatement ps, StopTimeRow row) throws SQLException {
@@ -486,6 +570,15 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
         setNullableShort(ps, 10, row.dropOffType(), "drop_off_type");
         setNullableDouble(ps, 11, row.shapeDistTraveled(), "shape_dist_traveled");
         setNullableShort(ps, 12, row.timepoint(), "timepoint");
+        ps.setString(13, row.locationGroupId());
+        ps.setString(14, row.locationId());
+        ps.setString(15, row.stopHeadsign());
+        setTime(ps, 16, 17, row.startPickupDropOffWindow(), "start_pickup_drop_off_window");
+        setTime(ps, 18, 19, row.endPickupDropOffWindow(), "end_pickup_drop_off_window");
+        setNullableShort(ps, 20, row.continuousPickup(), "continuous_pickup");
+        setNullableShort(ps, 21, row.continuousDropOff(), "continuous_drop_off");
+        ps.setString(22, row.pickupBookingRuleId());
+        ps.setString(23, row.dropOffBookingRuleId());
     }
 
     private void bindCalendar(PreparedStatement ps, CalendarRow row) throws SQLException {

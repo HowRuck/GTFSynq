@@ -122,8 +122,9 @@ public final class Columns {
     /**
      * Columns of the live updates tree.
      *
-     * <p>The hierarchy column doubles as the trip / stop label: a trip row shows its trip id, and
-     * its stop rows are indented below it with their stop id.
+     * <p>The hierarchy column doubles as the trip / stop label: a trip row shows its static short
+     * name when available, falling back to its trip id, and its stop rows are indented below it
+     * with their stop id.
      */
     public static void liveUpdates(TreeGrid<LiveUpdateRow> grid) {
         grid.addComponentHierarchyColumn(row -> liveLabel(grid, row))
@@ -137,10 +138,8 @@ public final class Columns {
                         : new Span())
                 .setHeader(grid.getTranslation("column.feed"));
 
-        grid.addColumn(row -> row instanceof TripUpdateRow trip
-                        ? UiFormat.text(trip.update().getRouteId())
-                        : "")
-                .setHeader(grid.getTranslation("column.routeId"))
+        grid.addColumn(row -> row instanceof TripUpdateRow trip ? UiFormat.text(routeName(trip.update())) : "")
+                .setHeader(grid.getTranslation("column.route"))
                 .setKey("routeId")
                 .setSortProperty("routeId")
                 .setSortable(true);
@@ -206,10 +205,36 @@ public final class Columns {
 
     private static Component liveLabel(TreeGrid<LiveUpdateRow> grid, LiveUpdateRow row) {
         return switch (row) {
-            case TripUpdateRow trip -> new Span(UiFormat.text(trip.update().getTripId()));
+            case TripUpdateRow trip -> new Span(UiFormat.text(tripName(trip.update())));
             case StopTimeUpdateRow stop -> new Span(UiFormat.text(stopId(stop.update())));
             case LoadingRow ignored -> loadingRow(grid);
         };
+    }
+
+    /**
+     * Trip label, preferring the static schedule's short name over the raw trip id.
+     *
+     * <p>GTFS makes {@code trip_short_name} optional, so most feeds fall back to the id; the live
+     * grid shows the name when the feed publishes one.
+     */
+    static String tripName(TripUpdate trip) {
+        return trip.hasTripShortName() ? trip.getTripShortName() : trip.getTripId();
+    }
+
+    /**
+     * Route label, preferring the static schedule's long name, then its short name, then the id.
+     *
+     * <p>GTFS requires at least one of the two names, but a feed may publish only one, and a live
+     * trip whose static trip is unknown has neither.
+     */
+    static String routeName(TripUpdate trip) {
+        if (trip.hasRouteLongName()) {
+            return trip.getRouteLongName();
+        }
+        if (trip.hasRouteShortName()) {
+            return trip.getRouteShortName();
+        }
+        return trip.getRouteId();
     }
 
     private static Component loadingRow(TreeGrid<LiveUpdateRow> grid) {

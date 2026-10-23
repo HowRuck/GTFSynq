@@ -20,7 +20,9 @@ public final class GtfsStaticRows {
             String agencyTimezone,
             String agencyLang,
             String agencyFareUrl,
-            String agencyEmail) {
+            String agencyEmail,
+            String agencyPhone,
+            String cemvSupport) {
         static AgencyRow from(NamedCsvRecord record, GtfsStaticColumns columns) {
             return new AgencyRow(
                     columns.value(record, "agency_id"),
@@ -29,7 +31,9 @@ public final class GtfsStaticRows {
                     columns.value(record, "agency_timezone"),
                     columns.value(record, "agency_lang"),
                     columns.value(record, "agency_fare_url"),
-                    columns.value(record, "agency_email"));
+                    columns.value(record, "agency_email"),
+                    columns.value(record, "agency_phone"),
+                    columns.value(record, "cemv_support"));
         }
     }
 
@@ -42,7 +46,14 @@ public final class GtfsStaticRows {
             String locationType,
             String parentStation,
             String stopTimezone,
-            String wheelchairBoarding) {
+            String wheelchairBoarding,
+            String stopCode,
+            String ttsStopName,
+            String stopDesc,
+            String zoneId,
+            String levelId,
+            String platformCode,
+            String stopAccess) {
         static StopRow from(NamedCsvRecord record, GtfsStaticColumns columns) {
             return new StopRow(
                     columns.value(record, "stop_id"),
@@ -53,7 +64,14 @@ public final class GtfsStaticRows {
                     columns.value(record, "location_type"),
                     columns.value(record, "parent_station"),
                     columns.value(record, "stop_timezone"),
-                    columns.value(record, "wheelchair_boarding"));
+                    columns.value(record, "wheelchair_boarding"),
+                    columns.value(record, "stop_code"),
+                    columns.value(record, "tts_stop_name"),
+                    columns.value(record, "stop_desc"),
+                    columns.value(record, "zone_id"),
+                    columns.value(record, "level_id"),
+                    columns.value(record, "platform_code"),
+                    columns.value(record, "stop_access"));
         }
     }
 
@@ -67,7 +85,11 @@ public final class GtfsStaticRows {
             String routeTextColor,
             String routeSortOrder,
             String continuousPickup,
-            String continuousDropOff) {
+            String continuousDropOff,
+            String agencyId,
+            String routeDesc,
+            String networkId,
+            String cemvSupport) {
         static RouteRow from(NamedCsvRecord record, GtfsStaticColumns columns) {
             return new RouteRow(
                     columns.value(record, "route_id"),
@@ -79,7 +101,11 @@ public final class GtfsStaticRows {
                     columns.value(record, "route_text_color"),
                     columns.value(record, "route_sort_order"),
                     columns.value(record, "continuous_pickup"),
-                    columns.value(record, "continuous_drop_off"));
+                    columns.value(record, "continuous_drop_off"),
+                    columns.value(record, "agency_id"),
+                    columns.value(record, "route_desc"),
+                    columns.value(record, "network_id"),
+                    columns.value(record, "cemv_support"));
         }
     }
 
@@ -89,7 +115,14 @@ public final class GtfsStaticRows {
             String tripId,
             String directionId,
             String wheelchairAccessible,
-            String bikesAllowed) {
+            String bikesAllowed,
+            String tripHeadsign,
+            String tripShortName,
+            String blockId,
+            String shapeId,
+            String carsAllowed,
+            String safeDurationFactor,
+            String safeDurationOffset) {
         static TripRow from(NamedCsvRecord record, GtfsStaticColumns columns) {
             return new TripRow(
                     columns.value(record, "route_id"),
@@ -97,7 +130,14 @@ public final class GtfsStaticRows {
                     columns.value(record, "trip_id"),
                     columns.value(record, "direction_id"),
                     columns.value(record, "wheelchair_accessible"),
-                    columns.value(record, "bikes_allowed"));
+                    columns.value(record, "bikes_allowed"),
+                    columns.value(record, "trip_headsign"),
+                    columns.value(record, "trip_short_name"),
+                    columns.value(record, "block_id"),
+                    columns.value(record, "shape_id"),
+                    columns.value(record, "cars_allowed"),
+                    columns.value(record, "safe_duration_factor"),
+                    columns.value(record, "safe_duration_offset"));
         }
     }
 
@@ -110,7 +150,16 @@ public final class GtfsStaticRows {
             String pickupType,
             String dropOffType,
             String shapeDistTraveled,
-            String timepoint) {
+            String timepoint,
+            String locationGroupId,
+            String locationId,
+            String stopHeadsign,
+            String startPickupDropOffWindow,
+            String endPickupDropOffWindow,
+            String continuousPickup,
+            String continuousDropOff,
+            String pickupBookingRuleId,
+            String dropOffBookingRuleId) {
         static StopTimeRow from(NamedCsvRecord record, GtfsStaticColumns columns) {
             return new StopTimeRow(
                     columns.value(record, "trip_id"),
@@ -121,7 +170,16 @@ public final class GtfsStaticRows {
                     columns.value(record, "pickup_type"),
                     columns.value(record, "drop_off_type"),
                     columns.value(record, "shape_dist_traveled"),
-                    columns.value(record, "timepoint"));
+                    columns.value(record, "timepoint"),
+                    columns.value(record, "location_group_id"),
+                    columns.value(record, "location_id"),
+                    columns.value(record, "stop_headsign"),
+                    columns.value(record, "start_pickup_drop_off_window"),
+                    columns.value(record, "end_pickup_drop_off_window"),
+                    columns.value(record, "continuous_pickup"),
+                    columns.value(record, "continuous_drop_off"),
+                    columns.value(record, "pickup_booking_rule_id"),
+                    columns.value(record, "drop_off_booking_rule_id"));
         }
     }
 

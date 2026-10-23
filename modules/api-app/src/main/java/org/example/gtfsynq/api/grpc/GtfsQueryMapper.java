@@ -130,6 +130,9 @@ final class GtfsQueryMapper {
             setIfPresent(timeText(update.startDate()), item::setStartDate);
             setIfPresent(timeText(update.startTime()), item::setStartTime);
             setIfPresent(update.currentDelay(), item::setCurrentDelay);
+            setIfPresent(update.tripShortName(), item::setTripShortName);
+            setIfPresent(update.routeShortName(), item::setRouteShortName);
+            setIfPresent(update.routeLongName(), item::setRouteLongName);
             reply.addItems(item);
         }
         return reply.build();

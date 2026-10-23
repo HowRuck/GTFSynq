@@ -173,6 +173,11 @@ message TripUpdate {
   // Delay in seconds at the first upcoming stop that reports one, so the trip
   // row can show its current delay without loading the stop time updates.
   optional int32 current_delay = 11;
+  // Display names resolved from the static schedule; absent when the feed has
+  // no matching row or does not publish the field.
+  optional string trip_short_name = 12;
+  optional string route_short_name = 13;
+  optional string route_long_name = 14;
 }
 
 message TripUpdatesRequest {

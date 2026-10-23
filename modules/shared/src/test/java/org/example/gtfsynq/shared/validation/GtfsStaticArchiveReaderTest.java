@@ -47,6 +47,10 @@ class GtfsStaticArchiveReaderTest {
 
         private final List<StopRow> stops = new ArrayList<>();
 
+        private final List<GtfsStaticRows.RouteRow> routes = new ArrayList<>();
+
+        private final List<GtfsStaticRows.TripRow> trips = new ArrayList<>();
+
         @Override
         public void onAgency(List<GtfsStaticRows.AgencyRow> rows) {
             calls.add("agency:" + rows.size());
@@ -62,11 +66,13 @@ class GtfsStaticArchiveReaderTest {
         @Override
         public void onRoutes(List<GtfsStaticRows.RouteRow> rows) {
             calls.add("routes:" + rows.size());
+            routes.addAll(rows);
         }
 
         @Override
         public void onTrips(List<GtfsStaticRows.TripRow> rows) {
             calls.add("trips:" + rows.size());
+            trips.addAll(rows);
         }
 
         @Override
@@ -104,12 +110,12 @@ class GtfsStaticArchiveReaderTest {
             "agency.txt", AGENCY,
             "stops.txt", STOPS,
             "routes.txt", """
-                    route_id,route_short_name,route_type
-                    R1,1,3
+                    route_id,route_short_name,route_long_name,route_type
+                    R1,1,Central - North,3
                     """,
             "trips.txt", """
-                    route_id,service_id,trip_id
-                    R1,serviceA,trip1
+                    route_id,service_id,trip_id,trip_short_name
+                    R1,serviceA,trip1,Trip 1
                     """,
             "stop_times.txt", stopTimes,
             "calendar.txt", CALENDAR,
@@ -133,6 +139,9 @@ class GtfsStaticArchiveReaderTest {
                 sink.calls);
         assertEquals(2, sink.stops.size());
         assertEquals(2, sink.stopTimes.size());
+        assertEquals("1", sink.routes.getFirst().routeShortName());
+        assertEquals("Central - North", sink.routes.getFirst().routeLongName());
+        assertEquals("Trip 1", sink.trips.getFirst().tripShortName());
         assertEquals("25:10:00", sink.stopTimes.get(1).arrivalTime(), "times are handed over as written");
     }
 

@@ -4,7 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 
-/** A live trip update, joining the hot table with its metadata row. */
+/** A live trip update, joining the hot table with its metadata and static display names. */
 public record TripUpdateDto(
         long tripUpdateId,
         String feedId,
@@ -16,4 +16,7 @@ public record TripUpdateDto(
         LocalDate startDate,
         LocalTime startTime,
         int stopTimeUpdateCount,
-        Integer currentDelay) {}
+        Integer currentDelay,
+        String tripShortName,
+        String routeShortName,
+        String routeLongName) {}
