@@ -1,0 +1,8 @@
+/*
+ * Aura exposes its font stack as a CSS custom property; Vaadin has no Java API
+ * for it, so this one override is all that is needed on top of the theme.
+ * Geist itself is loaded from Google Fonts (see AppShell).
+ */
+html {
+    --aura-font-family: "Geist", var(--aura-font-family-system);
+}
