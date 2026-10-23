@@ -13,7 +13,7 @@ quarkus-vaadin = "3.33.0"
 protobuf = "4.36.2"
 # Keep in step with the gRPC version managed by the Quarkus 3.33 BOM; the
 # generated stubs also run on the newer gRPC managed by Quarkus 4.
-grpc = "1.79.0"
+grpc = "1.85.1"
 vaadin = "25.4.0-alpha4"
 
 # Jakarta EE APIs used by the framework-agnostic :shared module
