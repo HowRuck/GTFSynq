@@ -23,6 +23,7 @@ It is built with **Gradle**, runs on **Java 25**, and is designed to work with *
 - **Static feed ingestion**: Download GTFS static (CSV) archives, store them in S3-compatible object storage, and publish an ingestion event for validation
 - **Event-driven handoff**: Kafka carries GTFS-RT payloads and static feed storage references
 - **Time-series storage**: Store transit data efficiently in TimescaleDB
+- **Web console**: A server-side Vaadin Flow console with an overview, lazy-loaded static feed / route / stop / trip tables, and a live trip-update tree that refreshes every 10 seconds
 - **Kafka integration**: Stream transit payloads through Apache Kafka
 - **Protobuf support**: Encode and decode GTFS-RT messages efficiently
 - **GraalVM native images**: Ahead-of-time compile any app into a standalone native executable for fast startup and low memory
@@ -34,7 +35,7 @@ It is built with **Gradle**, runs on **Java 25**, and is designed to work with *
 | Component | Technology | Purpose |
 |---|---|---|
 | Backend | Quarkus 4.0 (beta) | Application framework for the backend apps |
-| Console | Vaadin Flow 25.4 + Quarkus 3.33 | Server-side web UI (the UI module pins its own Quarkus version) |
+| Console | Vaadin Flow 25.4 + Quarkus 4.0 (beta) | Server-side web console (shares the Quarkus platform and BOM with the other apps) |
 | Build tool | Gradle | Build, test, and packaging |
 | Language | Java 25 | Application language |
 | Streaming | Apache Kafka | Event streaming and transport |
@@ -74,7 +75,12 @@ This produces the Quarkus fast-jar layout for each app:
 modules/api-app/build/quarkus-app/quarkus-run.jar
 modules/ingest-app/build/quarkus-app/quarkus-run.jar
 modules/store-app/build/quarkus-app/quarkus-run.jar
+modules/ui-app/build/quarkus-app/quarkus-run.jar
 ```
+
+`ui-app` also builds its production frontend bundle. Vaadin's extension downloads
+the Node/pnpm toolchain for that on the first build, so the first `ui-app` build
+takes longer than the backend modules.
 
 ### 3. Run the application locally
 
@@ -93,9 +99,10 @@ Each app listens on its own port:
 - `store-app`: `http://localhost:8082`
 - `ui-app`: `http://localhost:8083` (health: `/q/health`)
 
-The Vaadin console lives in `modules/ui-app`. It is a pure gRPC client: it
-reads everything from `api-app` on port `8080` (Quarkus 4 serves gRPC from the
-HTTP server) and never calls the REST API. Run it in dev mode next to the API:
+The Vaadin console lives in `modules/ui-app` (see [Web Console](#web-console)).
+It is a pure gRPC client: it reads everything from `api-app` on port `8080`
+(Quarkus 4 serves gRPC from the HTTP server) and never calls the REST API. Run
+it in dev mode next to the API:
 
 ```bash
 ./gradlew :api-app:quarkusDev      # terminal 1
@@ -174,6 +181,37 @@ A typical local development setup looks like this:
 
 If you want to run only the infrastructure containers and keep the app on your host machine, start Kafka, TimescaleDB and the S3 service separately using the same Compose file (`docker compose -f docker-compose.dev.yaml up -d`), export the `GTFSYNQ_STORAGE_S3_*` values from `.env.template`, then run the app locally with `./gradlew`.
 
+## Web Console
+
+The console in `modules/ui-app` is a server-side Vaadin Flow application. It is a
+pure gRPC client of `api-app`: the browser only talks to `ui-app` on port `8083`,
+while every query is a unary `GtfsQueryService` call made on the server. It opens
+no datasource and never calls the REST API.
+
+| Page | Path | Contents |
+|---|---|---|
+| Overview | `/` | Row counts for static feeds, routes, stops, trips and live updates, plus the most recent static feed revisions |
+| Static Feeds | `/feeds` | One current revision per feed: digest, size, object key, source, ingestion and load times |
+| Routes | `/routes` | Static routes with a feed filter and search |
+| Stops | `/stops` | Stops and stations with coordinates, location type and parent station |
+| Trips | `/trips` | Trips with their route, service and direction |
+| Live Updates | `/live` | Current trip updates; expand a trip to see its stop time updates |
+
+Behaviour shared by the tables:
+
+- Rows load lazily as you scroll; the backend returns one page at a time, so the
+  console never holds a whole table in memory.
+- Sortable columns sort server-side, and every column is sized to its content.
+- Routes, stops and trips offer a feed selector and a search box (three or more
+  characters, matching the API).
+- The live view polls every 10 seconds through server push, keeps expanded trips
+  open across refreshes, and has a manual refresh button.
+- gRPC failures appear as notifications instead of breaking the view. The API
+  host and port come from `GTFS_API_GRPC_HOST` / `GTFS_API_GRPC_PORT`.
+- All text goes through Vaadin's I18N provider
+  (`src/main/resources/vaadin-i18n/translations.properties`); English is the only
+  bundled locale. The look comes from the Aura theme with the Geist font.
+
 ## Project Structure
 
 ```text
@@ -239,12 +277,15 @@ The read API used by the console and by external clients:
 - `GtfsQueryService` gRPC service (served from the HTTP port), the console's only data source
 
 ### `modules/ui-app`
-The Vaadin Flow console that replaced the former Vue web UI:
+The Vaadin Flow web console (see [Web Console](#web-console)):
 
-- server-side views (`Overview`, `Static feeds`, `Routes`, `Stops`, `Trips`,
-  `Live updates`) rendered by Vaadin
-- explicit, page-based tables backed by unary `GtfsQueryService` calls
-- Aura theme, server push and a 10-second poll on the live view
+- server-side views for `Overview`, `Static Feeds`, `Routes`, `Stops`, `Trips` and
+  `Live Updates`, with top navigation and localized page titles
+- lazy-loaded grids backed by paged unary `GtfsQueryService` calls, with
+  server-side sorting, content-sized columns, feed filters and search
+- an expandable live tree: trip updates load lazily and expand to their stop time
+  updates, refreshed every 10 seconds through server push
+- English translations via Vaadin I18N, Aura theme with the Geist font
 - no database access and no REST calls — it is a pure gRPC client of `api-app`
 
 ## Runtime Flow
@@ -447,7 +488,8 @@ also collected into the GitHub Actions job summary by `gradle/actions/setup-grad
 ### Run an app from Gradle (dev mode, live reload)
 
 ```bash
-./gradlew :api-app:quarkusDev
+./gradlew :api-app:quarkusDev   # backend
+./gradlew :ui-app:quarkusDev    # console → http://localhost:8083
 ```
 
 ## Container Image Build
