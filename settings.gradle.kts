@@ -1,3 +1,8 @@
+// Gradle still marks the central repository declaration as @Incubating (since 6.8) without a
+// stable replacement; suppress the unstable-API inspection rather than spreading the repositories
+// across every project.
+@file:Suppress("UnstableApiUsage", "GradleUnstableApiUsage")
+
 pluginManagement {
     includeBuild("build-logic")
     repositories {
