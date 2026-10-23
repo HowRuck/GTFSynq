@@ -1,8 +1,12 @@
 package org.example.gtfsynq.ui.component;
 
+import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.grid.ColumnTextAlign;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
+import com.vaadin.flow.component.progressbar.ProgressBar;
 import com.vaadin.flow.component.treegrid.TreeGrid;
 import org.example.gtfsynq.shared.protocol.query.Route;
 import org.example.gtfsynq.shared.protocol.query.StaticFeed;
@@ -121,7 +125,7 @@ public final class Columns {
      * its stop rows are indented below it with their stop id.
      */
     public static void liveUpdates(TreeGrid<LiveUpdateRow> grid) {
-        grid.addHierarchyColumn(Columns::liveLabel)
+        grid.addComponentHierarchyColumn(row -> liveLabel(grid, row))
                 .setHeader(grid.getTranslation("column.tripOrStop"))
                 .setKey("tripId")
                 .setSortProperty("tripId")
@@ -187,11 +191,23 @@ public final class Columns {
                 .setSortable(true);
     }
 
-    private static String liveLabel(LiveUpdateRow row) {
+    private static Component liveLabel(TreeGrid<LiveUpdateRow> grid, LiveUpdateRow row) {
         return switch (row) {
-            case TripUpdateRow trip -> UiFormat.text(trip.update().getTripId());
-            case StopTimeUpdateRow stop -> UiFormat.text(stopId(stop.update()));
+            case TripUpdateRow trip -> new Span(UiFormat.text(trip.update().getTripId()));
+            case StopTimeUpdateRow stop -> new Span(UiFormat.text(stopId(stop.update())));
+            case LoadingRow ignored -> loadingRow(grid);
         };
+    }
+
+    private static Component loadingRow(TreeGrid<LiveUpdateRow> grid) {
+        var progress = new ProgressBar();
+        progress.setIndeterminate(true);
+        progress.setWidth("5rem");
+
+        var loading = new HorizontalLayout(progress, new Span(grid.getTranslation("grid.loading")));
+        loading.setPadding(false);
+        loading.setAlignItems(Alignment.CENTER);
+        return loading;
     }
 
     private static String stopId(StopTimeUpdate stop) {

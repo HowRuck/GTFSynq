@@ -208,7 +208,9 @@ Behaviour shared by the tables:
 - Routes, stops and trips offer a feed selector and a search box (three or more
   characters, matching the API).
 - The live view polls every 10 seconds through server push, keeps expanded trips
-  open across refreshes, and has a manual refresh button.
+  open across refreshes, and has a manual refresh button. Expanding a trip shows
+  a loading row with an indeterminate progress bar until its stop time updates
+  arrive, so the UI never waits on the backend with the session lock held.
 - gRPC failures appear as notifications instead of breaking the view. The API
   host and port come from `GTFS_API_GRPC_HOST` / `GTFS_API_GRPC_PORT`.
 - All text goes through Vaadin's I18N provider
@@ -288,7 +290,8 @@ The Vaadin Flow web console (see [Web Console](#web-console)):
   server-side sorting, content-sized columns that fill the grid, feed filters and
   search
 - an expandable live tree: trip updates load lazily and expand to their stop time
-  updates, refreshed every 10 seconds through server push
+  updates (with a progress-bar loading row while they fetch), refreshed every 10
+  seconds through server push
 - English translations via Vaadin I18N, Aura theme with the Geist font
 - no database access and no REST calls — it is a pure gRPC client of `api-app`
 

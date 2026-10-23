@@ -1,13 +1,17 @@
 package org.example.gtfsynq.ui.component;
 
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.data.provider.SortDirection;
 import com.vaadin.flow.data.provider.hierarchy.AbstractHierarchicalDataProvider;
 import com.vaadin.flow.data.provider.hierarchy.HierarchicalQuery;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import org.example.gtfsynq.ui.client.DataAccessException;
@@ -29,12 +33,14 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
     private final Function<String, String> errorMessage;
 
     private final Map<Long, List<LiveUpdateRow>> stopTimesByTrip = new HashMap<>();
+    private final Set<Long> loadingTrips = new HashSet<>();
 
     private String feedId;
     private String lastError;
     private RootPage rootPage;
     private CountKey countKey;
     private long total = -1;
+    private long generation;
 
     LiveUpdatesDataProvider(
             GtfsQueryClient client,
@@ -90,6 +96,7 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
             case TripUpdateRow trip -> trip.tripUpdateId();
             case StopTimeUpdateRow stop ->
                 stop.tripUpdateId() + ":" + stop.update().getStopSequence();
+            case LoadingRow loading -> loading.tripUpdateId() + ":loading";
         };
     }
 
@@ -105,7 +112,9 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
 
     /** Drops the cached pages so the next query hits the backend again. */
     void invalidate() {
+        generation++;
         stopTimesByTrip.clear();
+        loadingTrips.clear();
         rootPage = null;
         countKey = null;
         total = -1;
@@ -169,20 +178,72 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
         if (!(parent instanceof TripUpdateRow trip)) {
             return List.of();
         }
-        return stopTimesByTrip.computeIfAbsent(trip.tripUpdateId(), this::loadStopTimes);
+
+        var tripId = trip.tripUpdateId();
+        var cached = stopTimesByTrip.get(tripId);
+        if (cached != null) {
+            return cached;
+        }
+
+        // Without a UI (unit tests, background use) keep the original synchronous path.
+        var ui = UI.getCurrent();
+        if (ui == null) {
+            return stopTimesByTrip.computeIfAbsent(tripId, this::loadStopTimes);
+        }
+
+        // Show a placeholder immediately, then replace it when the backend answers.
+        if (loadingTrips.add(tripId)) {
+            loadStopTimesAsync(trip, ui);
+        }
+        return List.of(new LoadingRow(tripId));
+    }
+
+    private void loadStopTimesAsync(TripUpdateRow trip, UI ui) {
+        var tripId = trip.tripUpdateId();
+        var startedIn = generation;
+        CompletableFuture.runAsync(() -> {
+            List<LiveUpdateRow> rows;
+            DataAccessException failure = null;
+            try {
+                rows = stopTimes(tripId);
+            } catch (DataAccessException e) {
+                failure = e;
+                rows = List.of();
+            }
+
+            var loaded = rows;
+            var error = failure;
+            ui.access(() -> {
+                // A poll refresh may have invalidated the cache while this load ran.
+                if (startedIn != generation) {
+                    return;
+                }
+                loadingTrips.remove(tripId);
+                stopTimesByTrip.put(tripId, loaded);
+                if (error != null) {
+                    report(error);
+                }
+                // Clear the placeholder child from the grid's hierarchy cache.
+                refreshItem(trip, true);
+            });
+        });
     }
 
     private List<LiveUpdateRow> loadStopTimes(long tripUpdateId) {
         try {
-            var rows = client.stopTimeUpdates(tripUpdateId).stream()
-                    .map(stop -> (LiveUpdateRow) new StopTimeUpdateRow(tripUpdateId, stop))
-                    .toList();
+            var rows = stopTimes(tripUpdateId);
             lastError = null;
             return rows;
         } catch (DataAccessException e) {
             report(e);
             return List.of();
         }
+    }
+
+    private List<LiveUpdateRow> stopTimes(long tripUpdateId) {
+        return client.stopTimeUpdates(tripUpdateId).stream()
+                .map(stop -> (LiveUpdateRow) new StopTimeUpdateRow(tripUpdateId, stop))
+                .toList();
     }
 
     private void report(DataAccessException e) {
