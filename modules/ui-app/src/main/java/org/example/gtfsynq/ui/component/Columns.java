@@ -16,7 +16,8 @@ import org.example.gtfsynq.ui.format.UiFormat;
  *
  * <p>Column keys double as the backend sort keys, so they must match the sort maps in
  * {@code GtfsQueryRepository}. Headers are translated through the grid, so they follow the locale
- * of the view that built it.
+ * of the view that built it. Columns are sized to their content by the grids that host them, so no
+ * widths are set here.
  */
 public final class Columns {
 
@@ -24,27 +25,17 @@ public final class Columns {
 
     public static void feedSummary(Grid<StaticFeed> grid) {
         grid.addComponentColumn(feed -> UiComponents.badge(feed.getFeedId()))
-                .setHeader(grid.getTranslation("column.feed"))
-                .setFlexGrow(0)
-                .setWidth("9rem");
+                .setHeader(grid.getTranslation("column.feed"));
         grid.addColumn(feed -> UiFormat.shortHash(feed.getSha256())).setHeader(grid.getTranslation("column.sha256"));
-        grid.addColumn(feed -> UiFormat.bytes(feed.getSizeBytes()))
-                .setHeader(grid.getTranslation("column.size"))
-                .setFlexGrow(0)
-                .setWidth("7rem");
+        grid.addColumn(feed -> UiFormat.bytes(feed.getSizeBytes())).setHeader(grid.getTranslation("column.size"));
         grid.addColumn(feed -> UiFormat.dateTime(feed.getLoadedAt())).setHeader(grid.getTranslation("column.loaded"));
     }
 
     public static void feeds(Grid<StaticFeed> grid) {
         grid.addComponentColumn(feed -> UiComponents.badge(feed.getFeedId()))
-                .setHeader(grid.getTranslation("column.feed"))
-                .setFlexGrow(0)
-                .setWidth("9rem");
+                .setHeader(grid.getTranslation("column.feed"));
         grid.addColumn(feed -> UiFormat.shortHash(feed.getSha256())).setHeader(grid.getTranslation("column.sha256"));
-        grid.addColumn(feed -> UiFormat.bytes(feed.getSizeBytes()))
-                .setHeader(grid.getTranslation("column.size"))
-                .setFlexGrow(0)
-                .setWidth("7rem");
+        grid.addColumn(feed -> UiFormat.bytes(feed.getSizeBytes())).setHeader(grid.getTranslation("column.size"));
         grid.addColumn(StaticFeed::getObjectKey).setHeader(grid.getTranslation("column.objectKey"));
         grid.addComponentColumn(UiComponents::sourceLink).setHeader(grid.getTranslation("column.source"));
         grid.addColumn(feed -> UiFormat.dateTime(feed.getIngestedAt()))
@@ -53,10 +44,7 @@ public final class Columns {
     }
 
     public static void routes(Grid<Route> grid) {
-        grid.addColumn(Route::getFeedId)
-                .setHeader(grid.getTranslation("column.feed"))
-                .setFlexGrow(0)
-                .setWidth("9rem");
+        grid.addColumn(Route::getFeedId).setHeader(grid.getTranslation("column.feed"));
         grid.addColumn(Route::getRouteId)
                 .setHeader(grid.getTranslation("column.routeId"))
                 .setKey("routeId")
@@ -76,17 +64,12 @@ public final class Columns {
                 .setHeader(grid.getTranslation("column.type"))
                 .setKey("routeType")
                 .setSortProperty("routeType")
-                .setSortable(true)
-                .setFlexGrow(0)
-                .setWidth("5rem");
+                .setSortable(true);
         grid.addComponentColumn(UiComponents::routeColor).setHeader(grid.getTranslation("column.color"));
     }
 
     public static void stops(Grid<Stop> grid) {
-        grid.addColumn(Stop::getFeedId)
-                .setHeader(grid.getTranslation("column.feed"))
-                .setFlexGrow(0)
-                .setWidth("9rem");
+        grid.addColumn(Stop::getFeedId).setHeader(grid.getTranslation("column.feed"));
         grid.addColumn(Stop::getStopId)
                 .setHeader(grid.getTranslation("column.stopId"))
                 .setKey("stopId")
@@ -98,29 +81,20 @@ public final class Columns {
                 .setSortProperty("stopName")
                 .setSortable(true);
         grid.addColumn(stop -> stop.hasLat() ? UiFormat.coordinate(stop.getLat()) : "—")
-                .setHeader(grid.getTranslation("column.latitude"))
-                .setFlexGrow(0)
-                .setWidth("7rem");
+                .setHeader(grid.getTranslation("column.latitude"));
         grid.addColumn(stop -> stop.hasLon() ? UiFormat.coordinate(stop.getLon()) : "—")
-                .setHeader(grid.getTranslation("column.longitude"))
-                .setFlexGrow(0)
-                .setWidth("7rem");
+                .setHeader(grid.getTranslation("column.longitude"));
         grid.addColumn(stop -> stop.hasLocationType() ? String.valueOf(stop.getLocationType()) : "—")
                 .setHeader(grid.getTranslation("column.locationType"))
                 .setKey("locationType")
                 .setSortProperty("locationType")
-                .setSortable(true)
-                .setFlexGrow(0)
-                .setWidth("8rem");
+                .setSortable(true);
         grid.addColumn(stop -> stop.hasParentStation() ? stop.getParentStation() : "—")
                 .setHeader(grid.getTranslation("column.parentStation"));
     }
 
     public static void trips(Grid<Trip> grid) {
-        grid.addColumn(Trip::getFeedId)
-                .setHeader(grid.getTranslation("column.feed"))
-                .setFlexGrow(0)
-                .setWidth("9rem");
+        grid.addColumn(Trip::getFeedId).setHeader(grid.getTranslation("column.feed"));
         grid.addColumn(Trip::getTripId)
                 .setHeader(grid.getTranslation("column.tripId"))
                 .setKey("tripId")
@@ -137,9 +111,7 @@ public final class Columns {
                 .setSortProperty("serviceId")
                 .setSortable(true);
         grid.addColumn(trip -> trip.hasDirectionId() ? String.valueOf(trip.getDirectionId()) : "—")
-                .setHeader(grid.getTranslation("column.direction"))
-                .setFlexGrow(0)
-                .setWidth("6rem");
+                .setHeader(grid.getTranslation("column.direction"));
     }
 
     /**
@@ -153,15 +125,12 @@ public final class Columns {
                 .setHeader(grid.getTranslation("column.tripOrStop"))
                 .setKey("tripId")
                 .setSortProperty("tripId")
-                .setSortable(true)
-                .setFlexGrow(2);
+                .setSortable(true);
 
         grid.addComponentColumn(row -> row instanceof TripUpdateRow trip
                         ? UiComponents.badge(trip.update().getFeedId())
                         : new Span())
-                .setHeader(grid.getTranslation("column.feed"))
-                .setFlexGrow(0)
-                .setWidth("9rem");
+                .setHeader(grid.getTranslation("column.feed"));
 
         grid.addColumn(row -> row instanceof TripUpdateRow trip
                         ? UiFormat.text(trip.update().getRouteId())
@@ -174,46 +143,32 @@ public final class Columns {
         grid.addColumn(row -> row instanceof TripUpdateRow trip
                         ? UiFormat.text(trip.update().getStartDate())
                         : "")
-                .setHeader(grid.getTranslation("column.startDate"))
-                .setFlexGrow(0)
-                .setWidth("7rem");
+                .setHeader(grid.getTranslation("column.startDate"));
 
         grid.addColumn(row -> row instanceof TripUpdateRow trip
                         ? UiFormat.time(trip.update().getStartTime())
                         : "")
-                .setHeader(grid.getTranslation("column.startTime"))
-                .setFlexGrow(0)
-                .setWidth("6rem");
+                .setHeader(grid.getTranslation("column.startTime"));
 
         grid.addColumn(row -> row instanceof StopTimeUpdateRow stop
                         ? String.valueOf(stop.update().getStopSequence())
                         : "")
                 .setHeader(grid.getTranslation("column.stopSequence"))
-                .setTextAlign(ColumnTextAlign.END)
-                .setFlexGrow(0)
-                .setWidth("6rem");
+                .setTextAlign(ColumnTextAlign.END);
 
         grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? eventTime(stop.update(), true) : "")
-                .setHeader(grid.getTranslation("column.arrivalTime"))
-                .setFlexGrow(0)
-                .setWidth("7rem");
+                .setHeader(grid.getTranslation("column.arrivalTime"));
 
         grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? delay(stop.update(), true) : "")
                 .setHeader(grid.getTranslation("column.arrivalDelay"))
-                .setTextAlign(ColumnTextAlign.END)
-                .setFlexGrow(0)
-                .setWidth("7rem");
+                .setTextAlign(ColumnTextAlign.END);
 
         grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? eventTime(stop.update(), false) : "")
-                .setHeader(grid.getTranslation("column.departureTime"))
-                .setFlexGrow(0)
-                .setWidth("7rem");
+                .setHeader(grid.getTranslation("column.departureTime"));
 
         grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? delay(stop.update(), false) : "")
                 .setHeader(grid.getTranslation("column.departureDelay"))
-                .setTextAlign(ColumnTextAlign.END)
-                .setFlexGrow(0)
-                .setWidth("7rem");
+                .setTextAlign(ColumnTextAlign.END);
 
         grid.addColumn(row -> row instanceof TripUpdateRow trip
                         ? UiFormat.dateTime(trip.update().getFeedTs())

@@ -47,6 +47,8 @@ public class LazyGrid<T> extends Grid<T> {
         setSelectionMode(Grid.SelectionMode.NONE);
         addThemeVariants(GridVariant.ROW_STRIPES);
         columnConfigurer.accept(this);
+        // Size each column to its content instead of sharing the width equally.
+        getColumns().forEach(column -> column.setAutoWidth(true).setFlexGrow(0));
 
         setItems(this::fetch);
         getColumns().stream()
