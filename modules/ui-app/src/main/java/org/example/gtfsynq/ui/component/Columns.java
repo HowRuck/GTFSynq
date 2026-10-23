@@ -165,14 +165,18 @@ public final class Columns {
 
         grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? delay(stop.update(), true) : "")
                 .setHeader(grid.getTranslation("column.arrivalDelay"))
-                .setTextAlign(ColumnTextAlign.END);
+                .setTextAlign(ColumnTextAlign.END)
+                .setPartNameGenerator(
+                        row -> row instanceof StopTimeUpdateRow stop ? delayPart(stop.update(), true) : null);
 
         grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? eventTime(stop.update(), false) : "")
                 .setHeader(grid.getTranslation("column.departureTime"));
 
         grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? delay(stop.update(), false) : "")
                 .setHeader(grid.getTranslation("column.departureDelay"))
-                .setTextAlign(ColumnTextAlign.END);
+                .setTextAlign(ColumnTextAlign.END)
+                .setPartNameGenerator(
+                        row -> row instanceof StopTimeUpdateRow stop ? delayPart(stop.update(), false) : null);
 
         grid.addColumn(row -> row instanceof TripUpdateRow trip
                         ? UiFormat.dateTime(trip.update().getFeedTs())
@@ -231,9 +235,33 @@ public final class Columns {
     }
 
     private static String delay(StopTimeUpdate stop, boolean arrival) {
-        Integer seconds = arrival
+        return UiFormat.delay(delaySeconds(stop, arrival));
+    }
+
+    /**
+     * Part name that colors a delay cell: blue when early, green when on time, orange when late,
+     * and red with extra weight once the delay reaches five minutes.
+     */
+    private static String delayPart(StopTimeUpdate stop, boolean arrival) {
+        var seconds = delaySeconds(stop, arrival);
+        if (seconds == null) {
+            return null;
+        }
+        if (seconds <= -60) {
+            return "delay-early";
+        }
+        if (seconds >= 300) {
+            return "delay-severe";
+        }
+        if (seconds >= 60) {
+            return "delay-late";
+        }
+        return "delay-on-time";
+    }
+
+    private static Integer delaySeconds(StopTimeUpdate stop, boolean arrival) {
+        return arrival
                 ? (stop.hasArrivalDelay() ? stop.getArrivalDelay() : null)
                 : (stop.hasDepartureDelay() ? stop.getDepartureDelay() : null);
-        return UiFormat.delay(seconds);
     }
 }

@@ -6,3 +6,26 @@
 html {
     --aura-font-family: "Geist", var(--aura-font-family-system);
 }
+
+/*
+ * Live updates tree: color arrival and departure delay cells by how early or
+ * late the predicted stop event is. The part names come from
+ * Columns.delayPart(); the tokens are Aura's accessible text colors, so they
+ * follow the light and dark color schemes.
+ */
+vaadin-grid::part(delay-early) {
+    color: var(--aura-blue-text);
+}
+
+vaadin-grid::part(delay-on-time) {
+    color: var(--aura-green-text);
+}
+
+vaadin-grid::part(delay-late) {
+    color: var(--aura-orange-text);
+}
+
+vaadin-grid::part(delay-severe) {
+    color: var(--aura-red-text);
+    font-weight: var(--aura-font-weight-semibold);
+}
