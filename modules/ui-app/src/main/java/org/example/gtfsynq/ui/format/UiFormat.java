@@ -23,6 +23,13 @@ public final class UiFormat {
 
     private static final DateTimeFormatter TIME_OF_DAY = DateTimeFormatter.ofPattern("HH:mm:ss");
 
+    /**
+     * Timestamps are stored as {@code TIMESTAMPTZ} and rendered in Central European time instead of
+     * the JVM default, which is UTC in the container. {@code Europe/Berlin} is used rather than the
+     * fixed {@code CEST} offset so the tables switch between CET and CEST with daylight saving.
+     */
+    private static final ZoneId DISPLAY_ZONE = ZoneId.of("Europe/Berlin");
+
     private static final String[] BYTE_UNITS = {"B", "KiB", "MiB", "GiB", "TiB"};
 
     private UiFormat() {}
@@ -31,7 +38,7 @@ public final class UiFormat {
         if (!isSet(value)) {
             return NOT_AVAILABLE;
         }
-        return DATE_TIME.format(instant(value).atZone(ZoneId.systemDefault()));
+        return DATE_TIME.format(instant(value).atZone(DISPLAY_ZONE));
     }
 
     /** Time of day for a timestamp; stop times share the service date and do not repeat it. */
@@ -39,7 +46,7 @@ public final class UiFormat {
         if (!isSet(value)) {
             return NOT_AVAILABLE;
         }
-        return TIME_OF_DAY.format(instant(value).atZone(ZoneId.systemDefault()));
+        return TIME_OF_DAY.format(instant(value).atZone(DISPLAY_ZONE));
     }
 
     /**
