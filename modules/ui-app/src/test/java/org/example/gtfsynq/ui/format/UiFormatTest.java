@@ -3,7 +3,10 @@ package org.example.gtfsynq.ui.format;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.protobuf.Timestamp;
+import com.vaadin.flow.component.UI;
+import com.vaadin.flow.component.page.ExtendedClientDetails;
 import java.time.Instant;
+import java.time.ZoneId;
 import org.junit.jupiter.api.Test;
 
 class UiFormatTest {
@@ -41,6 +44,30 @@ class UiFormatTest {
         var scheduled = timestamp("2026-07-01T10:00:00Z");
 
         assertEquals("12:02:00", UiFormat.eventTime(null, scheduled, 120));
+    }
+
+    @Test
+    void usesTheTimeZoneReportedByTheBrowser() {
+        var ui = new UI();
+        UI.setCurrent(ui);
+        try {
+            var details = new ExtendedClientDetails(
+                    ui, null, null, null, null, null, null, "-240", "-300", "60", "true", "America/New_York", null,
+                    null, null, null, null, null, null);
+            ui.getInternals().setExtendedClientDetails(details);
+
+            assertEquals(ZoneId.of("America/New_York"), UiFormat.displayZone());
+            assertEquals("2026-07-01 06:00:00", UiFormat.dateTime(timestamp("2026-07-01T10:00:00Z")));
+        } finally {
+            UI.setCurrent(null);
+        }
+    }
+
+    @Test
+    void fallsBackToCentralEuropeanTimeWithoutABrowser() {
+        UI.setCurrent(null);
+
+        assertEquals(ZoneId.of("Europe/Berlin"), UiFormat.displayZone());
     }
 
     private static Timestamp timestamp(String instant) {

@@ -1,6 +1,7 @@
 package org.example.gtfsynq.ui.format;
 
 import com.google.protobuf.Timestamp;
+import com.vaadin.flow.component.UI;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -24,21 +25,43 @@ public final class UiFormat {
     private static final DateTimeFormatter TIME_OF_DAY = DateTimeFormatter.ofPattern("HH:mm:ss");
 
     /**
-     * Timestamps are stored as {@code TIMESTAMPTZ} and rendered in Central European time instead of
-     * the JVM default, which is UTC in the container. {@code Europe/Berlin} is used rather than the
-     * fixed {@code CEST} offset so the tables switch between CET and CEST with daylight saving.
+     * Fallback for timestamps rendered outside a browser request: Central European time, the region
+     * the feeds cover. {@code Europe/Berlin} is used rather than the fixed {@code CEST} offset so
+     * the value follows the CET/CEST switch instead of drifting an hour in winter.
      */
-    private static final ZoneId DISPLAY_ZONE = ZoneId.of("Europe/Berlin");
+    private static final ZoneId FALLBACK_ZONE = ZoneId.of("Europe/Berlin");
 
     private static final String[] BYTE_UNITS = {"B", "KiB", "MiB", "GiB", "TiB"};
 
     private UiFormat() {}
 
+    /**
+     * Time zone used for every rendered timestamp: the user's own, as reported by the browser in
+     * the extended client details Vaadin collects during UI initialization.
+     *
+     * <p>Falls back to {@link #FALLBACK_ZONE} when there is no current UI (background work, tests)
+     * or when the browser has not reported a zone yet, so a cell never renders in the JVM default
+     * zone, which is UTC in the container.
+     */
+    public static ZoneId displayZone() {
+        var ui = UI.getCurrent();
+        if (ui == null) {
+            return FALLBACK_ZONE;
+        }
+        var details = ui.getPage().getExtendedClientDetails();
+        // Before the browser reports its details the placeholder carries no zone id and a zero
+        // offset, which getZoneId() would resolve to UTC.
+        if (details.getTimeZoneId() == null && details.getTimezoneOffset() == 0) {
+            return FALLBACK_ZONE;
+        }
+        return details.getZoneId();
+    }
+
     public static String dateTime(Timestamp value) {
         if (!isSet(value)) {
             return NOT_AVAILABLE;
         }
-        return DATE_TIME.format(instant(value).atZone(DISPLAY_ZONE));
+        return DATE_TIME.format(instant(value).atZone(displayZone()));
     }
 
     /** Time of day for a timestamp; stop times share the service date and do not repeat it. */
@@ -46,7 +69,7 @@ public final class UiFormat {
         if (!isSet(value)) {
             return NOT_AVAILABLE;
         }
-        return TIME_OF_DAY.format(instant(value).atZone(DISPLAY_ZONE));
+        return TIME_OF_DAY.format(instant(value).atZone(displayZone()));
     }
 
     /**
