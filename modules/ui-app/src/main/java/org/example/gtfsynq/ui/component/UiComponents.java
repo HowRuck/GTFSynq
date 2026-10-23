@@ -36,14 +36,11 @@ public final class UiComponents {
         return link;
     }
 
-    public static Card statCard(String label, String value, String hint) {
+    public static Card statCard(String label, String value) {
         var card = new Card();
         card.setWidth("14rem");
         card.setTitle(label);
         card.add(new H3(value));
-        if (hint != null) {
-            card.addToFooter(new Span(hint));
-        }
         return card;
     }
 

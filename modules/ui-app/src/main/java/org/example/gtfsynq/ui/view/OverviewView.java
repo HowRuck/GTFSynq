@@ -81,21 +81,12 @@ public class OverviewView extends VerticalLayout implements HasDynamicTitle {
             String liveTripUpdates,
             String liveStopTimeUpdates) {
         return new Component[] {
-            UiComponents.statCard(
-                    getTranslation("overview.stats.staticFeeds"),
-                    staticFeeds,
-                    getTranslation("overview.hint.currentRevisions")),
-            UiComponents.statCard(getTranslation("overview.stats.routes"), routes, null),
-            UiComponents.statCard(getTranslation("overview.stats.stops"), stops, null),
-            UiComponents.statCard(getTranslation("overview.stats.trips"), trips, null),
-            UiComponents.statCard(
-                    getTranslation("overview.stats.liveTripUpdates"),
-                    liveTripUpdates,
-                    getTranslation("overview.hint.hotTable")),
-            UiComponents.statCard(
-                    getTranslation("overview.stats.liveStopTimeUpdates"),
-                    liveStopTimeUpdates,
-                    getTranslation("overview.hint.hotTable"))
+            UiComponents.statCard(getTranslation("overview.stats.staticFeeds"), staticFeeds),
+            UiComponents.statCard(getTranslation("overview.stats.routes"), routes),
+            UiComponents.statCard(getTranslation("overview.stats.stops"), stops),
+            UiComponents.statCard(getTranslation("overview.stats.trips"), trips),
+            UiComponents.statCard(getTranslation("overview.stats.liveTripUpdates"), liveTripUpdates),
+            UiComponents.statCard(getTranslation("overview.stats.liveStopTimeUpdates"), liveStopTimeUpdates)
         };
     }
 }
