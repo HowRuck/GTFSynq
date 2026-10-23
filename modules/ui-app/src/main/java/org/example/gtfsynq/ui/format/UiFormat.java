@@ -11,6 +11,13 @@ public final class UiFormat {
 
     private static final String DASH = "—";
 
+    /**
+     * Longest identifier shown in a grid cell; feed ids such as {@code
+     * BRA:ServiceJourney:6228_260630061449169_1060} would otherwise stretch their column across the
+     * table.
+     */
+    private static final int MAX_ID_LENGTH = 32;
+
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private static final DateTimeFormatter TIME_OF_DAY = DateTimeFormatter.ofPattern("HH:mm:ss");
@@ -95,6 +102,20 @@ public final class UiFormat {
 
     public static String shortHash(String value) {
         return value == null || value.isBlank() ? DASH : value.substring(0, Math.min(12, value.length())) + "…";
+    }
+
+    /**
+     * Shortens an identifier to {@link #MAX_ID_LENGTH} characters so one long id cannot widen its
+     * column, marking the cut with an ellipsis. Callers keep the full value in the cell tooltip.
+     */
+    public static String elideId(String value) {
+        if (value == null || value.isBlank()) {
+            return DASH;
+        }
+        if (value.length() <= MAX_ID_LENGTH) {
+            return value;
+        }
+        return value.substring(0, MAX_ID_LENGTH - 1) + "…";
     }
 
     public static String coordinate(double value) {

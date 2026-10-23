@@ -205,10 +205,20 @@ public final class Columns {
 
     private static Component liveLabel(TreeGrid<LiveUpdateRow> grid, LiveUpdateRow row) {
         return switch (row) {
-            case TripUpdateRow trip -> new Span(UiFormat.text(tripName(trip.update())));
-            case StopTimeUpdateRow stop -> new Span(UiFormat.text(stopId(stop.update())));
+            case TripUpdateRow trip -> label(tripName(trip.update()));
+            case StopTimeUpdateRow stop -> label(stopId(stop.update()));
             case LoadingRow ignored -> loadingRow(grid);
         };
+    }
+
+    /**
+     * Label cell that keeps the column narrow: long ids are shortened, with the full value available
+     * as a tooltip on hover.
+     */
+    private static Span label(String value) {
+        var span = new Span(UiFormat.elideId(value));
+        span.setTitle(UiFormat.text(value));
+        return span;
     }
 
     /**
