@@ -294,8 +294,12 @@ The Vaadin Flow web console (see [Web Console](#web-console)):
 - an expandable live tree: trip updates load lazily and expand to their stop time
   updates (with a progress-bar loading row while they fetch), refreshed every
   minute through server push
+<<<<<<< HEAD
 - English translations via Vaadin I18N, Aura theme with the Inter font and an
   orange accent palette
+=======
+- English translations via Vaadin I18N, Aura theme with the Geist font
+>>>>>>> 5d3f5db07c3a9a750a269c4604ab43e7e1710106
 - no database access and no REST calls — it is a pure gRPC client of `api-app`
 
 ## Runtime Flow

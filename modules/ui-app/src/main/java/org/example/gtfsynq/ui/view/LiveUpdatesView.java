@@ -36,7 +36,14 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
         setSizeFull();
         add(
                 PageHeader.create(
+<<<<<<< HEAD
                         getTranslation("page.live.title"), getTranslation("page.live.subtitle"), feed, refresh),
+=======
+                        getTranslation("page.live.title"),
+                        getTranslation("page.live.subtitle"),
+                        feed,
+                        refresh),
+>>>>>>> 5d3f5db07c3a9a750a269c4604ab43e7e1710106
                 table);
         setFlexGrow(1, table);
     }
