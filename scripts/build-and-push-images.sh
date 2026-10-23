@@ -6,6 +6,11 @@ cd "$repo_root"
 
 apps=(api-app ingest-app store-app)
 
+echo "Building and pushing JVM image for ui-app"
+# The Vaadin console is JVM-only (no native image).
+./gradlew ":ui-app:imageBuild" \
+  -Dquarkus.container-image.push=true
+
 for app in "${apps[@]}"; do
   echo "Building and pushing JVM image for ${app}"
   ./gradlew ":${app}:imageBuild" \

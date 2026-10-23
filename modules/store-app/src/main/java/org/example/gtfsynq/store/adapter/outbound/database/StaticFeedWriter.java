@@ -349,15 +349,21 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
                     object_key,
                     source_url,
                     size_bytes,
+                    route_count,
+                    stop_count,
+                    trip_count,
                     ingested_at,
                     loaded_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
                 ON CONFLICT (feed_id) DO UPDATE SET
                     sha256 = EXCLUDED.sha256,
                     bucket = EXCLUDED.bucket,
                     object_key = EXCLUDED.object_key,
                     source_url = EXCLUDED.source_url,
                     size_bytes = EXCLUDED.size_bytes,
+                    route_count = EXCLUDED.route_count,
+                    stop_count = EXCLUDED.stop_count,
+                    trip_count = EXCLUDED.trip_count,
                     ingested_at = EXCLUDED.ingested_at,
                     loaded_at = NOW()
                 """;
@@ -369,7 +375,10 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
             preparedStatement.setString(4, event.getObjectKey());
             preparedStatement.setString(5, emptyToNull(event.getSourceUrl()));
             preparedStatement.setLong(6, event.getSizeBytes());
-            preparedStatement.setTimestamp(7, Timestamp.from(ingestedAt()));
+            preparedStatement.setLong(7, rowsByTable.getOrDefault(ROUTES, 0L));
+            preparedStatement.setLong(8, rowsByTable.getOrDefault(STOPS, 0L));
+            preparedStatement.setLong(9, rowsByTable.getOrDefault(TRIPS, 0L));
+            preparedStatement.setTimestamp(10, Timestamp.from(ingestedAt()));
             preparedStatement.executeUpdate();
         }
     }

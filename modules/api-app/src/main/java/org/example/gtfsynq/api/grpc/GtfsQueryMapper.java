@@ -1,0 +1,166 @@
+package org.example.gtfsynq.api.grpc;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.util.function.Consumer;
+import org.example.gtfsynq.api.dto.OverviewDto;
+import org.example.gtfsynq.api.dto.PageResponse;
+import org.example.gtfsynq.api.dto.RouteDto;
+import org.example.gtfsynq.api.dto.StaticFeedDto;
+import org.example.gtfsynq.api.dto.StopDto;
+import org.example.gtfsynq.api.dto.TripDto;
+import org.example.gtfsynq.api.dto.TripUpdateDto;
+import org.example.gtfsynq.shared.protocol.query.OverviewReply;
+import org.example.gtfsynq.shared.protocol.query.PageInfo;
+import org.example.gtfsynq.shared.protocol.query.Route;
+import org.example.gtfsynq.shared.protocol.query.RoutesReply;
+import org.example.gtfsynq.shared.protocol.query.StaticFeed;
+import org.example.gtfsynq.shared.protocol.query.StaticFeedsReply;
+import org.example.gtfsynq.shared.protocol.query.Stop;
+import org.example.gtfsynq.shared.protocol.query.StopsReply;
+import org.example.gtfsynq.shared.protocol.query.Trip;
+import org.example.gtfsynq.shared.protocol.query.TripUpdate;
+import org.example.gtfsynq.shared.protocol.query.TripUpdatesReply;
+import org.example.gtfsynq.shared.protocol.query.TripsReply;
+
+/** Maps the read model returned by {@code GtfsQueryRepository} onto the gRPC contract. */
+final class GtfsQueryMapper {
+
+    private GtfsQueryMapper() {}
+
+    static OverviewReply toReply(OverviewDto dto) {
+        return OverviewReply.newBuilder()
+                .setStaticFeeds(dto.staticFeeds())
+                .setRoutes(dto.routes())
+                .setStops(dto.stops())
+                .setTrips(dto.trips())
+                .setLiveTripUpdates(dto.liveTripUpdates())
+                .setLiveStopTimeUpdates(dto.liveStopTimeUpdates())
+                .build();
+    }
+
+    static StaticFeedsReply staticFeedsReply(PageResponse<StaticFeedDto> page) {
+        var reply = StaticFeedsReply.newBuilder().setPage(pageInfo(page));
+        for (var feed : page.items()) {
+            var item = StaticFeed.newBuilder()
+                    .setFeedId(feed.feedId())
+                    .setSha256(feed.sha256())
+                    .setBucket(feed.bucket())
+                    .setObjectKey(feed.objectKey())
+                    .setSizeBytes(feed.sizeBytes())
+                    .setIngestedAt(timestamp(feed.ingestedAt()))
+                    .setLoadedAt(timestamp(feed.loadedAt()));
+            setIfPresent(feed.sourceUrl(), item::setSourceUrl);
+            reply.addItems(item);
+        }
+        return reply.build();
+    }
+
+    static RoutesReply routesReply(PageResponse<RouteDto> page) {
+        var reply = RoutesReply.newBuilder().setPage(pageInfo(page));
+        for (var route : page.items()) {
+            var item = Route.newBuilder()
+                    .setFeedId(route.feedId())
+                    .setRouteId(route.routeId())
+                    .setRouteType(route.routeType());
+            setIfPresent(route.shortName(), item::setShortName);
+            setIfPresent(route.longName(), item::setLongName);
+            setIfPresent(route.color(), item::setColor);
+            setIfPresent(route.textColor(), item::setTextColor);
+            reply.addItems(item);
+        }
+        return reply.build();
+    }
+
+    static StopsReply stopsReply(PageResponse<StopDto> page) {
+        var reply = StopsReply.newBuilder().setPage(pageInfo(page));
+        for (var stop : page.items()) {
+            var item = Stop.newBuilder()
+                    .setFeedId(stop.feedId())
+                    .setStopId(stop.stopId())
+                    .setStopName(stop.stopName());
+            if (stop.lat() != null) {
+                item.setLat(stop.lat());
+            }
+            if (stop.lon() != null) {
+                item.setLon(stop.lon());
+            }
+            if (stop.locationType() != null) {
+                item.setLocationType(stop.locationType());
+            }
+            setIfPresent(stop.parentStation(), item::setParentStation);
+            reply.addItems(item);
+        }
+        return reply.build();
+    }
+
+    static TripsReply tripsReply(PageResponse<TripDto> page) {
+        var reply = TripsReply.newBuilder().setPage(pageInfo(page));
+        for (var trip : page.items()) {
+            var item = Trip.newBuilder()
+                    .setFeedId(trip.feedId())
+                    .setTripId(trip.tripId())
+                    .setRouteId(trip.routeId())
+                    .setServiceId(trip.serviceId());
+            if (trip.directionId() != null) {
+                item.setDirectionId(trip.directionId());
+            }
+            reply.addItems(item);
+        }
+        return reply.build();
+    }
+
+    static TripUpdatesReply tripUpdatesReply(PageResponse<TripUpdateDto> page) {
+        var reply = TripUpdatesReply.newBuilder().setPage(pageInfo(page));
+        for (var update : page.items()) {
+            var item = TripUpdate.newBuilder()
+                    .setTripUpdateId(update.tripUpdateId())
+                    .setFeedId(update.feedId())
+                    .setFeedTs(timestamp(update.feedTs()))
+                    .setLastSeenAt(timestamp(update.lastSeenAt()));
+            setIfPresent(update.entityId(), item::setEntityId);
+            setIfPresent(update.tripId(), item::setTripId);
+            setIfPresent(update.routeId(), item::setRouteId);
+            setIfPresent(timeText(update.startDate()), item::setStartDate);
+            setIfPresent(timeText(update.startTime()), item::setStartTime);
+            reply.addItems(item);
+        }
+        return reply.build();
+    }
+
+    private static PageInfo pageInfo(PageResponse<?> page) {
+        return PageInfo.newBuilder()
+                .setPage(page.page())
+                .setSize(page.size())
+                .setTotal(page.total())
+                .setTotalPages(page.totalPages())
+                .build();
+    }
+
+    private static com.google.protobuf.Timestamp timestamp(OffsetDateTime value) {
+        if (value == null) {
+            return com.google.protobuf.Timestamp.getDefaultInstance();
+        }
+        return com.google.protobuf.Timestamp.newBuilder()
+                .setSeconds(value.toEpochSecond())
+                .setNanos(value.getNano())
+                .build();
+    }
+
+    private static String timeText(LocalDate value) {
+        return value == null ? null : value.toString();
+    }
+
+    private static String timeText(LocalTime value) {
+        return value == null
+                ? null
+                : String.format("%02d:%02d:%02d", value.getHour(), value.getMinute(), value.getSecond());
+    }
+
+    private static void setIfPresent(String value, Consumer<String> setter) {
+        if (value != null) {
+            setter.accept(value);
+        }
+    }
+}

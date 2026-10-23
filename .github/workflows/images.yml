@@ -25,7 +25,7 @@ jobs:
     runs-on: avrea-ubuntu-latest-4-vcpu
     strategy:
       matrix:
-        app: [api-app, ingest-app, store-app]
+        app: [api-app, ingest-app, store-app, ui-app]
     steps:
       - name: Checkout
         uses: actions/checkout@v7

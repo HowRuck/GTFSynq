@@ -1,0 +1,183 @@
+syntax = "proto3";
+
+package gtfsynq.query;
+
+import "google/protobuf/timestamp.proto";
+
+option java_package = "org.example.gtfsynq.shared.protocol.query";
+option java_multiple_files = true;
+option java_outer_classname = "GtfsQueryProtocol";
+
+// Read-only query API used by the Vaadin console.
+//
+// The backend (api-app) owns the database access; the UI (ui-app) is a pure
+// client of this service. The REST resources in api-app expose the same data
+// for external consumers, but the console never talks HTTP.
+service GtfsQueryService {
+  // Totals shown on the landing page.
+  rpc GetOverview(OverviewRequest) returns (OverviewReply);
+
+  // Feed identifiers present in the static or realtime tables.
+  rpc ListFeedIds(FeedIdsRequest) returns (FeedIdsReply);
+
+  // One current revision per feed.
+  rpc ListStaticFeeds(StaticFeedsRequest) returns (StaticFeedsReply);
+
+  // Static GTFS routes.
+  rpc ListRoutes(RoutesRequest) returns (RoutesReply);
+
+  // Static GTFS stops and stations.
+  rpc ListStops(StopsRequest) returns (StopsReply);
+
+  // Static GTFS trips.
+  rpc ListTrips(TripsRequest) returns (TripsReply);
+
+  // Live trip updates from the hot table.
+  rpc ListTripUpdates(TripUpdatesRequest) returns (TripUpdatesReply);
+}
+
+message OverviewRequest {}
+
+message OverviewReply {
+  int64 static_feeds = 1;
+  int64 routes = 2;
+  int64 stops = 3;
+  int64 trips = 4;
+  int64 live_trip_updates = 5;
+  int64 live_stop_time_updates = 6;
+}
+
+message FeedIdsRequest {}
+
+message FeedIdsReply {
+  repeated string feed_ids = 1;
+}
+
+// Paging metadata mirroring PageResponse from the REST resources.
+// `total` and `total_pages` are -1 when the caller asked to skip counting.
+message PageInfo {
+  int32 page = 1;
+  int32 size = 2;
+  int64 total = 3;
+  int32 total_pages = 4;
+}
+
+message StaticFeed {
+  string feed_id = 1;
+  string sha256 = 2;
+  string bucket = 3;
+  string object_key = 4;
+  optional string source_url = 5;
+  uint64 size_bytes = 6;
+  google.protobuf.Timestamp ingested_at = 7;
+  google.protobuf.Timestamp loaded_at = 8;
+}
+
+message StaticFeedsRequest {
+  int32 page = 1;
+  int32 size = 2;
+}
+
+message StaticFeedsReply {
+  repeated StaticFeed items = 1;
+  PageInfo page = 2;
+}
+
+message Route {
+  string feed_id = 1;
+  string route_id = 2;
+  optional string short_name = 3;
+  optional string long_name = 4;
+  int32 route_type = 5;
+  optional string color = 6;
+  optional string text_color = 7;
+}
+
+message RoutesRequest {
+  optional string feed_id = 1;
+  string search = 2;
+  int32 page = 3;
+  int32 size = 4;
+  string sort = 5;
+  string direction = 6;
+}
+
+message RoutesReply {
+  repeated Route items = 1;
+  PageInfo page = 2;
+}
+
+message Stop {
+  string feed_id = 1;
+  string stop_id = 2;
+  string stop_name = 3;
+  optional double lat = 4;
+  optional double lon = 5;
+  optional int32 location_type = 6;
+  optional string parent_station = 7;
+}
+
+message StopsRequest {
+  optional string feed_id = 1;
+  string search = 2;
+  int32 page = 3;
+  int32 size = 4;
+  string sort = 5;
+  string direction = 6;
+}
+
+message StopsReply {
+  repeated Stop items = 1;
+  PageInfo page = 2;
+}
+
+message Trip {
+  string feed_id = 1;
+  string trip_id = 2;
+  string route_id = 3;
+  string service_id = 4;
+  optional int32 direction_id = 5;
+}
+
+message TripsRequest {
+  optional string feed_id = 1;
+  string search = 2;
+  int32 page = 3;
+  int32 size = 4;
+  string sort = 5;
+  string direction = 6;
+}
+
+message TripsReply {
+  repeated Trip items = 1;
+  PageInfo page = 2;
+}
+
+message TripUpdate {
+  int64 trip_update_id = 1;
+  string feed_id = 2;
+  google.protobuf.Timestamp feed_ts = 3;
+  google.protobuf.Timestamp last_seen_at = 4;
+  optional string entity_id = 5;
+  optional string trip_id = 6;
+  optional string route_id = 7;
+  // ISO-8601 local service date, e.g. "2026-10-23".
+  optional string start_date = 8;
+  // GTFS service time, e.g. "23:15:00". May exceed 24:00:00.
+  optional string start_time = 9;
+}
+
+message TripUpdatesRequest {
+  optional string feed_id = 1;
+  int32 page = 2;
+  int32 size = 3;
+  string sort = 4;
+  string direction = 5;
+  // When false the backend skips the count query and returns total = -1.
+  bool count = 6;
+}
+
+message TripUpdatesReply {
+  repeated TripUpdate items = 1;
+  PageInfo page = 2;
+}

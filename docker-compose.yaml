@@ -27,6 +27,22 @@ services:
         # CMD-SHELL probe is not guaranteed to work. Health is observable from the
         # host via /q/health.
 
+    ui-app:
+        image: ghcr.io/howruck/gtfsynq-ui-app:0.0.1-SNAPSHOT
+        container_name: gtfsynq-ui-app
+        depends_on:
+            api-app:
+                condition: service_started
+        environment:
+            QUARKUS_HTTP_PORT: 8083
+            # The console reads everything from api-app over gRPC. Quarkus 4
+            # serves gRPC on the HTTP port (8080), so no extra port is exposed.
+            GTFS_API_GRPC_HOST: api-app
+            GTFS_API_GRPC_PORT: 8080
+        ports:
+            # Host-only by default, same policy as the API.
+            - "127.0.0.1:8083:8083"
+
     ingest-app:
         image: ghcr.io/howruck/gtfsynq-ingest-app-native:0.0.1-SNAPSHOT
         container_name: gtfsynq-ingest-app

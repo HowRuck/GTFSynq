@@ -15,6 +15,14 @@ plugins {
 dependencyResolutionManagement {
     repositories {
         mavenCentral()
+        // Vaadin prereleases (the UI is built on a 25.4 alpha).
+        maven {
+            name = "vaadinPrereleases"
+            url = uri("https://maven.vaadin.com/vaadin-prereleases")
+            content {
+                includeGroupByRegex("com\\.vaadin.*")
+            }
+        }
     }
 }
 
@@ -34,9 +42,10 @@ enableFeaturePreview("NO_IMPLICIT_LOOKUP_IN_PARENT_PROJECTS")
 
 rootProject.name = "GTFSynq"
 
-include("shared", "ingest-app", "store-app", "api-app")
+include("shared", "ingest-app", "store-app", "api-app", "ui-app")
 
 project(":shared").projectDir = file("modules/shared")
 project(":ingest-app").projectDir = file("modules/ingest-app")
 project(":store-app").projectDir = file("modules/store-app")
 project(":api-app").projectDir = file("modules/api-app")
+project(":ui-app").projectDir = file("modules/ui-app")

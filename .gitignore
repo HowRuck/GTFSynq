@@ -47,3 +47,17 @@ state_dump.bin
 .kotlin
 
 .agents/skills
+
+# Vaadin: the Gradle plugin generates the frontend bundle, the Vite config and
+# the local toolchain on every build. package.json, tsconfig.json and
+# types.d.ts stay in source control, as Vaadin recommends.
+modules/ui-app/src/main/frontend/generated/
+modules/ui-app/src/main/bundles/
+modules/ui-app/frontend/generated/
+modules/ui-app/node_modules/
+modules/ui-app/src/main/frontend/node_modules/
+modules/ui-app/vite.generated.ts
+modules/ui-app/.npmrc
+modules/ui-app/pnpmfile.js
+modules/ui-app/.vite/
+modules/ui-app/.vaadin/

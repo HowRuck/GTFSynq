@@ -33,7 +33,8 @@ It is built with **Gradle**, runs on **Java 25**, and is designed to work with *
 
 | Component | Technology | Purpose |
 |---|---|---|
-| Backend | Quarkus 3.40 (LTS) | Application framework |
+| Backend | Quarkus 4.0 (beta) | Application framework for the backend apps |
+| Console | Vaadin Flow 25.4 + Quarkus 3.33 | Server-side web UI (the UI module pins its own Quarkus version) |
 | Build tool | Gradle | Build, test, and packaging |
 | Language | Java 25 | Application language |
 | Streaming | Apache Kafka | Event streaming and transport |
@@ -87,25 +88,38 @@ java -jar modules/api-app/build/quarkus-app/quarkus-run.jar
 
 Each app listens on its own port:
 
-- `api-app`: `http://localhost:8080` (health: `/q/health`)
+- `api-app`: `http://localhost:8080` (health: `/q/health`; gRPC shares this port)
 - `ingest-app`: `http://localhost:8081`
 - `store-app`: `http://localhost:8082`
+- `ui-app`: `http://localhost:8083` (health: `/q/health`)
+
+The Vaadin console lives in `modules/ui-app`. It is a pure gRPC client: it
+reads everything from `api-app` on port `8080` (Quarkus 4 serves gRPC from the
+HTTP server) and never calls the REST API. Run it in dev mode next to the API:
+
+```bash
+./gradlew :api-app:quarkusDev      # terminal 1
+./gradlew :ui-app:quarkusDev       # terminal 2 → http://localhost:8083
+```
+
+Point it at a different backend with `GTFS_API_GRPC_HOST` and
+`GTFS_API_GRPC_PORT`.
 
 ## Running the Full Stack with Docker
 
 The repository includes a Docker Compose setup that starts:
 
-- `api-app` (port 8080)
+- `api-app` (port 8080, REST and gRPC)
+- `ui-app` (port 8083) — Vaadin console; reaches `api-app` over gRPC
 - `ingest-app` (port 8081)
 - `store-app` (port 8082)
 - Kafka
 - TimescaleDB
 - S3-compatible object storage for GTFS static feeds (port 9000)
 
-App images are built with the Quarkus Jib extension (no Dockerfile, no Docker
-daemon required), then Compose starts everything from those prebuilt images.
-First create a `.env` with strong secrets (Compose refuses to start without
-them):
+All images are built with the Quarkus Jib extension (no Dockerfile, no Docker
+daemon required). Compose starts everything from the resulting images. First
+create a `.env` with strong secrets (Compose refuses to start without them):
 
 ```bash
 cp .env.template .env
@@ -113,21 +127,23 @@ cp .env.template .env
 # generate each one with: openssl rand -base64 32
 openssl rand -base64 32
 
-./gradlew :api-app:imageBuild :ingest-app:imageBuild :store-app:imageBuild
+./gradlew :api-app:imageBuild :ingest-app:imageBuild :store-app:imageBuild :ui-app:imageBuild
 docker compose up -d
 ```
 
 All published ports bind to `127.0.0.1` only. The apps are reachable locally on:
 
 ```bash
-http://localhost:8080 # api-app
+http://localhost:8083 # Vaadin console
+http://localhost:8080 # api-app (REST + health)
 http://localhost:8081 # ingest-app
 http://localhost:8082 # store-app
 ```
 
 To expose a service to the internet, put a reverse proxy (Pangolin/Newt, Caddy,
 nginx) in front of it or use an SSH tunnel — never republish these ports on
-`0.0.0.0`.
+`0.0.0.0`. Point that proxy at the console on port 8083; the console keeps all
+data access server-side over gRPC, so the browser only talks to `ui-app`.
 
 ### Stopping the stack
 
@@ -170,7 +186,8 @@ GTFSynq/
 │   ├── shared/
 │   ├── ingest-app/
 │   ├── store-app/
-│   └── api-app/
+│   ├── api-app/
+│   └── ui-app/
 ├── monitoring/
 └── README.md
 ```
@@ -185,7 +202,8 @@ its Flyway migrations in `modules/store-app/src/main/resources/db/migration`.
 Contains code reused by multiple apps:
 
 - GTFS domain models and DTOs
-- protobuf-generated types
+- protobuf-generated types, including the `GtfsQueryService` gRPC contract
+  (`src/main/proto/gtfs-query.proto`) shared by `api-app` and `ui-app`
 - message envelope encoding/decoding
 - hashing utilities
 - off-heap state store utilities
@@ -213,11 +231,21 @@ Responsible for getting data out of Kafka and into PostgreSQL/TimescaleDB:
 - JDBC-based repository writes
 
 ### `modules/api-app`
-Reserved for the REST API layer:
+The read API used by the console and by external clients:
 
 - Quarkus application
 - PostgreSQL-backed read access
-- HTTP endpoints and query models
+- REST resources and query models on port `8080`
+- `GtfsQueryService` gRPC service (served from the HTTP port), the console's only data source
+
+### `modules/ui-app`
+The Vaadin Flow console that replaced the former Vue web UI:
+
+- server-side views (`Overview`, `Static feeds`, `Routes`, `Stops`, `Trips`,
+  `Live updates`) rendered by Vaadin
+- explicit, page-based tables backed by unary `GtfsQueryService` calls
+- Aura theme, server push and a 10-second poll on the live view
+- no database access and no REST calls — it is a pure gRPC client of `api-app`
 
 ## Runtime Flow
 
@@ -238,6 +266,12 @@ GTFS-RT sources                        GTFS static (CSV) sources
                         PostgreSQL / TimescaleDB
                                 ↓
                               api-app
+                    REST + gRPC :8080
+                         │
+                  ┌──────┴──────────┐
+                  │                 │
+            external clients    ui-app :8083
+                                  (Vaadin)
 ```
 
 ## Static Feed Ingestion
@@ -362,6 +396,8 @@ Important defaults:
 - Buffered sink flush interval: `10s`, hot data retention `1h`
 - Management endpoints: `/q/health` (the apps never start Dev
   Services containers; external infrastructure comes from Compose)
+- Console backend: `GTFS_API_GRPC_HOST` (default `localhost`) and
+  `GTFS_API_GRPC_PORT` (default `8080`, the api-app HTTP port)
 
 When running through Docker Compose, these values are overridden with container hostnames.
 
@@ -416,21 +452,22 @@ also collected into the GitHub Actions job summary by `gradle/actions/setup-grad
 
 ## Container Image Build
 
-Container images are built with the Quarkus Jib extension — no Dockerfile and no
+All images are built with the Quarkus Jib extension — no Dockerfile and no
 Docker daemon needed:
 
 ```bash
-# All three apps (JVM)
-./gradlew :api-app:imageBuild :ingest-app:imageBuild :store-app:imageBuild
+# Every app (JVM)
+./gradlew :api-app:imageBuild :ingest-app:imageBuild :store-app:imageBuild :ui-app:imageBuild
 
 # Or a single app
 ./gradlew :api-app:imageBuild
 ```
 
-This produces local images named `ghcr.io/howruck/gtfsynq-<app>:0.0.1-SNAPSHOT`
-(e.g. `ghcr.io/howruck/gtfsynq-api-app:0.0.1-SNAPSHOT`), which `docker-compose.yaml`
-references directly. Registry, group, name and tag are configured per app in
-`application.yaml` and can be overridden on the command line, e.g.:
+The Gradle commands produce local images named
+`ghcr.io/howruck/gtfsynq-<app>:0.0.1-SNAPSHOT` (e.g.
+`ghcr.io/howruck/gtfsynq-api-app:0.0.1-SNAPSHOT`), and `docker-compose.yaml`
+references all of them directly. Registry, group, name and tag are configured in
+each app's `application.yaml` and can be overridden on the command line, e.g.:
 
 ```bash
 ./gradlew :api-app:imageBuild -Dquarkus.container-image.push=true

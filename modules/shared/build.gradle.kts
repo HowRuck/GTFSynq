@@ -6,6 +6,8 @@ plugins {
 
 dependencies {
     api(libs.protobuf.java)
+    api(libs.grpc.stub)
+    api(libs.grpc.protobuf)
     api(libs.javatuples)
     api(libs.yavi)
     api(libs.fastcsv)
@@ -30,5 +32,19 @@ dependencies {
 protobuf {
     protoc {
         artifact = "com.google.protobuf:protoc:${libs.versions.protobuf.get()}"
+    }
+    plugins {
+        // Generates the GtfsQueryService client/server stubs used by api-app
+        // (server) and ui-app (client).
+        create("grpc") {
+            artifact = "io.grpc:protoc-gen-grpc-java:${libs.versions.grpc.get()}"
+        }
+    }
+    generateProtoTasks {
+        all().configureEach {
+            plugins {
+                create("grpc")
+            }
+        }
     }
 }

@@ -9,7 +9,8 @@ dependencies {
 
     implementation(libs.quarkus.config.yaml)
     implementation(libs.quarkus.rest)
-    implementation(libs.quarkus.hibernate.orm)
+    implementation(libs.quarkus.rest.jackson)
+    implementation(libs.quarkus.grpc)
     implementation(libs.quarkus.jdbc.postgresql)
     implementation(libs.quarkus.smallrye.health)
     implementation(libs.quarkus.opentelemetry)

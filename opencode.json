@@ -1,0 +1,15 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "vaadin": {
+        "type": "remote",
+        "url": "https://mcp.vaadin.com/docs"
+      },
+      "vaadin-directory": {
+        "type": "remote",
+        "url": "https://vaadin.com/directory/mcp"
+      }
+    }
+  }
+}

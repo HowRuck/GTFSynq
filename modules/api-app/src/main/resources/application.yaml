@@ -5,6 +5,9 @@ quarkus:
   http:
     port: 8080
 
+  # Quarkus 4 serves gRPC from the HTTP server, so the console's
+  # GtfsQueryService shares port 8080 with REST. There is no separate gRPC port.
+
   # External infrastructure (TimescaleDB, Kafka, S3) is provided by Compose; never
   # start throwaway Dev Services containers for it.
   devservices:
@@ -17,13 +20,12 @@ quarkus:
     jdbc:
       url: jdbc:postgresql://localhost:5432/gtfsynq
       max-size: 10
+      # Bound a runaway count/search so it cannot pin a pool connection indefinitely.
+      additional-jdbc-properties:
+        options: "-c statement_timeout=15000"
     # Connection pool metrics (agroal_*) for the Grafana dashboards.
     metrics:
       enabled: true
-
-  hibernate-orm:
-    schema-management:
-      strategy: validate
 
   # ---- Observability (/q/health) -------------------------------------------
   # Details are always included in the health JSON.

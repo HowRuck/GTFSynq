@@ -1,0 +1,51 @@
+quarkus:
+  application:
+    name: GTFSynq-UI
+    version: 0.0.1-SNAPSHOT
+  http:
+    port: 8083
+
+  # The console is a pure gRPC client: it never opens a datasource or calls the
+  # REST API. External infrastructure is provided by Compose.
+  devservices:
+    enabled: false
+
+  # ---- gRPC client ---------------------------------------------------------
+  # Quarkus 4 serves api-app's gRPC service on its HTTP port, not a dedicated
+  # gRPC port.
+  grpc:
+    clients:
+      gtfs-api:
+        host: ${GTFS_API_GRPC_HOST:localhost}
+        port: ${GTFS_API_GRPC_PORT:8080}
+        plain-text: true
+
+  # ---- Observability (/q/health) -------------------------------------------
+  micrometer:
+    binder:
+      http-server:
+        suppress-non-application-uris: false
+
+  otel:
+    logs:
+      enabled: true
+    exporter:
+      otlp:
+        endpoint: http://otel-collector:4317
+        protocol: grpc
+
+  log:
+    console:
+      format: "%d{HH:mm:ss} %-5p traceId=%X{traceId}, spanId=%X{spanId}, sampled=%X{sampled} [%c{1}] (%t) %s%e%n"
+
+  # ---- Container image (Jib) ----------------------------------------------
+  # ./gradlew :ui-app:imageBuild -Dquarkus.container-image.push=true
+  container-image:
+    registry: ghcr.io
+    group: howruck
+    name: gtfsynq-ui-app
+
+# Vaadin installs its own Node/pnpm toolchain for the frontend build.
+vaadin:
+  pnpm:
+    enabled: true
