@@ -3,12 +3,14 @@ package org.example.gtfsynq.api.grpc;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.function.Consumer;
 import org.example.gtfsynq.api.dto.OverviewDto;
 import org.example.gtfsynq.api.dto.PageResponse;
 import org.example.gtfsynq.api.dto.RouteDto;
 import org.example.gtfsynq.api.dto.StaticFeedDto;
 import org.example.gtfsynq.api.dto.StopDto;
+import org.example.gtfsynq.api.dto.StopTimeUpdateDto;
 import org.example.gtfsynq.api.dto.TripDto;
 import org.example.gtfsynq.api.dto.TripUpdateDto;
 import org.example.gtfsynq.shared.protocol.query.OverviewReply;
@@ -18,6 +20,8 @@ import org.example.gtfsynq.shared.protocol.query.RoutesReply;
 import org.example.gtfsynq.shared.protocol.query.StaticFeed;
 import org.example.gtfsynq.shared.protocol.query.StaticFeedsReply;
 import org.example.gtfsynq.shared.protocol.query.Stop;
+import org.example.gtfsynq.shared.protocol.query.StopTimeUpdate;
+import org.example.gtfsynq.shared.protocol.query.StopTimeUpdatesReply;
 import org.example.gtfsynq.shared.protocol.query.StopsReply;
 import org.example.gtfsynq.shared.protocol.query.Trip;
 import org.example.gtfsynq.shared.protocol.query.TripUpdate;
@@ -118,12 +122,36 @@ final class GtfsQueryMapper {
                     .setTripUpdateId(update.tripUpdateId())
                     .setFeedId(update.feedId())
                     .setFeedTs(timestamp(update.feedTs()))
-                    .setLastSeenAt(timestamp(update.lastSeenAt()));
+                    .setLastSeenAt(timestamp(update.lastSeenAt()))
+                    .setStopTimeUpdateCount(update.stopTimeUpdateCount());
             setIfPresent(update.entityId(), item::setEntityId);
             setIfPresent(update.tripId(), item::setTripId);
             setIfPresent(update.routeId(), item::setRouteId);
             setIfPresent(timeText(update.startDate()), item::setStartDate);
             setIfPresent(timeText(update.startTime()), item::setStartTime);
+            reply.addItems(item);
+        }
+        return reply.build();
+    }
+
+    static StopTimeUpdatesReply stopTimeUpdatesReply(List<StopTimeUpdateDto> stopTimes) {
+        var reply = StopTimeUpdatesReply.newBuilder();
+        for (var stopTime : stopTimes) {
+            var item = StopTimeUpdate.newBuilder()
+                    .setTripUpdateId(stopTime.tripUpdateId())
+                    .setStopSequence(stopTime.stopSequence());
+            setIfPresent(stopTime.stopId(), item::setStopId);
+            setIfPresent(stopTime.arrivalTime(), arrival -> item.setArrivalTime(timestamp(arrival)));
+            setIfPresent(stopTime.arrivalDelay(), item::setArrivalDelay);
+            setIfPresent(
+                    stopTime.scheduledArrivalTime(), scheduled -> item.setScheduledArrivalTime(timestamp(scheduled)));
+            setIfPresent(stopTime.departureTime(), departure -> item.setDepartureTime(timestamp(departure)));
+            setIfPresent(stopTime.departureDelay(), item::setDepartureDelay);
+            setIfPresent(
+                    stopTime.scheduledDepartureTime(),
+                    scheduled -> item.setScheduledDepartureTime(timestamp(scheduled)));
+            setIfPresent(stopTime.scheduleRelationship(), item::setScheduleRelationship);
+            setIfPresent(stopTime.assignedStopId(), item::setAssignedStopId);
             reply.addItems(item);
         }
         return reply.build();
@@ -158,7 +186,7 @@ final class GtfsQueryMapper {
                 : String.format("%02d:%02d:%02d", value.getHour(), value.getMinute(), value.getSecond());
     }
 
-    private static void setIfPresent(String value, Consumer<String> setter) {
+    private static <T> void setIfPresent(T value, Consumer<T> setter) {
         if (value != null) {
             setter.accept(value);
         }

@@ -18,6 +18,8 @@ import org.example.gtfsynq.shared.protocol.query.RoutesRequest;
 import org.example.gtfsynq.shared.protocol.query.StaticFeed;
 import org.example.gtfsynq.shared.protocol.query.StaticFeedsRequest;
 import org.example.gtfsynq.shared.protocol.query.Stop;
+import org.example.gtfsynq.shared.protocol.query.StopTimeUpdate;
+import org.example.gtfsynq.shared.protocol.query.StopTimeUpdatesRequest;
 import org.example.gtfsynq.shared.protocol.query.StopsRequest;
 import org.example.gtfsynq.shared.protocol.query.Trip;
 import org.example.gtfsynq.shared.protocol.query.TripUpdate;
@@ -119,6 +121,14 @@ public class GtfsQueryClient {
             var reply = stub().listTripUpdates(request.build());
             return page(reply.getItemsList(), reply.getPage());
         });
+    }
+
+    /** All current stop time updates of one live trip, ordered by stop sequence. */
+    public List<StopTimeUpdate> stopTimeUpdates(long tripUpdateId) {
+        var request = StopTimeUpdatesRequest.newBuilder()
+                .setTripUpdateId(tripUpdateId)
+                .build();
+        return call(() -> stub().listStopTimeUpdates(request).getItemsList());
     }
 
     private GtfsQueryServiceGrpc.GtfsQueryServiceBlockingStub stub() {

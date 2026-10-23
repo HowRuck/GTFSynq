@@ -34,6 +34,9 @@ service GtfsQueryService {
 
   // Live trip updates from the hot table.
   rpc ListTripUpdates(TripUpdatesRequest) returns (TripUpdatesReply);
+
+  // The stop time updates of one trip update, ordered by stop sequence.
+  rpc ListStopTimeUpdates(StopTimeUpdatesRequest) returns (StopTimeUpdatesReply);
 }
 
 message OverviewRequest {}
@@ -165,6 +168,8 @@ message TripUpdate {
   optional string start_date = 8;
   // GTFS service time, e.g. "23:15:00". May exceed 24:00:00.
   optional string start_time = 9;
+  // Number of rows in rt_stop_time_updates_hot, used to decide whether the trip is expandable.
+  int32 stop_time_update_count = 10;
 }
 
 message TripUpdatesRequest {
@@ -180,4 +185,30 @@ message TripUpdatesRequest {
 message TripUpdatesReply {
   repeated TripUpdate items = 1;
   PageInfo page = 2;
+}
+
+message StopTimeUpdate {
+  int64 trip_update_id = 1;
+  int32 stop_sequence = 2;
+  optional string stop_id = 3;
+  // Predicted arrival and departure; unset when the feed only sends a delay.
+  google.protobuf.Timestamp arrival_time = 4;
+  optional int32 arrival_delay = 5;
+  google.protobuf.Timestamp scheduled_arrival_time = 6;
+  google.protobuf.Timestamp departure_time = 7;
+  optional int32 departure_delay = 8;
+  google.protobuf.Timestamp scheduled_departure_time = 9;
+  // SCHEDULED, SKIPPED, NO_DATA, UNSCHEDULED or ADDED.
+  optional string schedule_relationship = 10;
+  optional string assigned_stop_id = 11;
+}
+
+message StopTimeUpdatesRequest {
+  int64 trip_update_id = 1;
+}
+
+// One trip has a bounded number of stops, so the reply carries every stop time update for the
+// trip instead of a page.
+message StopTimeUpdatesReply {
+  repeated StopTimeUpdate items = 1;
 }

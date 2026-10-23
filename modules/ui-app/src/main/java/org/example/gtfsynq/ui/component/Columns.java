@@ -1,11 +1,14 @@
 package org.example.gtfsynq.ui.component;
 
+import com.vaadin.flow.component.grid.ColumnTextAlign;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.treegrid.TreeGrid;
 import org.example.gtfsynq.shared.protocol.query.Route;
 import org.example.gtfsynq.shared.protocol.query.StaticFeed;
 import org.example.gtfsynq.shared.protocol.query.Stop;
+import org.example.gtfsynq.shared.protocol.query.StopTimeUpdate;
 import org.example.gtfsynq.shared.protocol.query.Trip;
-import org.example.gtfsynq.shared.protocol.query.TripUpdate;
 import org.example.gtfsynq.ui.format.UiFormat;
 
 /**
@@ -139,34 +142,127 @@ public final class Columns {
                 .setWidth("6rem");
     }
 
-    public static void tripUpdates(Grid<TripUpdate> grid) {
-        grid.addColumn(TripUpdate::getFeedId)
+    /**
+     * Columns of the live updates tree.
+     *
+     * <p>The hierarchy column doubles as the trip / stop label: a trip row shows its trip id, and
+     * its stop rows are indented below it with their stop id.
+     */
+    public static void liveUpdates(TreeGrid<LiveUpdateRow> grid) {
+        grid.addHierarchyColumn(Columns::liveLabel)
+                .setHeader(grid.getTranslation("column.tripOrStop"))
+                .setKey("tripId")
+                .setSortProperty("tripId")
+                .setSortable(true)
+                .setFlexGrow(2);
+
+        grid.addComponentColumn(row -> row instanceof TripUpdateRow trip
+                        ? UiComponents.badge(trip.update().getFeedId())
+                        : new Span())
                 .setHeader(grid.getTranslation("column.feed"))
                 .setFlexGrow(0)
                 .setWidth("9rem");
-        grid.addColumn(update -> update.hasTripId() ? update.getTripId() : "—")
-                .setHeader(grid.getTranslation("column.tripId"))
-                .setKey("tripId")
-                .setSortProperty("tripId")
-                .setSortable(true);
-        grid.addColumn(update -> update.hasRouteId() ? update.getRouteId() : "—")
+
+        grid.addColumn(row -> row instanceof TripUpdateRow trip
+                        ? UiFormat.text(trip.update().getRouteId())
+                        : "")
                 .setHeader(grid.getTranslation("column.routeId"))
                 .setKey("routeId")
                 .setSortProperty("routeId")
                 .setSortable(true);
-        grid.addColumn(update -> update.hasStartDate() ? update.getStartDate() : "—")
-                .setHeader(grid.getTranslation("column.startDate"));
-        grid.addColumn(update -> UiFormat.time(update.hasStartTime() ? update.getStartTime() : null))
-                .setHeader(grid.getTranslation("column.startTime"));
-        grid.addColumn(update -> UiFormat.dateTime(update.getFeedTs()))
+
+        grid.addColumn(row -> row instanceof TripUpdateRow trip
+                        ? UiFormat.text(trip.update().getStartDate())
+                        : "")
+                .setHeader(grid.getTranslation("column.startDate"))
+                .setFlexGrow(0)
+                .setWidth("7rem");
+
+        grid.addColumn(row -> row instanceof TripUpdateRow trip
+                        ? UiFormat.time(trip.update().getStartTime())
+                        : "")
+                .setHeader(grid.getTranslation("column.startTime"))
+                .setFlexGrow(0)
+                .setWidth("6rem");
+
+        grid.addColumn(row -> row instanceof StopTimeUpdateRow stop
+                        ? String.valueOf(stop.update().getStopSequence())
+                        : "")
+                .setHeader(grid.getTranslation("column.stopSequence"))
+                .setTextAlign(ColumnTextAlign.END)
+                .setFlexGrow(0)
+                .setWidth("6rem");
+
+        grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? eventTime(stop.update(), true) : "")
+                .setHeader(grid.getTranslation("column.arrivalTime"))
+                .setFlexGrow(0)
+                .setWidth("7rem");
+
+        grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? delay(stop.update(), true) : "")
+                .setHeader(grid.getTranslation("column.arrivalDelay"))
+                .setTextAlign(ColumnTextAlign.END)
+                .setFlexGrow(0)
+                .setWidth("7rem");
+
+        grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? eventTime(stop.update(), false) : "")
+                .setHeader(grid.getTranslation("column.departureTime"))
+                .setFlexGrow(0)
+                .setWidth("7rem");
+
+        grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? delay(stop.update(), false) : "")
+                .setHeader(grid.getTranslation("column.departureDelay"))
+                .setTextAlign(ColumnTextAlign.END)
+                .setFlexGrow(0)
+                .setWidth("7rem");
+
+        grid.addColumn(row -> row instanceof TripUpdateRow trip
+                        ? UiFormat.dateTime(trip.update().getFeedTs())
+                        : "")
                 .setHeader(grid.getTranslation("column.feedTimestamp"))
                 .setKey("feedTs")
                 .setSortProperty("feedTs")
                 .setSortable(true);
-        grid.addColumn(update -> UiFormat.dateTime(update.getLastSeenAt()))
+
+        grid.addColumn(row -> row instanceof TripUpdateRow trip
+                        ? UiFormat.dateTime(trip.update().getLastSeenAt())
+                        : "")
                 .setHeader(grid.getTranslation("column.lastSeen"))
                 .setKey("lastSeenAt")
                 .setSortProperty("lastSeenAt")
                 .setSortable(true);
+    }
+
+    private static String liveLabel(LiveUpdateRow row) {
+        return switch (row) {
+            case TripUpdateRow trip -> UiFormat.text(trip.update().getTripId());
+            case StopTimeUpdateRow stop -> UiFormat.text(stopId(stop.update()));
+        };
+    }
+
+    private static String stopId(StopTimeUpdate stop) {
+        if (stop.hasStopId()) {
+            return stop.getStopId();
+        }
+        return stop.hasAssignedStopId() ? stop.getAssignedStopId() : null;
+    }
+
+    private static String eventTime(StopTimeUpdate stop, boolean arrival) {
+        if (arrival) {
+            return UiFormat.eventTime(
+                    stop.getArrivalTime(),
+                    stop.getScheduledArrivalTime(),
+                    stop.hasArrivalDelay() ? stop.getArrivalDelay() : null);
+        }
+        return UiFormat.eventTime(
+                stop.getDepartureTime(),
+                stop.getScheduledDepartureTime(),
+                stop.hasDepartureDelay() ? stop.getDepartureDelay() : null);
+    }
+
+    private static String delay(StopTimeUpdate stop, boolean arrival) {
+        Integer seconds = arrival
+                ? (stop.hasArrivalDelay() ? stop.getArrivalDelay() : null)
+                : (stop.hasDepartureDelay() ? stop.getDepartureDelay() : null);
+        return UiFormat.delay(seconds);
     }
 }

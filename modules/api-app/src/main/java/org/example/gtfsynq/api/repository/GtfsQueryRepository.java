@@ -19,6 +19,7 @@ import org.example.gtfsynq.api.dto.PageResponse;
 import org.example.gtfsynq.api.dto.RouteDto;
 import org.example.gtfsynq.api.dto.StaticFeedDto;
 import org.example.gtfsynq.api.dto.StopDto;
+import org.example.gtfsynq.api.dto.StopTimeUpdateDto;
 import org.example.gtfsynq.api.dto.TripDto;
 import org.example.gtfsynq.api.dto.TripUpdateDto;
 
@@ -272,7 +273,9 @@ public class GtfsQueryRepository {
 
         String select = """
                 SELECT h.trip_update_id, h.feed_id::text AS feed_id, h.feed_ts, h.last_seen_at,
-                       m.entity_id, m.trip_id, m.route_id, m.start_date, m.start_time
+                       m.entity_id, m.trip_id, m.route_id, m.start_date, m.start_time,
+                       (SELECT count(*) FROM rt_stop_time_updates_hot s
+                        WHERE s.trip_update_id = h.trip_update_id) AS stop_time_update_count
                 FROM rt_trip_updates_hot h
                 LEFT JOIN rt_trip_updates_meta m ON m.id = h.trip_update_id
                 """;
@@ -296,8 +299,46 @@ public class GtfsQueryRepository {
                         rs.getString("trip_id"),
                         rs.getString("route_id"),
                         rs.getObject("start_date", LocalDate.class),
-                        rs.getObject("start_time", LocalTime.class)),
+                        rs.getObject("start_time", LocalTime.class),
+                        rs.getInt("stop_time_update_count")),
                 includeTotal);
+    }
+
+    /** Current stop time updates of one live trip, ordered by stop sequence. */
+    public List<StopTimeUpdateDto> liveStopTimeUpdates(long tripUpdateId) {
+        String sql = """
+                SELECT trip_update_id, stop_sequence, stop_id,
+                       arrival_time, arrival_delay, scheduled_arrival_time,
+                       departure_time, departure_delay, scheduled_departure_time,
+                       schedule_relationship::text AS schedule_relationship, assigned_stop_id
+                FROM rt_stop_time_updates_hot
+                WHERE trip_update_id = ?
+                ORDER BY stop_sequence ASC
+                """;
+        try (Connection connection = dataSource.getConnection();
+                PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setLong(1, tripUpdateId);
+            try (ResultSet rs = statement.executeQuery()) {
+                List<StopTimeUpdateDto> items = new ArrayList<>();
+                while (rs.next()) {
+                    items.add(new StopTimeUpdateDto(
+                            rs.getLong("trip_update_id"),
+                            rs.getInt("stop_sequence"),
+                            rs.getString("stop_id"),
+                            offsetDateTime(rs, "arrival_time"),
+                            nullableInt(rs, "arrival_delay"),
+                            offsetDateTime(rs, "scheduled_arrival_time"),
+                            offsetDateTime(rs, "departure_time"),
+                            nullableInt(rs, "departure_delay"),
+                            offsetDateTime(rs, "scheduled_departure_time"),
+                            rs.getString("schedule_relationship"),
+                            rs.getString("assigned_stop_id")));
+                }
+                return items;
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to query GTFS data", e);
+        }
     }
 
     private <T> PageResponse<T> page(

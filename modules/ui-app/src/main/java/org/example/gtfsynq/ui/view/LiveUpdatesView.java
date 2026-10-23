@@ -10,12 +10,10 @@ import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.shared.Registration;
 import jakarta.inject.Inject;
-import org.example.gtfsynq.shared.protocol.query.TripUpdate;
 import org.example.gtfsynq.ui.MainLayout;
 import org.example.gtfsynq.ui.client.GtfsQueryClient;
-import org.example.gtfsynq.ui.component.Columns;
 import org.example.gtfsynq.ui.component.Filters;
-import org.example.gtfsynq.ui.component.LazyGrid;
+import org.example.gtfsynq.ui.component.LiveUpdatesGrid;
 import org.example.gtfsynq.ui.component.PageHeader;
 
 /** Live trip updates, refreshed while the view is attached. */
@@ -24,12 +22,12 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
 
     private static final int POLL_INTERVAL_MS = 10_000;
 
-    private final LazyGrid<TripUpdate> table;
+    private final LiveUpdatesGrid table;
     private Registration pollRegistration;
 
     @Inject
     public LiveUpdatesView(GtfsQueryClient client) {
-        table = new LazyGrid<>(client::tripUpdates, "lastSeenAt", SortDirection.DESCENDING, Columns::tripUpdates);
+        table = new LiveUpdatesGrid(client, "lastSeenAt", SortDirection.DESCENDING);
 
         var feed = Filters.feed(client, getTranslation("filter.feed.placeholder"), table::setFeedId);
         var refresh = new Button(getTranslation("live.refresh"), event -> table.refresh());

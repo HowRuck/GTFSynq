@@ -4,10 +4,13 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
+import java.util.List;
 import org.example.gtfsynq.api.dto.PageResponse;
+import org.example.gtfsynq.api.dto.StopTimeUpdateDto;
 import org.example.gtfsynq.api.dto.TripUpdateDto;
 import org.example.gtfsynq.api.repository.GtfsQueryRepository;
 
@@ -32,5 +35,11 @@ public class RealtimeResource {
             @QueryParam("dir") @DefaultValue("desc") String direction,
             @QueryParam("count") @DefaultValue("true") boolean count) {
         return repository.liveTripUpdates(feedId, page, size, sort, direction, count);
+    }
+
+    @GET
+    @Path("/trip-updates/{tripUpdateId}/stop-time-updates")
+    public List<StopTimeUpdateDto> stopTimeUpdates(@PathParam("tripUpdateId") long tripUpdateId) {
+        return repository.liveStopTimeUpdates(tripUpdateId);
     }
 }

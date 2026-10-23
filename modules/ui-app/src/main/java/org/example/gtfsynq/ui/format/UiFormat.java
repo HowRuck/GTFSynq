@@ -13,16 +13,61 @@ public final class UiFormat {
 
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
+    private static final DateTimeFormatter TIME_OF_DAY = DateTimeFormatter.ofPattern("HH:mm:ss");
+
     private static final String[] BYTE_UNITS = {"B", "KiB", "MiB", "GiB", "TiB"};
 
     private UiFormat() {}
 
     public static String dateTime(Timestamp value) {
-        if (value == null || (value.getSeconds() == 0 && value.getNanos() == 0)) {
+        if (!isSet(value)) {
             return DASH;
         }
-        return DATE_TIME.format(
-                Instant.ofEpochSecond(value.getSeconds(), value.getNanos()).atZone(ZoneId.systemDefault()));
+        return DATE_TIME.format(instant(value).atZone(ZoneId.systemDefault()));
+    }
+
+    /** Time of day for a timestamp; stop times share the service date and do not repeat it. */
+    public static String time(Timestamp value) {
+        if (!isSet(value)) {
+            return DASH;
+        }
+        return TIME_OF_DAY.format(instant(value).atZone(ZoneId.systemDefault()));
+    }
+
+    /**
+     * The predicted time of a stop event, falling back to the scheduled time plus the feed delay.
+     *
+     * <p>Many feeds only send delays; deriving the clock time keeps the column useful for them.
+     */
+    public static String eventTime(Timestamp predicted, Timestamp scheduled, Integer delaySeconds) {
+        if (isSet(predicted)) {
+            return time(predicted);
+        }
+        if (isSet(scheduled) && delaySeconds != null) {
+            var shifted = Timestamp.newBuilder()
+                    .setSeconds(scheduled.getSeconds() + delaySeconds)
+                    .setNanos(scheduled.getNanos())
+                    .build();
+            return time(shifted);
+        }
+        return DASH;
+    }
+
+    /** Delay formatted as {@code +minutes:seconds}; the sign shows early and late events. */
+    public static String delay(Integer seconds) {
+        if (seconds == null) {
+            return DASH;
+        }
+        var absolute = Math.abs((long) seconds);
+        return String.format(Locale.ROOT, "%s%d:%02d", seconds < 0 ? "-" : "+", absolute / 60, absolute % 60);
+    }
+
+    private static boolean isSet(Timestamp value) {
+        return value != null && !(value.getSeconds() == 0 && value.getNanos() == 0);
+    }
+
+    private static Instant instant(Timestamp value) {
+        return Instant.ofEpochSecond(value.getSeconds(), value.getNanos());
     }
 
     public static String text(String value) {
