@@ -31,16 +31,16 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
     public MainLayout() {
         setPrimarySection(Section.NAVBAR);
 
-        var brand = new HorizontalLayout(new Span("GTFSynq"), new Badge("console"));
+        var brand = new HorizontalLayout(new Span(getTranslation("app.name")), new Badge(getTranslation("app.badge")));
         brand.setPadding(false);
         brand.setAlignItems(Alignment.CENTER);
 
-        addTab("Overview", "", OverviewView.class);
-        addTab("Static feeds", "feeds", FeedsView.class);
-        addTab("Routes", "routes", RoutesView.class);
-        addTab("Stops", "stops", StopsView.class);
-        addTab("Trips", "trips", TripsView.class);
-        addTab("Live updates", "live", LiveUpdatesView.class);
+        addTab(getTranslation("nav.overview"), "", OverviewView.class);
+        addTab(getTranslation("nav.feeds"), "feeds", FeedsView.class);
+        addTab(getTranslation("nav.routes"), "routes", RoutesView.class);
+        addTab(getTranslation("nav.stops"), "stops", StopsView.class);
+        addTab(getTranslation("nav.trips"), "trips", TripsView.class);
+        addTab(getTranslation("nav.live"), "live", LiveUpdatesView.class);
 
         tabs.addSelectedChangeListener(event -> {
             var tab = event.getSelectedTab();

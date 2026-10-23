@@ -2,7 +2,7 @@ package org.example.gtfsynq.ui.view;
 
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.data.provider.SortDirection;
-import com.vaadin.flow.router.PageTitle;
+import com.vaadin.flow.router.HasDynamicTitle;
 import jakarta.inject.Inject;
 import org.example.gtfsynq.shared.protocol.query.Route;
 import org.example.gtfsynq.ui.MainLayout;
@@ -14,15 +14,22 @@ import org.example.gtfsynq.ui.component.PageHeader;
 
 /** Static GTFS routes. */
 @com.vaadin.flow.router.Route(value = "routes", layout = MainLayout.class)
-@PageTitle("Routes · GTFSynq")
-public class RoutesView extends VerticalLayout {
+public class RoutesView extends VerticalLayout implements HasDynamicTitle {
 
     @Inject
     public RoutesView(GtfsQueryClient client) {
         var table = new LazyGrid<Route>(client::routes, "routeId", SortDirection.ASCENDING, Columns::routes);
-        var feed = Filters.feed(client, table::setFeedId);
-        var search = Filters.search(table::setSearch);
+        var feed = Filters.feed(client, getTranslation("filter.feed.placeholder"), table::setFeedId);
+        var search = Filters.search(getTranslation("filter.search.placeholder"), table::setSearch);
 
-        add(PageHeader.create("Routes", "Static GTFS routes, one current revision per feed.", feed, search), table);
+        add(
+                PageHeader.create(
+                        getTranslation("page.routes.title"), getTranslation("page.routes.subtitle"), feed, search),
+                table);
+    }
+
+    @Override
+    public String getPageTitle() {
+        return getTranslation("document.title", getTranslation("page.routes.title"));
     }
 }

@@ -38,7 +38,7 @@ public final class GtfsStaticColumns {
      * @param file file the header belongs to, used for diagnostics and required-column checks
      * @param header raw header cells in file order, duplicates preserved
      */
-    public static GtfsStaticColumns of(GtfsStaticFile file, List<String> header) {
+    static GtfsStaticColumns of(GtfsStaticFile file, List<String> header) {
         var names = new ArrayList<String>(header.size());
         var index = new HashMap<String, Integer>(header.size());
         for (var i = 0; i < header.size(); i++) {
@@ -51,7 +51,7 @@ public final class GtfsStaticColumns {
     }
 
     /** File this mapping was built for. */
-    public GtfsStaticFile file() {
+    GtfsStaticFile file() {
         return file;
     }
 

@@ -2,7 +2,7 @@ package org.example.gtfsynq.ui.view;
 
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.data.provider.SortDirection;
-import com.vaadin.flow.router.PageTitle;
+import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
 import jakarta.inject.Inject;
 import org.example.gtfsynq.shared.protocol.query.StaticFeed;
@@ -14,8 +14,7 @@ import org.example.gtfsynq.ui.component.PageHeader;
 
 /** One current static feed revision per feed. */
 @Route(value = "feeds", layout = MainLayout.class)
-@PageTitle("Static feeds · GTFSynq")
-public class FeedsView extends VerticalLayout {
+public class FeedsView extends VerticalLayout implements HasDynamicTitle {
 
     @Inject
     public FeedsView(GtfsQueryClient client) {
@@ -25,6 +24,11 @@ public class FeedsView extends VerticalLayout {
                 SortDirection.DESCENDING,
                 Columns::feeds);
 
-        add(PageHeader.create("Static feeds", "One current revision per feed, as recorded by the store app."), table);
+        add(PageHeader.create(getTranslation("page.feeds.title"), getTranslation("page.feeds.subtitle")), table);
+    }
+
+    @Override
+    public String getPageTitle() {
+        return getTranslation("document.title", getTranslation("page.feeds.title"));
     }
 }

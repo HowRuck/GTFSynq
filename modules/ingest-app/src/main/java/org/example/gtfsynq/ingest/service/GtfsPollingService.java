@@ -49,11 +49,11 @@ public class GtfsPollingService {
 
             return safeBytes;
         } catch (IOException e) {
-            log.error("Network or HTTP error downloading feed from {}", feedUrl, e);
+            log.error("I/O error downloading feed from {}", feedUrl, e);
             return new byte[0];
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.error("Network or HTTP error downloading feed from {}", feedUrl, e);
+            log.error("Interrupted while downloading feed from {}", feedUrl, e);
             return new byte[0];
         }
     }
@@ -90,14 +90,14 @@ public class GtfsPollingService {
                 log.debug("Processed {} in {} ms", feedId, System.currentTimeMillis() - startTime);
             }
         } catch (IOException e) {
-            log.error("Failed to poll feed {} due to: {}", feedId, e.getMessage());
+            log.error("I/O error polling feed {}: {}", feedId, e.getMessage());
             return null;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.error("Failed to poll feed {} due to: {}", feedId, e.getMessage());
+            log.error("Interrupted while polling feed {}: {}", feedId, e.getMessage());
             return null;
         } catch (GtfsIngestionException e) {
-            log.error("Failed to poll feed {} due to: {}", feedId, e.getMessage());
+            log.error("Ingestion error polling feed {}: {}", feedId, e.getMessage());
             return null;
         } catch (RuntimeException e) {
             log.error("Unexpected error polling feed {}: {}", feedId, e.getMessage(), e);

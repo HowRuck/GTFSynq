@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import org.example.gtfsynq.shared.protocol.StaticFeedIngested;
 import org.example.gtfsynq.shared.util.GtfsFeedFormatter;
+import org.example.gtfsynq.shared.validation.GtfsStaticArchiveReader;
 import org.example.gtfsynq.shared.validation.GtfsStaticArchiveReader.StaticRowSink;
 import org.example.gtfsynq.shared.validation.GtfsStaticRows.AgencyRow;
 import org.example.gtfsynq.shared.validation.GtfsStaticRows.CalendarDateRow;

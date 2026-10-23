@@ -227,8 +227,9 @@ public final class GtfsStaticValidators {
 
     private static boolean isTimezone(String value) {
         try {
-            ZoneId.of(value);
-            return true;
+            // Resolving the id is what proves the value is a zone; keep the result so the call is
+            // not dead code.
+            return !ZoneId.of(value).getId().isEmpty();
         } catch (DateTimeException _) {
             return false;
         }
@@ -253,8 +254,9 @@ public final class GtfsStaticValidators {
 
     private static boolean isWithin(String value, double min, double max) {
         try {
+            // NaN fails both comparisons, so the range check already rejects it.
             double parsed = Double.parseDouble(value);
-            return parsed >= min && parsed <= max && !Double.isNaN(parsed);
+            return parsed >= min && parsed <= max;
         } catch (NumberFormatException _) {
             return false;
         }

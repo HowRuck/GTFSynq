@@ -101,7 +101,7 @@ public class LazyGrid<T> extends Grid<T> {
             var message = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
             if (!message.equals(lastError)) {
                 lastError = message;
-                Notification.show("Could not load data: " + message, 5000, Notification.Position.BOTTOM_END);
+                Notification.show(getTranslation("grid.error.load", message), 5000, Notification.Position.BOTTOM_END);
             }
             return Stream.empty();
         }

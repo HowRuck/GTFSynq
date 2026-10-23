@@ -8,7 +8,7 @@ import com.vaadin.flow.component.orderedlayout.FlexComponent.JustifyContentMode;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.data.provider.SortDirection;
-import com.vaadin.flow.router.PageTitle;
+import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLink;
 import jakarta.inject.Inject;
@@ -24,8 +24,7 @@ import org.example.gtfsynq.ui.format.UiFormat;
 
 /** Landing page: row counts and the most recent static feed revisions. */
 @Route(value = "", layout = MainLayout.class)
-@PageTitle("Overview · GTFSynq")
-public class OverviewView extends VerticalLayout {
+public class OverviewView extends VerticalLayout implements HasDynamicTitle {
 
     @Inject
     public OverviewView(GtfsQueryClient client) {
@@ -43,7 +42,8 @@ public class OverviewView extends VerticalLayout {
                     UiFormat.count(overview.getLiveTripUpdates()),
                     UiFormat.count(overview.getLiveStopTimeUpdates())));
         } catch (DataAccessException e) {
-            Notification.show(e.getMessage(), 5000, Notification.Position.BOTTOM_END);
+            Notification.show(
+                    getTranslation("overview.error.load", e.getMessage()), 5000, Notification.Position.BOTTOM_END);
             stats.add(statCards("—", "—", "—", "—", "—", "—"));
         }
 
@@ -53,17 +53,27 @@ public class OverviewView extends VerticalLayout {
                 SortDirection.DESCENDING,
                 Columns::feedSummary);
 
-        var sectionHeader =
-                new HorizontalLayout(new H3("Static feed revisions"), new RouterLink("All feeds", FeedsView.class));
+        var sectionHeader = new HorizontalLayout(
+                new H3(getTranslation("overview.section.revisions")),
+                new RouterLink(getTranslation("overview.link.allFeeds"), FeedsView.class));
         sectionHeader.setPadding(false);
         sectionHeader.setWidthFull();
         sectionHeader.setAlignItems(Alignment.CENTER);
         sectionHeader.setJustifyContentMode(JustifyContentMode.BETWEEN);
 
-        add(PageHeader.create("Overview", "What is currently loaded in TimescaleDB."), stats, sectionHeader, feeds);
+        add(
+                PageHeader.create(getTranslation("page.overview.title"), getTranslation("page.overview.subtitle")),
+                stats,
+                sectionHeader,
+                feeds);
     }
 
-    private static Component[] statCards(
+    @Override
+    public String getPageTitle() {
+        return getTranslation("document.title", getTranslation("page.overview.title"));
+    }
+
+    private Component[] statCards(
             String staticFeeds,
             String routes,
             String stops,
@@ -71,12 +81,21 @@ public class OverviewView extends VerticalLayout {
             String liveTripUpdates,
             String liveStopTimeUpdates) {
         return new Component[] {
-            UiComponents.statCard("Static feeds", staticFeeds, "Current revisions"),
-            UiComponents.statCard("Routes", routes, null),
-            UiComponents.statCard("Stops", stops, null),
-            UiComponents.statCard("Trips", trips, null),
-            UiComponents.statCard("Live trip updates", liveTripUpdates, "Hot table"),
-            UiComponents.statCard("Live stop time updates", liveStopTimeUpdates, "Hot table")
+            UiComponents.statCard(
+                    getTranslation("overview.stats.staticFeeds"),
+                    staticFeeds,
+                    getTranslation("overview.hint.currentRevisions")),
+            UiComponents.statCard(getTranslation("overview.stats.routes"), routes, null),
+            UiComponents.statCard(getTranslation("overview.stats.stops"), stops, null),
+            UiComponents.statCard(getTranslation("overview.stats.trips"), trips, null),
+            UiComponents.statCard(
+                    getTranslation("overview.stats.liveTripUpdates"),
+                    liveTripUpdates,
+                    getTranslation("overview.hint.hotTable")),
+            UiComponents.statCard(
+                    getTranslation("overview.stats.liveStopTimeUpdates"),
+                    liveStopTimeUpdates,
+                    getTranslation("overview.hint.hotTable"))
         };
     }
 }

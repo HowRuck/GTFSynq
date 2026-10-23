@@ -28,8 +28,12 @@ public class GtfsKafkaProducer {
      * (e.g. {@code store-app}'s {@code @Incoming} listener) join this trace rather
      * than starting a detached root span.
      */
-    private static final TextMapSetter<Headers> HEADER_SETTER =
-            (headers, key, value) -> headers.add(key, value.getBytes(StandardCharsets.UTF_8));
+    private static final TextMapSetter<Headers> HEADER_SETTER = (headers, key, value) -> {
+        // The propagator may report a missing context value as null; Headers rejects null bytes.
+        if (value != null) {
+            headers.add(key, value.getBytes(StandardCharsets.UTF_8));
+        }
+    };
 
     /**
      * Kafka producer for sending messages

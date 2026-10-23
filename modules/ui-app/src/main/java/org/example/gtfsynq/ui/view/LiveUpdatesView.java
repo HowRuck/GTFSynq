@@ -6,7 +6,7 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.data.provider.SortDirection;
-import com.vaadin.flow.router.PageTitle;
+import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.shared.Registration;
 import jakarta.inject.Inject;
@@ -20,8 +20,7 @@ import org.example.gtfsynq.ui.component.PageHeader;
 
 /** Live trip updates, refreshed while the view is attached. */
 @Route(value = "live", layout = MainLayout.class)
-@PageTitle("Live updates · GTFSynq")
-public class LiveUpdatesView extends VerticalLayout {
+public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
 
     private static final int POLL_INTERVAL_MS = 10_000;
 
@@ -32,17 +31,22 @@ public class LiveUpdatesView extends VerticalLayout {
     public LiveUpdatesView(GtfsQueryClient client) {
         table = new LazyGrid<>(client::tripUpdates, "lastSeenAt", SortDirection.DESCENDING, Columns::tripUpdates);
 
-        var feed = Filters.feed(client, table::setFeedId);
-        var refresh = new Button("Refresh", event -> table.refresh());
+        var feed = Filters.feed(client, getTranslation("filter.feed.placeholder"), table::setFeedId);
+        var refresh = new Button(getTranslation("live.refresh"), event -> table.refresh());
         refresh.setIcon(VaadinIcon.REFRESH.create());
 
         add(
                 PageHeader.create(
-                        "Live trip updates",
-                        "Refreshes every 10 seconds from the hot table while visible.",
+                        getTranslation("page.live.title"),
+                        getTranslation("page.live.subtitle", POLL_INTERVAL_MS / 1000),
                         feed,
                         refresh),
                 table);
+    }
+
+    @Override
+    public String getPageTitle() {
+        return getTranslation("document.title", getTranslation("page.live.title"));
     }
 
     @Override

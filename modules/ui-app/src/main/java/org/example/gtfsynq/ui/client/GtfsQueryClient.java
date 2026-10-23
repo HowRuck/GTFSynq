@@ -1,5 +1,6 @@
 package org.example.gtfsynq.ui.client;
 
+import com.vaadin.flow.i18n.I18NProvider;
 import io.grpc.StatusRuntimeException;
 import io.quarkus.grpc.GrpcClient;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -138,10 +139,11 @@ public class GtfsQueryClient {
 
     private static String friendlyMessage(StatusRuntimeException e) {
         return switch (e.getStatus().getCode()) {
-            case UNAVAILABLE -> "The API service is unavailable. Is api-app running?";
-            case DEADLINE_EXCEEDED -> "The API service did not answer within " + DEADLINE_SECONDS + " seconds.";
-            case INVALID_ARGUMENT, NOT_FOUND, FAILED_PRECONDITION -> description(e, "The API rejected the query.");
-            default -> "The API service returned " + e.getStatus().getCode();
+            case UNAVAILABLE -> I18NProvider.translate("error.api.unavailable");
+            case DEADLINE_EXCEEDED -> I18NProvider.translate("error.api.deadline", DEADLINE_SECONDS);
+            case INVALID_ARGUMENT, NOT_FOUND, FAILED_PRECONDITION ->
+                description(e, I18NProvider.translate("error.api.rejected"));
+            default -> I18NProvider.translate("error.api.status", e.getStatus().getCode());
         };
     }
 

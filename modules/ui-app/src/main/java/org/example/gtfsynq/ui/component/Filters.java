@@ -13,9 +13,9 @@ public final class Filters {
     private Filters() {}
 
     /** Feed selector; an empty value means "all feeds". */
-    public static ComboBox<String> feed(GtfsQueryClient client, Consumer<String> onChange) {
+    public static ComboBox<String> feed(GtfsQueryClient client, String placeholder, Consumer<String> onChange) {
         var feed = new ComboBox<String>();
-        feed.setPlaceholder("All feeds");
+        feed.setPlaceholder(placeholder);
         feed.setClearButtonVisible(true);
         feed.setAllowCustomValue(false);
         feed.setWidth("12rem");
@@ -28,9 +28,9 @@ public final class Filters {
         return feed;
     }
 
-    public static TextField search(Consumer<String> onChange) {
+    public static TextField search(String placeholder, Consumer<String> onChange) {
         var search = new TextField();
-        search.setPlaceholder("Search (3+ characters)...");
+        search.setPlaceholder(placeholder);
         search.setClearButtonVisible(true);
         search.setWidth("18rem");
         search.setValueChangeMode(ValueChangeMode.LAZY);
