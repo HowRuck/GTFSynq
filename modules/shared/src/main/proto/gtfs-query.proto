@@ -181,9 +181,10 @@ message TripUpdate {
   optional string trip_short_name = 12;
   optional string route_short_name = 13;
   optional string route_long_name = 14;
-  // Agency names of the update's feed, resolved from static_agency in agency_id
-  // order. Empty when no static agency row was loaded for the feed.
-  repeated string agency_names = 15;
+  // Agency name of the update's route, resolved from static_routes.agency_id and
+  // static_agency; absent when no static route matches or the feed does not
+  // publish an agency.
+  optional string agency_name = 15;
 }
 
 message TripUpdatesRequest {

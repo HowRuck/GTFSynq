@@ -145,7 +145,7 @@ public final class Columns {
                 .setHeader(grid.getTranslation("column.feed"));
 
         grid.addColumn(row -> row instanceof TripUpdateRow trip
-                        ? agencyNames(trip.update().getAgencyNamesList())
+                        ? UiFormat.text(trip.update().getAgencyName())
                         : "")
                 .setHeader(grid.getTranslation("column.agency"));
 

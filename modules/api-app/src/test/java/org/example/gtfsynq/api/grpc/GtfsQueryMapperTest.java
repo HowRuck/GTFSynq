@@ -55,20 +55,20 @@ class GtfsQueryMapperTest {
     }
 
     @Test
-    void mapsAgencyNamesOnTripUpdates() {
-        var update = GtfsQueryMapper.tripUpdatesReply(
-                        page(tripUpdate(List.of("MTA", "NJ Transit"), "Trip 1", "10", "Central - North")))
+    void mapsAgencyNameOnTripUpdates() {
+        var update = GtfsQueryMapper.tripUpdatesReply(page(tripUpdate("MTA", "Trip 1", "10", "Central - North")))
                 .getItems(0);
 
-        assertEquals(List.of("MTA", "NJ Transit"), update.getAgencyNamesList());
+        assertTrue(update.hasAgencyName());
+        assertEquals("MTA", update.getAgencyName());
     }
 
     @Test
-    void leavesAgencyNamesEmptyWhenTheFeedHasNoAgencyRow() {
-        var update = GtfsQueryMapper.tripUpdatesReply(page(tripUpdate(List.of(), null, null, null)))
+    void leavesAgencyNameAbsentWhenNoStaticAgencyMatches() {
+        var update = GtfsQueryMapper.tripUpdatesReply(page(tripUpdate(null, null, null, null)))
                 .getItems(0);
 
-        assertTrue(update.getAgencyNamesList().isEmpty());
+        assertFalse(update.hasAgencyName());
     }
 
     @Test
@@ -105,11 +105,11 @@ class GtfsQueryMapperTest {
     }
 
     private static TripUpdateDto tripUpdate(String tripShortName, String routeShortName, String routeLongName) {
-        return tripUpdate(List.of(), tripShortName, routeShortName, routeLongName);
+        return tripUpdate(null, tripShortName, routeShortName, routeLongName);
     }
 
     private static TripUpdateDto tripUpdate(
-            List<String> agencyNames, String tripShortName, String routeShortName, String routeLongName) {
+            String agencyName, String tripShortName, String routeShortName, String routeLongName) {
         return new TripUpdateDto(
                 1,
                 "feed",
@@ -125,7 +125,7 @@ class GtfsQueryMapperTest {
                 tripShortName,
                 routeShortName,
                 routeLongName,
-                agencyNames);
+                agencyName);
     }
 
     private static StopTimeUpdateDto stopTimeUpdate(String stopName) {

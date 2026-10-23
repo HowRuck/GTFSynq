@@ -3,7 +3,6 @@ package org.example.gtfsynq.api.dto;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
-import java.util.List;
 
 /** A live trip update, joining the hot table with its metadata and static display names. */
 public record TripUpdateDto(
@@ -21,4 +20,4 @@ public record TripUpdateDto(
         String tripShortName,
         String routeShortName,
         String routeLongName,
-        List<String> agencyNames) {}
+        String agencyName) {}
