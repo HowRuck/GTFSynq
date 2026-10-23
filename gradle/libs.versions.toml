@@ -6,10 +6,6 @@ palantir-java-format = "2.102.0"
 # Frameworks & runtimes
 quarkus = "4.0.0.Beta1"
 quarkus-amazon-services = "4.0.0.Beta3"
-# Vaadin 25.4 is a prerelease and is resolved from Vaadin's prereleases
-# repository. Its Quarkus extension is built against Quarkus 3.33, so the UI
-# module pins its own Quarkus version instead of tracking the backend apps.
-quarkus-vaadin = "3.33.0"
 protobuf = "4.36.2"
 # Keep in step with the gRPC version managed by the Quarkus 3.33 BOM; the
 # generated stubs also run on the newer gRPC managed by Quarkus 4.
@@ -47,7 +43,6 @@ microprofile-config-api = { module = "org.eclipse.microprofile.config:microprofi
 
 # Platform / BOM
 quarkus-bom = { module = "io.quarkus.platform:quarkus-bom", version.ref = "quarkus" }
-quarkus-bom-vaadin = { module = "io.quarkus:quarkus-bom", version.ref = "quarkus-vaadin" }
 quarkus-amazon-services-bom = { module = "io.quarkiverse.amazonservices:quarkus-amazon-services-bom", version.ref = "quarkus-amazon-services" }
 vaadin-bom = { module = "com.vaadin:vaadin-bom", version.ref = "vaadin" }
 vaadin-quarkus-extension = { module = "com.vaadin:vaadin-quarkus-extension", version.ref = "vaadin" }
