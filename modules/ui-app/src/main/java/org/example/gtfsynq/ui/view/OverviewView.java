@@ -36,7 +36,13 @@ public class OverviewView extends VerticalLayout implements HasDynamicTitle {
         stats.setPadding(false);
         stats.setWidthFull();
         stats.setWrap(true);
-        stats.add(statCards("—", "—", "—", "—", "—", "—"));
+        stats.add(statCards(
+                UiFormat.NOT_AVAILABLE,
+                UiFormat.NOT_AVAILABLE,
+                UiFormat.NOT_AVAILABLE,
+                UiFormat.NOT_AVAILABLE,
+                UiFormat.NOT_AVAILABLE,
+                UiFormat.NOT_AVAILABLE));
 
         var feeds = new LazyGrid<StaticFeed>(
                 query -> client.staticFeeds(query.page(), query.size()),
@@ -75,7 +81,14 @@ public class OverviewView extends VerticalLayout implements HasDynamicTitle {
             return;
         }
         CompletableFuture.runAsync(() -> {
-            var counts = new String[] {"—", "—", "—", "—", "—", "—"};
+            var counts = new String[] {
+                UiFormat.NOT_AVAILABLE,
+                UiFormat.NOT_AVAILABLE,
+                UiFormat.NOT_AVAILABLE,
+                UiFormat.NOT_AVAILABLE,
+                UiFormat.NOT_AVAILABLE,
+                UiFormat.NOT_AVAILABLE
+            };
             DataAccessException failure = null;
             try {
                 var overview = client.overview();
