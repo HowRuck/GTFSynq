@@ -52,8 +52,25 @@ class UiFormatTest {
         UI.setCurrent(ui);
         try {
             var details = new ExtendedClientDetails(
-                    ui, null, null, null, null, null, null, "-240", "-300", "60", "true", "America/New_York", null,
-                    null, null, null, null, null, null);
+                    ui,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    "-240",
+                    "-300",
+                    "60",
+                    "true",
+                    "America/New_York",
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null);
             ui.getInternals().setExtendedClientDetails(details);
 
             assertEquals(ZoneId.of("America/New_York"), UiFormat.displayZone());
