@@ -6,7 +6,7 @@ plugins {
 dependencies {
     // Vaadin's BOM must win over Quarkus' where the two overlap.
     implementation(enforcedPlatform(libs.vaadin.bom))
-    implementation(enforcedPlatform(libs.quarkus.bom.vaadin))
+    implementation(platform(libs.quarkus.bom))
     implementation(project(":shared"))
 
     implementation(libs.vaadin.quarkus.extension)
