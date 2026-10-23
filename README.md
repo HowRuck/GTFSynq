@@ -504,9 +504,10 @@ ships the native-image build steps (Atmosphere/websocket patches, reflection and
 resource registrations) and embeds the production frontend bundle, so it needs no
 extra flags or GraalVM configuration.
 
-To run native images, point Compose at the `-native` tags. Note the native run
-image has no shell, so any `wget`/`curl`-based Compose healthcheck must be
-replaced (e.g. a Docker `httpGet`-style check).
+Compose already references the `-native` tags; swap them for the plain tags to
+run the JVM images instead. Note the native run image has no shell, so any
+`wget`/`curl`-based Compose healthcheck must be replaced (e.g. a Docker
+`httpGet`-style check).
 
 ## Monitoring
 
