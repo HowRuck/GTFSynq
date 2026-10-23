@@ -61,9 +61,11 @@ quarkus:
     name: gtfsynq-ui-app
 
 # Vaadin installs its own Node/pnpm toolchain for the frontend build.
+# pnpm-enable is a build-time property; the committed pnpm-lock.yaml keeps
+# installs reproducible and lets CI restore the pnpm store cache.
 vaadin:
-  pnpm:
-    enabled: true
+  build:
+    pnpm-enable: true
 
 # The collector hostname only resolves inside the Compose network, so local dev
 # mode disables the SDK unless QUARKUS_OTEL_SDK_DISABLED is set explicitly.
