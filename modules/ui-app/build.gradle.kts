@@ -1,8 +1,4 @@
 plugins {
-    // Vaadin 25.4's Quarkus extension is built against Quarkus 3.33. This module
-    // therefore pins its own plugin version instead of using the backend's
-    // 4.0 beta. The backend apps keep their existing Quarkus version.
-    id("io.quarkus") version "3.33.0"
     id("gtfsynq.java-conventions")
 }
 
