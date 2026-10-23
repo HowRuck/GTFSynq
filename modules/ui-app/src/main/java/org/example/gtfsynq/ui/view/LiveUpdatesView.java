@@ -15,8 +15,8 @@ import org.example.gtfsynq.ui.MainLayout;
 import org.example.gtfsynq.ui.client.GtfsQueryClient;
 import org.example.gtfsynq.ui.component.Columns;
 import org.example.gtfsynq.ui.component.Filters;
+import org.example.gtfsynq.ui.component.LazyGrid;
 import org.example.gtfsynq.ui.component.PageHeader;
-import org.example.gtfsynq.ui.component.PagedGrid;
 
 /** Live trip updates, refreshed while the view is attached. */
 @Route(value = "live", layout = MainLayout.class)
@@ -25,17 +25,12 @@ public class LiveUpdatesView extends VerticalLayout {
 
     private static final int POLL_INTERVAL_MS = 10_000;
 
-    private final PagedGrid<TripUpdate> table;
+    private final LazyGrid<TripUpdate> table;
     private Registration pollRegistration;
 
     @Inject
     public LiveUpdatesView(GtfsQueryClient client) {
-        addClassName("page");
-        setWidthFull();
-        setPadding(false);
-        setSpacing(true);
-
-        table = new PagedGrid<>(client::tripUpdates, "lastSeenAt", SortDirection.DESCENDING, 25, Columns::tripUpdates);
+        table = new LazyGrid<>(client::tripUpdates, "lastSeenAt", SortDirection.DESCENDING, Columns::tripUpdates);
 
         var feed = Filters.feed(client, table::setFeedId);
         var refresh = new Button("Refresh", event -> table.refresh());

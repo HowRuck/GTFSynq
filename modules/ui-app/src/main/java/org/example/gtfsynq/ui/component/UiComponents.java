@@ -1,40 +1,30 @@
 package org.example.gtfsynq.ui.component;
 
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.badge.Badge;
+import com.vaadin.flow.component.card.Card;
 import com.vaadin.flow.component.html.Anchor;
-import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Span;
-import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
-import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import org.example.gtfsynq.shared.protocol.query.Route;
 import org.example.gtfsynq.shared.protocol.query.StaticFeed;
 import org.example.gtfsynq.ui.format.UiFormat;
 
-/** Small presentational building blocks used inside grid cells. */
+/** Small presentational building blocks used inside grid cells and cards. */
 public final class UiComponents {
 
     private UiComponents() {}
 
-    public static Span badge(String text) {
-        var badge = new Span(text);
-        badge.addClassName("badge");
-        return badge;
+    public static Badge badge(String text) {
+        return new Badge(text);
     }
 
-    public static Component colorSwatch(Route route) {
+    public static Component routeColor(Route route) {
         if (!route.hasColor() || route.getColor().isBlank()) {
             return new Span("—");
         }
         var color = route.getColor().startsWith("#") ? route.getColor() : "#" + route.getColor();
-        var dot = new Span();
-        dot.addClassName("color-dot");
-        dot.getStyle().set("background-color", color);
-
-        var layout = new HorizontalLayout(dot, new Span(color));
-        layout.setPadding(false);
-        layout.setSpacing(true);
-        layout.setAlignItems(Alignment.CENTER);
-        return layout;
+        return new Span(color);
     }
 
     public static Component sourceLink(StaticFeed feed) {
@@ -43,37 +33,18 @@ public final class UiComponents {
         }
         var link = new Anchor(feed.getSourceUrl(), feed.getSourceUrl());
         link.setTarget("_blank");
-        link.addClassName("source-link");
         return link;
     }
 
-    public static Component statCard(String label, String value, String hint) {
-        var card = new Div();
-        card.addClassName("stat-card");
-        card.add(label(label));
-        card.add(value(value));
+    public static Card statCard(String label, String value, String hint) {
+        var card = new Card();
+        card.setWidth("14rem");
+        card.setTitle(label);
+        card.add(new H3(value));
         if (hint != null) {
-            card.add(hint(hint));
+            card.addToFooter(new Span(hint));
         }
         return card;
-    }
-
-    private static Span label(String text) {
-        var span = new Span(text);
-        span.addClassName("stat-label");
-        return span;
-    }
-
-    private static Span value(String text) {
-        var span = new Span(text);
-        span.addClassName("stat-value");
-        return span;
-    }
-
-    private static Span hint(String text) {
-        var span = new Span(text);
-        span.addClassName("stat-hint");
-        return span;
     }
 
     /** Formats a nullable string for a cell. */

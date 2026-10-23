@@ -1,8 +1,8 @@
 package org.example.gtfsynq.ui.view;
 
 import com.vaadin.flow.component.Component;
-import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H3;
+import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.JustifyContentMode;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
@@ -17,8 +17,8 @@ import org.example.gtfsynq.ui.MainLayout;
 import org.example.gtfsynq.ui.client.DataAccessException;
 import org.example.gtfsynq.ui.client.GtfsQueryClient;
 import org.example.gtfsynq.ui.component.Columns;
+import org.example.gtfsynq.ui.component.LazyGrid;
 import org.example.gtfsynq.ui.component.PageHeader;
-import org.example.gtfsynq.ui.component.PagedGrid;
 import org.example.gtfsynq.ui.component.UiComponents;
 import org.example.gtfsynq.ui.format.UiFormat;
 
@@ -29,17 +29,10 @@ public class OverviewView extends VerticalLayout {
 
     @Inject
     public OverviewView(GtfsQueryClient client) {
-        addClassName("page");
-        setWidthFull();
-        setPadding(false);
-        setSpacing(true);
-
-        var error = new Div();
-        error.addClassName("error-banner");
-        error.setVisible(false);
-
-        var stats = new Div();
-        stats.addClassName("stat-grid");
+        var stats = new HorizontalLayout();
+        stats.setPadding(false);
+        stats.setWidthFull();
+        stats.setWrap(true);
         try {
             var overview = client.overview();
             stats.add(statCards(
@@ -50,33 +43,24 @@ public class OverviewView extends VerticalLayout {
                     UiFormat.count(overview.getLiveTripUpdates()),
                     UiFormat.count(overview.getLiveStopTimeUpdates())));
         } catch (DataAccessException e) {
-            error.setText(e.getMessage());
-            error.setVisible(true);
+            Notification.show(e.getMessage(), 5000, Notification.Position.BOTTOM_END);
             stats.add(statCards("—", "—", "—", "—", "—", "—"));
         }
 
-        var feeds = new PagedGrid<StaticFeed>(
+        var feeds = new LazyGrid<StaticFeed>(
                 query -> client.staticFeeds(query.page(), query.size()),
                 "loadedAt",
                 SortDirection.DESCENDING,
-                10,
                 Columns::feedSummary);
 
-        var sectionTitle = new H3("Static feed revisions");
-        sectionTitle.addClassName("section-title");
-        var allFeeds = new RouterLink("All feeds", FeedsView.class);
-        var sectionHeader = new HorizontalLayout(sectionTitle, allFeeds);
-        sectionHeader.setWidthFull();
+        var sectionHeader =
+                new HorizontalLayout(new H3("Static feed revisions"), new RouterLink("All feeds", FeedsView.class));
         sectionHeader.setPadding(false);
+        sectionHeader.setWidthFull();
         sectionHeader.setAlignItems(Alignment.CENTER);
         sectionHeader.setJustifyContentMode(JustifyContentMode.BETWEEN);
 
-        add(
-                PageHeader.create("Overview", "What is currently loaded in TimescaleDB."),
-                error,
-                stats,
-                sectionHeader,
-                feeds);
+        add(PageHeader.create("Overview", "What is currently loaded in TimescaleDB."), stats, sectionHeader, feeds);
     }
 
     private static Component[] statCards(

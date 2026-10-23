@@ -12,6 +12,5 @@ import com.vaadin.flow.theme.aura.Aura;
  * applies no theme without an annotation.
  */
 @StyleSheet(Aura.STYLESHEET)
-@StyleSheet("styles.css")
 @Push
 public class AppShell implements AppShellConfigurator {}

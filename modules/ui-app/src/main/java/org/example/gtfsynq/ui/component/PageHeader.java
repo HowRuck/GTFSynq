@@ -14,29 +14,20 @@ public final class PageHeader {
     private PageHeader() {}
 
     public static HorizontalLayout create(String title, String subtitle, Component... actions) {
-        var heading = new H2(title);
-        heading.addClassName("page-title");
-
-        var description = new Span(subtitle);
-        description.addClassName("muted");
-
-        var text = new VerticalLayout(heading, description);
+        var text = new VerticalLayout(new H2(title), new Span(subtitle));
         text.setPadding(false);
         text.setSpacing(false);
-        text.addClassName("page-heading");
 
         var controls = new HorizontalLayout(actions);
         controls.setPadding(false);
-        controls.setSpacing(true);
         controls.setAlignItems(Alignment.END);
         controls.setJustifyContentMode(JustifyContentMode.END);
-        controls.addClassName("page-actions");
 
         var header = new HorizontalLayout(text, controls);
+        header.setPadding(false);
         header.setWidthFull();
         header.setAlignItems(Alignment.END);
         header.setJustifyContentMode(JustifyContentMode.BETWEEN);
-        header.addClassName("page-header");
         header.setFlexGrow(1, text);
         return header;
     }

@@ -71,7 +71,7 @@ public final class Columns {
                 .setSortable(true)
                 .setFlexGrow(0)
                 .setWidth("5rem");
-        grid.addComponentColumn(UiComponents::colorSwatch).setHeader("Color");
+        grid.addComponentColumn(UiComponents::routeColor).setHeader("Color");
     }
 
     public static void stops(Grid<Stop> grid) {
