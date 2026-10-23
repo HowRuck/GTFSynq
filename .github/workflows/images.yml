@@ -39,6 +39,18 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 
+      - name: Cache Vaadin toolchain and pnpm store
+        # Vaadin downloads its own Node/pnpm toolchain and frontend packages.
+        if: matrix.app == 'ui-app'
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.vaadin
+            ~/.cache/pnpm
+          key: ${{ runner.os }}-vaadin-${{ hashFiles('modules/ui-app/package.json', 'modules/ui-app/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-vaadin-
+
       - name: Cache Jib Layers
         uses: actions/cache@v6
         with:

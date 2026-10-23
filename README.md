@@ -499,6 +499,11 @@ requires via `quarkus.native.additional-build-args` in `application.yaml`:
 `-H:+UnlockExperimentalVMOptions -H:+SharedArenaSupport`
 (`OffHeapLongTable` uses `Arena.ofShared()`, which GraalVM disables by default).
 
+The Vaadin console (`ui-app`) is native-capable too: Vaadin's Quarkus extension
+ships the native-image build steps (Atmosphere/websocket patches, reflection and
+resource registrations) and embeds the production frontend bundle, so it needs no
+extra flags or GraalVM configuration.
+
 To run native images, point Compose at the `-native` tags. Note the native run
 image has no shell, so any `wget`/`curl`-based Compose healthcheck must be
 replaced (e.g. a Docker `httpGet`-style check).
