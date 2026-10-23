@@ -88,9 +88,7 @@ public final class Columns {
                 .setHeader(grid.getTranslation("column.latitude"));
         grid.addColumn(stop -> stop.hasLon() ? UiFormat.coordinate(stop.getLon()) : UiFormat.NOT_AVAILABLE)
                 .setHeader(grid.getTranslation("column.longitude"));
-        grid.addColumn(stop -> stop.hasLocationType()
-                        ? String.valueOf(stop.getLocationType())
-                        : UiFormat.NOT_AVAILABLE)
+        grid.addColumn(stop -> stop.hasLocationType() ? String.valueOf(stop.getLocationType()) : UiFormat.NOT_AVAILABLE)
                 .setHeader(grid.getTranslation("column.locationType"))
                 .setKey("locationType")
                 .setSortProperty("locationType")
@@ -116,9 +114,7 @@ public final class Columns {
                 .setKey("serviceId")
                 .setSortProperty("serviceId")
                 .setSortable(true);
-        grid.addColumn(trip -> trip.hasDirectionId()
-                        ? String.valueOf(trip.getDirectionId())
-                        : UiFormat.NOT_AVAILABLE)
+        grid.addColumn(trip -> trip.hasDirectionId() ? String.valueOf(trip.getDirectionId()) : UiFormat.NOT_AVAILABLE)
                 .setHeader(grid.getTranslation("column.direction"));
     }
 
