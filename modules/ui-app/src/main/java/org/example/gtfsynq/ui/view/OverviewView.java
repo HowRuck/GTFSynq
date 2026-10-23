@@ -28,6 +28,8 @@ public class OverviewView extends VerticalLayout implements HasDynamicTitle {
 
     @Inject
     public OverviewView(GtfsQueryClient client) {
+        setSizeFull();
+
         var stats = new HorizontalLayout();
         stats.setPadding(false);
         stats.setWidthFull();
@@ -66,6 +68,7 @@ public class OverviewView extends VerticalLayout implements HasDynamicTitle {
                 stats,
                 sectionHeader,
                 feeds);
+        setFlexGrow(1, feeds);
     }
 
     @Override

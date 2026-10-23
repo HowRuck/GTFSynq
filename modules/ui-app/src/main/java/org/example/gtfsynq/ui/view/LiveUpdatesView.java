@@ -33,6 +33,7 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
         var refresh = new Button(getTranslation("live.refresh"), event -> table.refresh());
         refresh.setIcon(VaadinIcon.REFRESH.create());
 
+        setSizeFull();
         add(
                 PageHeader.create(
                         getTranslation("page.live.title"),
@@ -40,6 +41,7 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
                         feed,
                         refresh),
                 table);
+        setFlexGrow(1, table);
     }
 
     @Override

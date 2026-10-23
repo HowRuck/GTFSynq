@@ -24,7 +24,9 @@ public class FeedsView extends VerticalLayout implements HasDynamicTitle {
                 SortDirection.DESCENDING,
                 Columns::feeds);
 
+        setSizeFull();
         add(PageHeader.create(getTranslation("page.feeds.title"), getTranslation("page.feeds.subtitle")), table);
+        setFlexGrow(1, table);
     }
 
     @Override

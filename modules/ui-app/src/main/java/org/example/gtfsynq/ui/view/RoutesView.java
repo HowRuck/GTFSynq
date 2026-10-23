@@ -22,10 +22,12 @@ public class RoutesView extends VerticalLayout implements HasDynamicTitle {
         var feed = Filters.feed(client, getTranslation("filter.feed.placeholder"), table::setFeedId);
         var search = Filters.search(getTranslation("filter.search.placeholder"), table::setSearch);
 
+        setSizeFull();
         add(
                 PageHeader.create(
                         getTranslation("page.routes.title"), getTranslation("page.routes.subtitle"), feed, search),
                 table);
+        setFlexGrow(1, table);
     }
 
     @Override

@@ -201,6 +201,8 @@ Behaviour shared by the tables:
 
 - Rows load lazily as you scroll; the backend returns one page at a time, so the
   console never holds a whole table in memory.
+- Tables fill the remaining viewport height and scroll internally, keeping the
+  header and filters in place.
 - Sortable columns sort server-side; columns are sized to their content and share
   any remaining width.
 - Routes, stops and trips offer a feed selector and a search box (three or more
