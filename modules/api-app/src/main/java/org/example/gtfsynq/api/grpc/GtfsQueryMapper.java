@@ -156,6 +156,7 @@ final class GtfsQueryMapper {
                     scheduled -> item.setScheduledDepartureTime(timestamp(scheduled)));
             setIfPresent(stopTime.scheduleRelationship(), item::setScheduleRelationship);
             setIfPresent(stopTime.assignedStopId(), item::setAssignedStopId);
+            setIfPresent(stopTime.stopName(), item::setStopName);
             reply.addItems(item);
         }
         return reply.build();

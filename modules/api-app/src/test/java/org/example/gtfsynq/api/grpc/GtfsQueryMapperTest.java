@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.example.gtfsynq.api.dto.PageResponse;
+import org.example.gtfsynq.api.dto.StopTimeUpdateDto;
 import org.example.gtfsynq.api.dto.TripUpdateDto;
 import org.junit.jupiter.api.Test;
 
@@ -35,6 +36,23 @@ class GtfsQueryMapperTest {
         assertFalse(update.hasRouteLongName());
     }
 
+    @Test
+    void mapsStaticStopNameOnStopTimeUpdates() {
+        var update = GtfsQueryMapper.stopTimeUpdatesReply(List.of(stopTimeUpdate("Central Station")))
+                .getItems(0);
+
+        assertTrue(update.hasStopName());
+        assertEquals("Central Station", update.getStopName());
+    }
+
+    @Test
+    void leavesStaticStopNameAbsentWhenNoStaticRowMatches() {
+        var update = GtfsQueryMapper.stopTimeUpdatesReply(List.of(stopTimeUpdate(null)))
+                .getItems(0);
+
+        assertFalse(update.hasStopName());
+    }
+
     private static PageResponse<TripUpdateDto> page(TripUpdateDto update) {
         return new PageResponse<>(List.of(update), 0, 25, 1, 1);
     }
@@ -55,5 +73,9 @@ class GtfsQueryMapperTest {
                 tripShortName,
                 routeShortName,
                 routeLongName);
+    }
+
+    private static StopTimeUpdateDto stopTimeUpdate(String stopName) {
+        return new StopTimeUpdateDto(1, 1, "stop-id", null, null, null, null, null, null, null, null, stopName);
     }
 }

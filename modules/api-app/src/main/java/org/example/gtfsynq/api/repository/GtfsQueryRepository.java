@@ -321,13 +321,17 @@ public class GtfsQueryRepository {
     /** Current stop time updates of one live trip, ordered by stop sequence. */
     public List<StopTimeUpdateDto> liveStopTimeUpdates(long tripUpdateId) {
         String sql = """
-                SELECT trip_update_id, stop_sequence, stop_id,
-                       arrival_time, arrival_delay, scheduled_arrival_time,
-                       departure_time, departure_delay, scheduled_departure_time,
-                       schedule_relationship::text AS schedule_relationship, assigned_stop_id
-                FROM rt_stop_time_updates_hot
-                WHERE trip_update_id = ?
-                ORDER BY stop_sequence ASC
+                SELECT s.trip_update_id, s.stop_sequence, s.stop_id,
+                       s.arrival_time, s.arrival_delay, s.scheduled_arrival_time,
+                       s.departure_time, s.departure_delay, s.scheduled_departure_time,
+                       s.schedule_relationship::text AS schedule_relationship, s.assigned_stop_id,
+                       st.stop_name
+                FROM rt_stop_time_updates_hot s
+                LEFT JOIN static_stops st
+                       ON st.feed_id = s.feed_id
+                      AND st.stop_id = COALESCE(s.stop_id, s.assigned_stop_id)
+                WHERE s.trip_update_id = ?
+                ORDER BY s.stop_sequence ASC
                 """;
         try (Connection connection = dataSource.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -346,7 +350,8 @@ public class GtfsQueryRepository {
                             nullableInt(rs, "departure_delay"),
                             offsetDateTime(rs, "scheduled_departure_time"),
                             rs.getString("schedule_relationship"),
-                            rs.getString("assigned_stop_id")));
+                            rs.getString("assigned_stop_id"),
+                            rs.getString("stop_name")));
                 }
                 return items;
             }

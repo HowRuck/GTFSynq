@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.data.provider.SortDirection;
+import org.example.gtfsynq.shared.protocol.query.StopTimeUpdate;
 import org.example.gtfsynq.shared.protocol.query.TripUpdate;
 import org.example.gtfsynq.ui.client.GtfsQueryClient;
 import org.junit.jupiter.api.Test;
@@ -35,6 +36,18 @@ class LiveUpdatesGridTest {
                 .build();
         assertEquals("trip-id", Columns.tripName(unnamed));
         assertEquals("route-id", Columns.routeName(unnamed));
+    }
+
+    @Test
+    void prefersStaticStopNameAndFallsBackToStopId() {
+        var named = StopTimeUpdate.newBuilder()
+                .setStopId("stop-id")
+                .setStopName("Central Station")
+                .build();
+
+        assertEquals("Central Station", Columns.stopName(named));
+        assertEquals(
+                "stop-id", Columns.stopName(named.toBuilder().clearStopName().build()));
     }
 
     @Test

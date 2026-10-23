@@ -124,7 +124,7 @@ public final class Columns {
      *
      * <p>The hierarchy column doubles as the trip / stop label: a trip row shows its static short
      * name when available, falling back to its trip id, and its stop rows are indented below it
-     * with their stop id.
+     * with their static stop name, falling back to the stop id.
      */
     public static void liveUpdates(TreeGrid<LiveUpdateRow> grid) {
         grid.addComponentHierarchyColumn(row -> liveLabel(grid, row))
@@ -206,7 +206,7 @@ public final class Columns {
     private static Component liveLabel(TreeGrid<LiveUpdateRow> grid, LiveUpdateRow row) {
         return switch (row) {
             case TripUpdateRow trip -> label(tripName(trip.update()));
-            case StopTimeUpdateRow stop -> label(stopId(stop.update()));
+            case StopTimeUpdateRow stop -> stopLabel(stop.update());
             case LoadingRow ignored -> loadingRow(grid);
         };
     }
@@ -216,9 +216,31 @@ public final class Columns {
      * as a tooltip on hover.
      */
     private static Span label(String value) {
+        return label(value, value);
+    }
+
+    private static Span label(String value, String title) {
         var span = new Span(UiFormat.elideId(value));
-        span.setTitle(UiFormat.text(value));
+        span.setTitle(UiFormat.text(title));
         return span;
+    }
+
+    /**
+     * Stop label, preferring the static schedule's stop name over the raw stop id.
+     *
+     * <p>A stop time update only carries a stop id; the name is resolved from the static schedule
+     * and is absent when no static stop matches. The stop id stays available as the tooltip.
+     */
+    static String stopName(StopTimeUpdate stop) {
+        return stop.hasStopName() ? stop.getStopName() : stopId(stop);
+    }
+
+    private static Span stopLabel(StopTimeUpdate stop) {
+        var id = stopId(stop);
+        if (!stop.hasStopName()) {
+            return label(id);
+        }
+        return label(stop.getStopName(), id == null ? stop.getStopName() : id);
     }
 
     /**

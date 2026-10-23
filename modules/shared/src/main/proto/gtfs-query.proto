@@ -209,6 +209,9 @@ message StopTimeUpdate {
   // SCHEDULED, SKIPPED, NO_DATA, UNSCHEDULED or ADDED.
   optional string schedule_relationship = 10;
   optional string assigned_stop_id = 11;
+  // Stop name resolved from the static schedule; absent when no static stop
+  // matches or the feed does not publish one.
+  optional string stop_name = 12;
 }
 
 message StopTimeUpdatesRequest {
