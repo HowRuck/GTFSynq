@@ -1,8 +1,10 @@
 package org.example.gtfsynq.ui.component;
 
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.value.ValueChangeMode;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import org.example.gtfsynq.ui.client.DataAccessException;
 import org.example.gtfsynq.ui.client.GtfsQueryClient;
@@ -19,12 +21,21 @@ public final class Filters {
         feed.setClearButtonVisible(true);
         feed.setAllowCustomValue(false);
         feed.setWidth("12rem");
-        try {
-            feed.setItems(client.feedIds());
-        } catch (DataAccessException ignored) {
-            // The table below shows the gRPC failure; an empty selector is enough here.
-        }
         feed.addValueChangeListener(event -> onChange.accept(event.getValue()));
+
+        // Load the feed ids off the session-lock thread, like the overview stats.
+        var ui = UI.getCurrent();
+        if (ui == null) {
+            return feed;
+        }
+        CompletableFuture.runAsync(() -> {
+            try {
+                var ids = client.feedIds();
+                ui.access(() -> feed.setItems(ids));
+            } catch (DataAccessException ignored) {
+                // The table below shows the gRPC failure; an empty selector is enough here.
+            }
+        });
         return feed;
     }
 

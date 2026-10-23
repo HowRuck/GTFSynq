@@ -27,12 +27,27 @@ quarkus:
         suppress-non-application-uris: false
 
   otel:
+    # Set QUARKUS_OTEL_SDK_DISABLED=true when the app runs without the
+    # monitoring stack, so it stops trying to reach an absent collector.
+    sdk:
+      disabled: ${QUARKUS_OTEL_SDK_DISABLED:false}
     logs:
       enabled: true
     exporter:
       otlp:
-        endpoint: http://otel-collector:4317
+        endpoint: ${QUARKUS_OTEL_EXPORTER_OTLP_ENDPOINT:http://otel-collector:4317}
         protocol: grpc
+
+  # Resolve the collector asynchronously. The default resolver does a blocking
+  # InetAddress lookup on the Vert.x event loop when the host is unreachable,
+  # which trips the blocked-thread checker and stalls push handshakes.
+  vertx:
+    use-async-dns: true
+
+  # Vaadin push frames must not run on the Vert.x event loop. The Vaadin
+  # extension sets this by default; keeping it explicit guards against upgrades.
+  websocket:
+    dispatch-to-worker: true
 
   log:
     console:

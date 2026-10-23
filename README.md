@@ -580,6 +580,12 @@ The apps export telemetry via OpenTelemetry:
 Because metrics are pushed rather than scraped, the apps no longer expose a
 Prometheus `/q/metrics` endpoint and there is no scrape job for them.
 
+If the apps run without this monitoring stack, they log repeated
+`Failed to export ... otel-collector` warnings. Either start the stack with the
+apps (`docker compose up -d` includes `docker-compose.monitoring.yaml`) or set
+`QUARKUS_OTEL_SDK_DISABLED=true` in `.env` to turn the SDK off. The collector
+endpoint is configurable through `QUARKUS_OTEL_EXPORTER_OTLP_ENDPOINT`.
+
 The applications expose health endpoints on their own port:
 
 - `GET /q/health`

@@ -29,13 +29,23 @@ quarkus:
   # VictoriaMetrics / VictoriaLogs / VictoriaTraces. service.name defaults to
   # quarkus.application.name.
   otel:
+    # Set QUARKUS_OTEL_SDK_DISABLED=true when the app runs without the
+    # monitoring stack, so it stops trying to reach an absent collector.
+    sdk:
+      disabled: ${QUARKUS_OTEL_SDK_DISABLED:false}
     logs:
       enabled: true
     exporter:
       otlp:
         # The collector defined in docker-compose.monitoring.yaml.
-        endpoint: http://otel-collector:4317
+        endpoint: ${QUARKUS_OTEL_EXPORTER_OTLP_ENDPOINT:http://otel-collector:4317}
         protocol: grpc
+
+  # Resolve the collector asynchronously. The default resolver does a blocking
+  # InetAddress lookup on the Vert.x event loop when the host is unreachable,
+  # which trips the blocked-thread checker.
+  vertx:
+    use-async-dns: true
 
   log:
     console:

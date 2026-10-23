@@ -17,6 +17,10 @@ services:
             QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://timescaledb:5432/gtfsynq
             QUARKUS_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
             QUARKUS_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set (see .env.template)}
+            # Set QUARKUS_OTEL_SDK_DISABLED=true in .env to run without the
+            # monitoring stack.
+            QUARKUS_OTEL_SDK_DISABLED: ${QUARKUS_OTEL_SDK_DISABLED:-false}
+            QUARKUS_OTEL_EXPORTER_OTLP_ENDPOINT: ${QUARKUS_OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4317}
         ports:
             # Host-only by default. Expose externally via a reverse proxy
             # (Pangolin/Newt, Caddy, nginx) or an SSH tunnel, never 0.0.0.0.
@@ -39,6 +43,8 @@ services:
             # serves gRPC on the HTTP port (8080), so no extra port is exposed.
             GTFS_API_GRPC_HOST: api-app
             GTFS_API_GRPC_PORT: 8080
+            QUARKUS_OTEL_SDK_DISABLED: ${QUARKUS_OTEL_SDK_DISABLED:-false}
+            QUARKUS_OTEL_EXPORTER_OTLP_ENDPOINT: ${QUARKUS_OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4317}
         ports:
             # Host-only by default, same policy as the API.
             - "127.0.0.1:8083:8083"
@@ -64,6 +70,8 @@ services:
             GTFSYNQ_STORAGE_S3_BUCKET: ${GTFSYNQ_STORAGE_S3_BUCKET:-gtfsynq-static}
             GTFSYNQ_STORAGE_S3_ACCESS_KEY: ${S3_ACCESS_KEY:?S3_ACCESS_KEY must be set (see .env.template)}
             GTFSYNQ_STORAGE_S3_SECRET_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY must be set (see .env.template)}
+            QUARKUS_OTEL_SDK_DISABLED: ${QUARKUS_OTEL_SDK_DISABLED:-false}
+            QUARKUS_OTEL_EXPORTER_OTLP_ENDPOINT: ${QUARKUS_OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4317}
         ports:
             - "127.0.0.1:8081:8081"
         volumes:
@@ -94,6 +102,8 @@ services:
             GTFSYNQ_STORAGE_S3_BUCKET: ${GTFSYNQ_STORAGE_S3_BUCKET:-gtfsynq-static}
             GTFSYNQ_STORAGE_S3_ACCESS_KEY: ${S3_ACCESS_KEY:?S3_ACCESS_KEY must be set (see .env.template)}
             GTFSYNQ_STORAGE_S3_SECRET_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY must be set (see .env.template)}
+            QUARKUS_OTEL_SDK_DISABLED: ${QUARKUS_OTEL_SDK_DISABLED:-false}
+            QUARKUS_OTEL_EXPORTER_OTLP_ENDPOINT: ${QUARKUS_OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4317}
         ports:
             - "127.0.0.1:8082:8082"
         volumes:
