@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.example.gtfsynq.api.dto.PageResponse;
+import org.example.gtfsynq.api.dto.StaticFeedDto;
 import org.example.gtfsynq.api.dto.StopTimeUpdateDto;
 import org.example.gtfsynq.api.dto.TripUpdateDto;
 import org.junit.jupiter.api.Test;
@@ -53,8 +54,38 @@ class GtfsQueryMapperTest {
         assertFalse(update.hasStopName());
     }
 
+    @Test
+    void mapsAgencyNamesOnStaticFeeds() {
+        var feed = GtfsQueryMapper.staticFeedsReply(staticFeedPage(List.of("MTA", "NJ Transit")))
+                .getItems(0);
+
+        assertEquals(List.of("MTA", "NJ Transit"), feed.getAgencyNamesList());
+    }
+
+    @Test
+    void leavesAgencyNamesEmptyWhenNoAgencyRowWasLoaded() {
+        var feed = GtfsQueryMapper.staticFeedsReply(staticFeedPage(List.of()))
+                .getItems(0);
+
+        assertTrue(feed.getAgencyNamesList().isEmpty());
+    }
+
     private static PageResponse<TripUpdateDto> page(TripUpdateDto update) {
         return new PageResponse<>(List.of(update), 0, 25, 1, 1);
+    }
+
+    private static PageResponse<StaticFeedDto> staticFeedPage(List<String> agencyNames) {
+        var feed = new StaticFeedDto(
+                "feed",
+                "sha256",
+                "bucket",
+                "object-key",
+                null,
+                1024,
+                OffsetDateTime.parse("2026-10-23T10:00:00Z"),
+                OffsetDateTime.parse("2026-10-23T10:01:00Z"),
+                agencyNames);
+        return new PageResponse<>(List.of(feed), 0, 25, 1, 1);
     }
 
     private static TripUpdateDto tripUpdate(String tripShortName, String routeShortName, String routeLongName) {

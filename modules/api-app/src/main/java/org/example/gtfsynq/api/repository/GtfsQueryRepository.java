@@ -126,16 +126,24 @@ public class GtfsQueryRepository {
     }
 
     public PageResponse<StaticFeedDto> staticFeeds(int page, int size) {
+        // A feed may describe several agencies, so they are aggregated into one array beside the
+        // feed's row instead of widening the page by one row per agency.
         String select = """
-                SELECT feed_id::text, sha256, bucket, object_key, source_url, size_bytes, ingested_at, loaded_at
-                FROM static_feeds
+                SELECT f.feed_id::text, f.sha256, f.bucket, f.object_key, f.source_url, f.size_bytes,
+                       f.ingested_at, f.loaded_at, a.agency_names
+                FROM static_feeds f
+                LEFT JOIN LATERAL (
+                    SELECT array_agg(agency_name ORDER BY agency_id) AS agency_names
+                    FROM static_agency
+                    WHERE feed_id = f.feed_id
+                ) a ON TRUE
                 """;
         String count = "SELECT count(*) FROM static_feeds";
         return page(
                 select,
                 count,
                 List.of(),
-                "loaded_at DESC, feed_id ASC",
+                "f.loaded_at DESC, f.feed_id ASC",
                 page,
                 size,
                 rs -> new StaticFeedDto(
@@ -146,7 +154,8 @@ public class GtfsQueryRepository {
                         rs.getString("source_url"),
                         rs.getLong("size_bytes"),
                         offsetDateTime(rs, "ingested_at"),
-                        offsetDateTime(rs, "loaded_at")));
+                        offsetDateTime(rs, "loaded_at"),
+                        stringList(rs, "agency_names")));
     }
 
     public PageResponse<RouteDto> routes(
@@ -487,6 +496,19 @@ public class GtfsQueryRepository {
     private static Integer nullableInt(ResultSet rs, String column) throws SQLException {
         int value = rs.getInt(column);
         return rs.wasNull() ? null : value;
+    }
+
+    /** An aggregated text array as a list; absent stays empty rather than null. */
+    private static List<String> stringList(ResultSet rs, String column) throws SQLException {
+        var array = rs.getArray(column);
+        if (array == null) {
+            return List.of();
+        }
+        try {
+            return List.of((String[]) array.getArray());
+        } finally {
+            array.free();
+        }
     }
 
     @FunctionalInterface

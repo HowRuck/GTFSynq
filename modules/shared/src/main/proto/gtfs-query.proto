@@ -74,6 +74,9 @@ message StaticFeed {
   uint64 size_bytes = 6;
   google.protobuf.Timestamp ingested_at = 7;
   google.protobuf.Timestamp loaded_at = 8;
+  // Agency names from static_agency, in agency_id order. A feed may describe
+  // several agencies; the list is empty when no agency row was loaded.
+  repeated string agency_names = 9;
 }
 
 message StaticFeedsRequest {

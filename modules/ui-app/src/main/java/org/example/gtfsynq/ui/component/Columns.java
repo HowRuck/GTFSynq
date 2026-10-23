@@ -30,6 +30,7 @@ public final class Columns {
     public static void feedSummary(Grid<StaticFeed> grid) {
         grid.addComponentColumn(feed -> UiComponents.badge(feed.getFeedId()))
                 .setHeader(grid.getTranslation("column.feed"));
+        grid.addColumn(Columns::agencyNames).setHeader(grid.getTranslation("column.agency"));
         grid.addColumn(feed -> UiFormat.shortHash(feed.getSha256())).setHeader(grid.getTranslation("column.sha256"));
         grid.addColumn(feed -> UiFormat.bytes(feed.getSizeBytes())).setHeader(grid.getTranslation("column.size"));
         grid.addColumn(feed -> UiFormat.dateTime(feed.getLoadedAt())).setHeader(grid.getTranslation("column.loaded"));
@@ -38,6 +39,7 @@ public final class Columns {
     public static void feeds(Grid<StaticFeed> grid) {
         grid.addComponentColumn(feed -> UiComponents.badge(feed.getFeedId()))
                 .setHeader(grid.getTranslation("column.feed"));
+        grid.addColumn(Columns::agencyNames).setHeader(grid.getTranslation("column.agency"));
         grid.addColumn(feed -> UiFormat.shortHash(feed.getSha256())).setHeader(grid.getTranslation("column.sha256"));
         grid.addColumn(feed -> UiFormat.bytes(feed.getSizeBytes())).setHeader(grid.getTranslation("column.size"));
         grid.addColumn(StaticFeed::getObjectKey).setHeader(grid.getTranslation("column.objectKey"));
@@ -45,6 +47,12 @@ public final class Columns {
         grid.addColumn(feed -> UiFormat.dateTime(feed.getIngestedAt()))
                 .setHeader(grid.getTranslation("column.ingested"));
         grid.addColumn(feed -> UiFormat.dateTime(feed.getLoadedAt())).setHeader(grid.getTranslation("column.loaded"));
+    }
+
+    /** All agencies a feed describes, in agency order; a feed with none shows the placeholder. */
+    private static String agencyNames(StaticFeed feed) {
+        var names = feed.getAgencyNamesList();
+        return names.isEmpty() ? UiFormat.NOT_AVAILABLE : String.join(", ", names);
     }
 
     public static void routes(Grid<Route> grid) {

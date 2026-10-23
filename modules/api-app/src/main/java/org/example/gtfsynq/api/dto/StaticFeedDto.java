@@ -1,8 +1,9 @@
 package org.example.gtfsynq.api.dto;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 
-/** One row from {@code static_feeds}. */
+/** One row from {@code static_feeds}, with the agencies that feed describes. */
 public record StaticFeedDto(
         String feedId,
         String sha256,
@@ -11,4 +12,5 @@ public record StaticFeedDto(
         String sourceUrl,
         long sizeBytes,
         OffsetDateTime ingestedAt,
-        OffsetDateTime loadedAt) {}
+        OffsetDateTime loadedAt,
+        List<String> agencyNames) {}

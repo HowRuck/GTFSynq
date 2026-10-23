@@ -54,7 +54,8 @@ final class GtfsQueryMapper {
                     .setObjectKey(feed.objectKey())
                     .setSizeBytes(feed.sizeBytes())
                     .setIngestedAt(timestamp(feed.ingestedAt()))
-                    .setLoadedAt(timestamp(feed.loadedAt()));
+                    .setLoadedAt(timestamp(feed.loadedAt()))
+                    .addAllAgencyNames(feed.agencyNames());
             setIfPresent(feed.sourceUrl(), item::setSourceUrl);
             reply.addItems(item);
         }
