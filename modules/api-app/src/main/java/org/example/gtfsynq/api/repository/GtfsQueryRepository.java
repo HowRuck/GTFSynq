@@ -283,7 +283,7 @@ public class GtfsQueryRepository {
         String select = """
                 SELECT h.trip_update_id, h.feed_id::text AS feed_id, h.feed_ts, h.last_seen_at,
                        m.entity_id, m.trip_id, m.route_id, m.start_date, m.start_time,
-                       t.trip_short_name, r.route_short_name, r.route_long_name,
+                       t.trip_short_name, r.route_short_name, r.route_long_name, a.agency_names,
                        (SELECT count(*) FROM rt_stop_time_updates_hot s
                         WHERE s.trip_update_id = h.trip_update_id) AS stop_time_update_count,
                        (SELECT COALESCE(s.arrival_delay, s.departure_delay)
@@ -297,6 +297,11 @@ public class GtfsQueryRepository {
                 LEFT JOIN static_trips t ON t.feed_id = h.feed_id AND t.trip_id = m.trip_id
                 LEFT JOIN static_routes r
                        ON r.feed_id = h.feed_id AND r.route_id = COALESCE(t.route_id, m.route_id)
+                LEFT JOIN LATERAL (
+                    SELECT array_agg(agency_name ORDER BY agency_id) AS agency_names
+                    FROM static_agency
+                    WHERE feed_id = h.feed_id
+                ) a ON TRUE
                 """;
         String count = "SELECT count(*) FROM rt_trip_updates_hot h";
         String order =
@@ -323,7 +328,8 @@ public class GtfsQueryRepository {
                         nullableInt(rs, "current_delay"),
                         rs.getString("trip_short_name"),
                         rs.getString("route_short_name"),
-                        rs.getString("route_long_name")),
+                        rs.getString("route_long_name"),
+                        stringList(rs, "agency_names")),
                 includeTotal);
     }
 

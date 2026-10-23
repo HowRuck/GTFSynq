@@ -55,6 +55,23 @@ class GtfsQueryMapperTest {
     }
 
     @Test
+    void mapsAgencyNamesOnTripUpdates() {
+        var update = GtfsQueryMapper.tripUpdatesReply(
+                        page(tripUpdate(List.of("MTA", "NJ Transit"), "Trip 1", "10", "Central - North")))
+                .getItems(0);
+
+        assertEquals(List.of("MTA", "NJ Transit"), update.getAgencyNamesList());
+    }
+
+    @Test
+    void leavesAgencyNamesEmptyWhenTheFeedHasNoAgencyRow() {
+        var update = GtfsQueryMapper.tripUpdatesReply(page(tripUpdate(List.of(), null, null, null)))
+                .getItems(0);
+
+        assertTrue(update.getAgencyNamesList().isEmpty());
+    }
+
+    @Test
     void mapsAgencyNamesOnStaticFeeds() {
         var feed = GtfsQueryMapper.staticFeedsReply(staticFeedPage(List.of("MTA", "NJ Transit")))
                 .getItems(0);
@@ -88,6 +105,11 @@ class GtfsQueryMapperTest {
     }
 
     private static TripUpdateDto tripUpdate(String tripShortName, String routeShortName, String routeLongName) {
+        return tripUpdate(List.of(), tripShortName, routeShortName, routeLongName);
+    }
+
+    private static TripUpdateDto tripUpdate(
+            List<String> agencyNames, String tripShortName, String routeShortName, String routeLongName) {
         return new TripUpdateDto(
                 1,
                 "feed",
@@ -102,7 +124,8 @@ class GtfsQueryMapperTest {
                 null,
                 tripShortName,
                 routeShortName,
-                routeLongName);
+                routeLongName,
+                agencyNames);
     }
 
     private static StopTimeUpdateDto stopTimeUpdate(String stopName) {

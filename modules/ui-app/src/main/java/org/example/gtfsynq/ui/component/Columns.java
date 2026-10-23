@@ -7,6 +7,7 @@ import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.progressbar.ProgressBar;
 import com.vaadin.flow.component.treegrid.TreeGrid;
+import java.util.List;
 import org.example.gtfsynq.shared.protocol.query.Route;
 import org.example.gtfsynq.shared.protocol.query.StaticFeed;
 import org.example.gtfsynq.shared.protocol.query.Stop;
@@ -30,7 +31,6 @@ public final class Columns {
     public static void feedSummary(Grid<StaticFeed> grid) {
         grid.addComponentColumn(feed -> UiComponents.badge(feed.getFeedId()))
                 .setHeader(grid.getTranslation("column.feed"));
-        grid.addColumn(Columns::agencyNames).setHeader(grid.getTranslation("column.agency"));
         grid.addColumn(feed -> UiFormat.shortHash(feed.getSha256())).setHeader(grid.getTranslation("column.sha256"));
         grid.addColumn(feed -> UiFormat.bytes(feed.getSizeBytes())).setHeader(grid.getTranslation("column.size"));
         grid.addColumn(feed -> UiFormat.dateTime(feed.getLoadedAt())).setHeader(grid.getTranslation("column.loaded"));
@@ -39,7 +39,7 @@ public final class Columns {
     public static void feeds(Grid<StaticFeed> grid) {
         grid.addComponentColumn(feed -> UiComponents.badge(feed.getFeedId()))
                 .setHeader(grid.getTranslation("column.feed"));
-        grid.addColumn(Columns::agencyNames).setHeader(grid.getTranslation("column.agency"));
+        grid.addColumn(feed -> agencyNames(feed.getAgencyNamesList())).setHeader(grid.getTranslation("column.agency"));
         grid.addColumn(feed -> UiFormat.shortHash(feed.getSha256())).setHeader(grid.getTranslation("column.sha256"));
         grid.addColumn(feed -> UiFormat.bytes(feed.getSizeBytes())).setHeader(grid.getTranslation("column.size"));
         grid.addColumn(StaticFeed::getObjectKey).setHeader(grid.getTranslation("column.objectKey"));
@@ -50,8 +50,7 @@ public final class Columns {
     }
 
     /** All agencies a feed describes, in agency order; a feed with none shows the placeholder. */
-    private static String agencyNames(StaticFeed feed) {
-        var names = feed.getAgencyNamesList();
+    private static String agencyNames(List<String> names) {
         return names.isEmpty() ? UiFormat.NOT_AVAILABLE : String.join(", ", names);
     }
 
@@ -144,6 +143,11 @@ public final class Columns {
                         ? UiComponents.badge(trip.update().getFeedId())
                         : new Span())
                 .setHeader(grid.getTranslation("column.feed"));
+
+        grid.addColumn(row -> row instanceof TripUpdateRow trip
+                        ? agencyNames(trip.update().getAgencyNamesList())
+                        : "")
+                .setHeader(grid.getTranslation("column.agency"));
 
         grid.addColumn(row -> row instanceof TripUpdateRow trip ? UiFormat.text(routeName(trip.update())) : "")
                 .setHeader(grid.getTranslation("column.route"))

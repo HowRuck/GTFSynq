@@ -195,7 +195,7 @@ no datasource and never calls the REST API.
 | Routes | `/routes` | Static routes with a feed filter and search |
 | Stops | `/stops` | Stops and stations with coordinates, location type and parent station |
 | Trips | `/trips` | Trips with their route, service and direction |
-| Live Updates | `/live` | Current trip updates; expand a trip to see its stop time updates |
+| Live Updates | `/live` | Current trip updates with their agencies; expand a trip to see its stop time updates |
 
 Behaviour shared by the tables:
 
@@ -210,10 +210,10 @@ Behaviour shared by the tables:
 - The live view polls every minute through server push, keeps expanded trips
   open across refreshes, and has a manual refresh button. Trip, route and stop
   labels prefer their static names and fall back to ids when no matching static
-  name is available. Each trip row also shows its current delay, taken
-  from the first upcoming stop that reports one. Expanding a trip shows a loading
-  row with an indeterminate progress bar until its stop time updates arrive, so
-  the UI never waits on the backend with the session lock held.
+  name is available. Each trip row also shows its feed's agencies and its current
+  delay, taken from the first upcoming stop that reports one. Expanding a trip
+  shows a loading row with an indeterminate progress bar until its stop time
+  updates arrive, so the UI never waits on the backend with the session lock held.
 - gRPC failures appear as notifications instead of breaking the view. The API
   host and port come from `GTFS_API_GRPC_HOST` / `GTFS_API_GRPC_PORT`.
 - All text goes through Vaadin's I18N provider
