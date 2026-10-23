@@ -176,3 +176,11 @@ gtfs:
     otel:
       sdk:
         disabled: true
+
+# The collector hostname only resolves inside the Compose network, so local dev
+# mode disables the SDK unless QUARKUS_OTEL_SDK_DISABLED is set explicitly.
+"%dev":
+  quarkus:
+    otel:
+      sdk:
+        disabled: true
