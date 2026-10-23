@@ -54,3 +54,13 @@ vaadin-grid::part(delay-severe) {
     color: var(--aura-red-text);
     font-weight: var(--aura-font-weight-semibold);
 }
+
+/*
+ * Clock in the navbar. Tabular figures keep the ticking digits from shifting
+ * the surrounding layout, and the secondary color keeps it from competing with
+ * the navigation.
+ */
+.app-clock {
+    color: var(--vaadin-text-color-secondary);
+    font-variant-numeric: tabular-nums;
+}
