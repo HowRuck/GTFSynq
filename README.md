@@ -201,7 +201,8 @@ Behaviour shared by the tables:
 
 - Rows load lazily as you scroll; the backend returns one page at a time, so the
   console never holds a whole table in memory.
-- Sortable columns sort server-side, and every column is sized to its content.
+- Sortable columns sort server-side; columns are sized to their content and share
+  any remaining width.
 - Routes, stops and trips offer a feed selector and a search box (three or more
   characters, matching the API).
 - The live view polls every 10 seconds through server push, keeps expanded trips
@@ -282,7 +283,8 @@ The Vaadin Flow web console (see [Web Console](#web-console)):
 - server-side views for `Overview`, `Static Feeds`, `Routes`, `Stops`, `Trips` and
   `Live Updates`, with top navigation and localized page titles
 - lazy-loaded grids backed by paged unary `GtfsQueryService` calls, with
-  server-side sorting, content-sized columns, feed filters and search
+  server-side sorting, content-sized columns that fill the grid, feed filters and
+  search
 - an expandable live tree: trip updates load lazily and expand to their stop time
   updates, refreshed every 10 seconds through server push
 - English translations via Vaadin I18N, Aura theme with the Geist font

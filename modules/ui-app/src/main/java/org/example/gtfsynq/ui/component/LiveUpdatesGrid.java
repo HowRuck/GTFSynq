@@ -27,8 +27,8 @@ public class LiveUpdatesGrid extends TreeGrid<LiveUpdateRow> {
         setSelectionMode(Grid.SelectionMode.NONE);
         addThemeVariants(GridVariant.ROW_STRIPES);
         Columns.liveUpdates(this);
-        // Size each column to its content instead of sharing the width equally.
-        getColumns().forEach(column -> column.setAutoWidth(true).setFlexGrow(0));
+        // Size each column to its content, then let the columns share any remaining width.
+        getColumns().forEach(column -> column.setAutoWidth(true).setFlexGrow(1));
 
         setDataProvider(provider);
         getColumns().stream()
