@@ -20,7 +20,7 @@ import org.example.gtfsynq.ui.component.PageHeader;
 @Route(value = "live", layout = MainLayout.class)
 public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
 
-    private static final int POLL_INTERVAL_MS = 10_000;
+    private static final int POLL_INTERVAL_MS = 60_000;
 
     private final LiveUpdatesGrid table;
     private Registration pollRegistration;
@@ -37,7 +37,7 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
         add(
                 PageHeader.create(
                         getTranslation("page.live.title"),
-                        getTranslation("page.live.subtitle", POLL_INTERVAL_MS / 1000),
+                        getTranslation("page.live.subtitle"),
                         feed,
                         refresh),
                 table);
