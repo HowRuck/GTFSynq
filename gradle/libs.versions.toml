@@ -1,6 +1,5 @@
 [versions]
 protobufPlugin = "0.10.0"
-snakeyaml = "2.7"
 spotless = "8.10.4"
 palantir-java-format = "2.102.0"
 
@@ -34,7 +33,6 @@ junitJupiter = "6.1.3"
 yavi = "0.17.1"
 
 [libraries]
-snakeyaml = { module = "org.yaml:snakeyaml", version.ref = "snakeyaml" }
 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 

@@ -1,4 +1,4 @@
-name: Qodana
+name: qodana
 
 on:
   push:
@@ -36,20 +36,20 @@ jobs:
   qodana:
     runs-on: avrea-ubuntu-latest-4-vcpu
     steps:
-      - name: Checkout
+      - name: checkout
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - name: Set up Java
+      - name: set-up-java
         uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 27
-      - name: Set up Gradle
+      - name: set-up-gradle
         uses: gradle/actions/setup-gradle@v6
-      - name: Generate proto sources
+      - name: generate-proto-sources
         run: ./gradlew :shared:generateProto
-      - name: "Qodana Scan"
+      - name: qodana-scan
         uses: JetBrains/qodana-action@v2026.2.2
         with:
           # Same as the SARIF upload below: a fork PR gets a read-only
@@ -57,7 +57,7 @@ jobs:
           post-pr-comment: ${{ github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork }}
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
-      - name: Upload SARIF
+      - name: upload-sarif
         # Fork PRs get a read-only GITHUB_TOKEN, so the upload would always fail there
         if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork }}
         uses: github/codeql-action/upload-sarif@v4

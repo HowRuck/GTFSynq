@@ -1,4 +1,4 @@
-name: Images
+name: images
 
 on:
   push:
@@ -27,19 +27,19 @@ jobs:
       matrix:
         app: [api-app, ingest-app, store-app, ui-app]
     steps:
-      - name: Checkout
+      - name: checkout
         uses: actions/checkout@v7
 
-      - name: Set up Java
+      - name: set-up-java
         uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 25
 
-      - name: Set up Gradle
+      - name: set-up-gradle
         uses: gradle/actions/setup-gradle@v6
 
-      - name: Cache Vaadin toolchain and pnpm store
+      - name: cache-vaadin-toolchain-and-pnpm-store
         # Vaadin downloads its own Node/pnpm toolchain and frontend packages.
         if: matrix.app == 'ui-app'
         uses: actions/cache@v6
@@ -51,7 +51,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-vaadin-
 
-      - name: Cache Jib Layers
+      - name: cache-jib-layers
         uses: actions/cache@v6
         with:
           path: ~/.cache/google-cloud-tools-jib
@@ -60,19 +60,19 @@ jobs:
             ${{ runner.os }}-jib-${{ matrix.app }}-
             ${{ runner.os }}-jib-
 
-      - name: Log in to GitHub Container Registry
+      - name: log-in-to-github-container-registry
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push JVM image
+      - name: build-and-push-jvm-image
         # Quarkus/Jib builds the image without a Docker daemon and reads the
         # registry credentials written by docker/login-action.
         run: ./gradlew :${{ matrix.app }}:imageBuild -Dquarkus.container-image.push=true
 
-      - name: Build and push native image
+      - name: build-and-push-native-image
         # Native compilation happens in the GraalVM builder container (Docker is
         # available on the runner), then Jib packages the executable without a
         # daemon. quarkus.package.jar.enabled=false is mandatory: the Gradle
