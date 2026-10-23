@@ -15,4 +15,5 @@ public record TripUpdateDto(
         String routeId,
         LocalDate startDate,
         LocalTime startTime,
-        int stopTimeUpdateCount) {}
+        int stopTimeUpdateCount,
+        Integer currentDelay) {}

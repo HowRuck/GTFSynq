@@ -18,7 +18,7 @@ class LiveUpdatesGridTest {
         try {
             var grid = new LiveUpdatesGrid(new GtfsQueryClient(), "lastSeenAt", SortDirection.DESCENDING);
 
-            assertEquals(12, grid.getColumns().size());
+            assertEquals(13, grid.getColumns().size());
             assertEquals("tripId", grid.getColumns().getFirst().getKey());
             assertNotNull(grid.getColumnByKey("lastSeenAt"));
             assertNotNull(grid.getColumnByKey("feedTs"));

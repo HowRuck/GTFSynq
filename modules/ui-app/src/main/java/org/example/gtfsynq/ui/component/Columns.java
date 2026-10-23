@@ -13,6 +13,7 @@ import org.example.gtfsynq.shared.protocol.query.StaticFeed;
 import org.example.gtfsynq.shared.protocol.query.Stop;
 import org.example.gtfsynq.shared.protocol.query.StopTimeUpdate;
 import org.example.gtfsynq.shared.protocol.query.Trip;
+import org.example.gtfsynq.shared.protocol.query.TripUpdate;
 import org.example.gtfsynq.ui.format.UiFormat;
 
 /**
@@ -154,6 +155,14 @@ public final class Columns {
                         : "")
                 .setHeader(grid.getTranslation("column.startTime"));
 
+        grid.addColumn(row -> row instanceof TripUpdateRow trip ? currentDelay(trip.update()) : "")
+                .setHeader(grid.getTranslation("column.currentDelay"))
+                .setTextAlign(ColumnTextAlign.END)
+                .setPartNameGenerator(row -> row instanceof TripUpdateRow trip
+                        ? delayPart(
+                                trip.update().hasCurrentDelay() ? trip.update().getCurrentDelay() : null)
+                        : null);
+
         grid.addColumn(row -> row instanceof StopTimeUpdateRow stop
                         ? String.valueOf(stop.update().getStopSequence())
                         : "")
@@ -234,6 +243,10 @@ public final class Columns {
                 stop.hasDepartureDelay() ? stop.getDepartureDelay() : null);
     }
 
+    private static String currentDelay(TripUpdate trip) {
+        return UiFormat.delay(trip.hasCurrentDelay() ? trip.getCurrentDelay() : null);
+    }
+
     private static String delay(StopTimeUpdate stop, boolean arrival) {
         return UiFormat.delay(delaySeconds(stop, arrival));
     }
@@ -243,7 +256,10 @@ public final class Columns {
      * and red with extra weight once the delay reaches five minutes.
      */
     private static String delayPart(StopTimeUpdate stop, boolean arrival) {
-        var seconds = delaySeconds(stop, arrival);
+        return delayPart(delaySeconds(stop, arrival));
+    }
+
+    private static String delayPart(Integer seconds) {
         if (seconds == null) {
             return null;
         }

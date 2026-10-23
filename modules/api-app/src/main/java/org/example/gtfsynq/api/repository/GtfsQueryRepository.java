@@ -275,7 +275,13 @@ public class GtfsQueryRepository {
                 SELECT h.trip_update_id, h.feed_id::text AS feed_id, h.feed_ts, h.last_seen_at,
                        m.entity_id, m.trip_id, m.route_id, m.start_date, m.start_time,
                        (SELECT count(*) FROM rt_stop_time_updates_hot s
-                        WHERE s.trip_update_id = h.trip_update_id) AS stop_time_update_count
+                        WHERE s.trip_update_id = h.trip_update_id) AS stop_time_update_count,
+                       (SELECT COALESCE(s.arrival_delay, s.departure_delay)
+                        FROM rt_stop_time_updates_hot s
+                        WHERE s.trip_update_id = h.trip_update_id
+                          AND COALESCE(s.arrival_delay, s.departure_delay) IS NOT NULL
+                        ORDER BY s.stop_sequence ASC
+                        LIMIT 1) AS current_delay
                 FROM rt_trip_updates_hot h
                 LEFT JOIN rt_trip_updates_meta m ON m.id = h.trip_update_id
                 """;
@@ -300,7 +306,8 @@ public class GtfsQueryRepository {
                         rs.getString("route_id"),
                         rs.getObject("start_date", LocalDate.class),
                         rs.getObject("start_time", LocalTime.class),
-                        rs.getInt("stop_time_update_count")),
+                        rs.getInt("stop_time_update_count"),
+                        nullableInt(rs, "current_delay")),
                 includeTotal);
     }
 
