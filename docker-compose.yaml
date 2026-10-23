@@ -28,7 +28,7 @@ services:
         # host via /q/health.
 
     ui-app:
-        image: ghcr.io/howruck/gtfsynq-ui-app:0.0.1-SNAPSHOT
+        image: ghcr.io/howruck/gtfsynq-ui-app-native:0.0.1-SNAPSHOT
         container_name: gtfsynq-ui-app
         depends_on:
             api-app:

@@ -453,7 +453,8 @@ also collected into the GitHub Actions job summary by `gradle/actions/setup-grad
 ## Container Image Build
 
 All images are built with the Quarkus Jib extension — no Dockerfile and no
-Docker daemon needed:
+Docker daemon needed. Every app, including the Vaadin console, is also compiled
+to a GraalVM native executable (see below):
 
 ```bash
 # Every app (JVM)
@@ -463,11 +464,11 @@ Docker daemon needed:
 ./gradlew :api-app:imageBuild
 ```
 
-The Gradle commands produce local images named
+The Gradle commands produce local JVM images named
 `ghcr.io/howruck/gtfsynq-<app>:0.0.1-SNAPSHOT` (e.g.
-`ghcr.io/howruck/gtfsynq-api-app:0.0.1-SNAPSHOT`), and `docker-compose.yaml`
-references all of them directly. Registry, group, name and tag are configured in
-each app's `application.yaml` and can be overridden on the command line, e.g.:
+`ghcr.io/howruck/gtfsynq-api-app:0.0.1-SNAPSHOT`); `docker-compose.yaml`
+references the `-native` variants. Registry, group, name and tag are configured
+in each app's `application.yaml` and can be overridden on the command line, e.g.:
 
 ```bash
 ./gradlew :api-app:imageBuild -Dquarkus.container-image.push=true
