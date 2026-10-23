@@ -149,7 +149,7 @@ public final class Columns {
                         : "")
                 .setHeader(grid.getTranslation("column.agency"));
 
-        grid.addColumn(row -> row instanceof TripUpdateRow trip ? UiFormat.text(routeName(trip.update())) : "")
+        grid.addComponentColumn(row -> row instanceof TripUpdateRow trip ? label(routeName(trip.update())) : new Span())
                 .setHeader(grid.getTranslation("column.route"))
                 .setKey("routeId")
                 .setSortProperty("routeId")

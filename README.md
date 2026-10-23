@@ -210,7 +210,8 @@ Behaviour shared by the tables:
 - The live view polls every minute through server push, keeps expanded trips
   open across refreshes, and has a manual refresh button. Trip, route and stop
   labels prefer their static names and fall back to ids when no matching static
-  name is available. Each trip row also shows its feed's agencies and its current
+  name is available; long labels are shortened to 32 characters with the full
+  value in a tooltip. Each trip row also shows its feed's agencies and its current
   delay, taken from the first upcoming stop that reports one. Expanding a trip
   shows a loading row with an indeterminate progress bar until its stop time
   updates arrive, so the UI never waits on the backend with the session lock held.
