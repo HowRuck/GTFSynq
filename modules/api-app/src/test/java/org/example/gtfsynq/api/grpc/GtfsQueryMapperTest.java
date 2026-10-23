@@ -64,8 +64,7 @@ class GtfsQueryMapperTest {
 
     @Test
     void leavesAgencyNamesEmptyWhenNoAgencyRowWasLoaded() {
-        var feed = GtfsQueryMapper.staticFeedsReply(staticFeedPage(List.of()))
-                .getItems(0);
+        var feed = GtfsQueryMapper.staticFeedsReply(staticFeedPage(List.of())).getItems(0);
 
         assertTrue(feed.getAgencyNamesList().isEmpty());
     }
