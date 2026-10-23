@@ -21,7 +21,7 @@ public final class UiComponents {
 
     public static Component routeColor(Route route) {
         if (!route.hasColor() || route.getColor().isBlank()) {
-            return new Span("—");
+            return new Span(UiFormat.NOT_AVAILABLE);
         }
         var color = route.getColor().startsWith("#") ? route.getColor() : "#" + route.getColor();
         return new Span(color);
@@ -29,7 +29,7 @@ public final class UiComponents {
 
     public static Component sourceLink(StaticFeed feed) {
         if (!feed.hasSourceUrl() || feed.getSourceUrl().isBlank()) {
-            return new Span("—");
+            return new Span(UiFormat.NOT_AVAILABLE);
         }
         var link = new Anchor(feed.getSourceUrl(), feed.getSourceUrl());
         link.setTarget("_blank");

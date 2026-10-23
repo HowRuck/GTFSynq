@@ -9,7 +9,8 @@ import java.util.Locale;
 /** Presentation helpers shared by the table columns and the stat cards. */
 public final class UiFormat {
 
-    private static final String DASH = "—";
+    /** Placeholder for a value the feed does not provide. */
+    public static final String NOT_AVAILABLE = "N/A";
 
     /**
      * Longest identifier shown in a grid cell; feed ids such as {@code
@@ -28,7 +29,7 @@ public final class UiFormat {
 
     public static String dateTime(Timestamp value) {
         if (!isSet(value)) {
-            return DASH;
+            return NOT_AVAILABLE;
         }
         return DATE_TIME.format(instant(value).atZone(ZoneId.systemDefault()));
     }
@@ -36,7 +37,7 @@ public final class UiFormat {
     /** Time of day for a timestamp; stop times share the service date and do not repeat it. */
     public static String time(Timestamp value) {
         if (!isSet(value)) {
-            return DASH;
+            return NOT_AVAILABLE;
         }
         return TIME_OF_DAY.format(instant(value).atZone(ZoneId.systemDefault()));
     }
@@ -57,13 +58,13 @@ public final class UiFormat {
                     .build();
             return time(shifted);
         }
-        return DASH;
+        return NOT_AVAILABLE;
     }
 
     /** Delay formatted as {@code +minutes:seconds}; the sign shows early and late events. */
     public static String delay(Integer seconds) {
         if (seconds == null) {
-            return DASH;
+            return NOT_AVAILABLE;
         }
         var absolute = Math.abs((long) seconds);
         return String.format(Locale.ROOT, "%s%d:%02d", seconds < 0 ? "-" : "+", absolute / 60, absolute % 60);
@@ -78,13 +79,13 @@ public final class UiFormat {
     }
 
     public static String text(String value) {
-        return value == null || value.isBlank() ? DASH : value;
+        return value == null || value.isBlank() ? NOT_AVAILABLE : value;
     }
 
     /** GTFS times may exceed 24:00:00, so only the first 8 characters are shown. */
     public static String time(String value) {
         if (value == null || value.isBlank()) {
-            return DASH;
+            return NOT_AVAILABLE;
         }
         return value.length() > 8 ? value.substring(0, 8) : value;
     }
@@ -101,7 +102,9 @@ public final class UiFormat {
     }
 
     public static String shortHash(String value) {
-        return value == null || value.isBlank() ? DASH : value.substring(0, Math.min(12, value.length())) + "…";
+        return value == null || value.isBlank()
+                ? NOT_AVAILABLE
+                : value.substring(0, Math.min(12, value.length())) + "…";
     }
 
     /**
@@ -110,7 +113,7 @@ public final class UiFormat {
      */
     public static String elideId(String value) {
         if (value == null || value.isBlank()) {
-            return DASH;
+            return NOT_AVAILABLE;
         }
         if (value.length() <= MAX_ID_LENGTH) {
             return value;

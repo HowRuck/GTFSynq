@@ -84,16 +84,18 @@ public final class Columns {
                 .setKey("stopName")
                 .setSortProperty("stopName")
                 .setSortable(true);
-        grid.addColumn(stop -> stop.hasLat() ? UiFormat.coordinate(stop.getLat()) : "—")
+        grid.addColumn(stop -> stop.hasLat() ? UiFormat.coordinate(stop.getLat()) : UiFormat.NOT_AVAILABLE)
                 .setHeader(grid.getTranslation("column.latitude"));
-        grid.addColumn(stop -> stop.hasLon() ? UiFormat.coordinate(stop.getLon()) : "—")
+        grid.addColumn(stop -> stop.hasLon() ? UiFormat.coordinate(stop.getLon()) : UiFormat.NOT_AVAILABLE)
                 .setHeader(grid.getTranslation("column.longitude"));
-        grid.addColumn(stop -> stop.hasLocationType() ? String.valueOf(stop.getLocationType()) : "—")
+        grid.addColumn(stop -> stop.hasLocationType()
+                        ? String.valueOf(stop.getLocationType())
+                        : UiFormat.NOT_AVAILABLE)
                 .setHeader(grid.getTranslation("column.locationType"))
                 .setKey("locationType")
                 .setSortProperty("locationType")
                 .setSortable(true);
-        grid.addColumn(stop -> stop.hasParentStation() ? stop.getParentStation() : "—")
+        grid.addColumn(stop -> stop.hasParentStation() ? stop.getParentStation() : UiFormat.NOT_AVAILABLE)
                 .setHeader(grid.getTranslation("column.parentStation"));
     }
 
@@ -114,7 +116,9 @@ public final class Columns {
                 .setKey("serviceId")
                 .setSortProperty("serviceId")
                 .setSortable(true);
-        grid.addColumn(trip -> trip.hasDirectionId() ? String.valueOf(trip.getDirectionId()) : "—")
+        grid.addColumn(trip -> trip.hasDirectionId()
+                        ? String.valueOf(trip.getDirectionId())
+                        : UiFormat.NOT_AVAILABLE)
                 .setHeader(grid.getTranslation("column.direction"));
     }
 

@@ -19,7 +19,7 @@ class UiFormatTest {
     @Test
     void keepsShortIdentifiersAndUnsetValues() {
         assertEquals("62_1060", UiFormat.elideId("62_1060"));
-        assertEquals("—", UiFormat.elideId(null));
-        assertEquals("—", UiFormat.elideId(" "));
+        assertEquals("N/A", UiFormat.elideId(null));
+        assertEquals("N/A", UiFormat.elideId(" "));
     }
 }
