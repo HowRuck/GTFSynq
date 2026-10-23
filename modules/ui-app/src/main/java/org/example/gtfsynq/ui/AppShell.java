@@ -12,7 +12,6 @@ import com.vaadin.flow.theme.aura.Aura;
  * applies no theme without an annotation.
  */
 @StyleSheet(Aura.STYLESHEET)
-@StyleSheet("https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap")
 @StyleSheet("styles.css")
 @Push
 public class AppShell implements AppShellConfigurator {}

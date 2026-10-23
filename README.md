@@ -215,7 +215,9 @@ Behaviour shared by the tables:
   host and port come from `GTFS_API_GRPC_HOST` / `GTFS_API_GRPC_PORT`.
 - All text goes through Vaadin's I18N provider
   (`src/main/resources/vaadin-i18n/translations.properties`); English is the only
-  bundled locale. The look comes from the Aura theme with the Geist font.
+  bundled locale. The look comes from the Aura theme configured in
+  `META-INF/resources/styles.css` (Inter font, orange accent, warm light/dark
+  backgrounds).
 
 ## Project Structure
 
@@ -292,7 +294,8 @@ The Vaadin Flow web console (see [Web Console](#web-console)):
 - an expandable live tree: trip updates load lazily and expand to their stop time
   updates (with a progress-bar loading row while they fetch), refreshed every
   minute through server push
-- English translations via Vaadin I18N, Aura theme with the Geist font
+- English translations via Vaadin I18N, Aura theme with the Inter font and an
+  orange accent palette
 - no database access and no REST calls — it is a pure gRPC client of `api-app`
 
 ## Runtime Flow
