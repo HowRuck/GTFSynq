@@ -48,7 +48,8 @@ public class LazyGrid<T> extends Grid<T> {
         addThemeVariants(GridVariant.ROW_STRIPES);
         columnConfigurer.accept(this);
         // Size each column to its content, then let the columns share any remaining width.
-        getColumns().forEach(column -> column.setAutoWidth(true).setFlexGrow(1));
+        // Resizable lets users widen a truncated column by dragging its header edge.
+        getColumns().forEach(column -> column.setAutoWidth(true).setFlexGrow(1).setResizable(true));
 
         setItems(this::fetch);
         getColumns().stream()

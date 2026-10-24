@@ -62,6 +62,7 @@ class LiveUpdatesGridTest {
             assertNotNull(grid.getColumnByKey("lastSeenAt"));
             assertNotNull(grid.getColumnByKey("feedTs"));
             assertTrue(grid.getColumns().stream().allMatch(Grid.Column::isAutoWidth));
+            assertTrue(grid.getColumns().stream().allMatch(Grid.Column::isResizable));
             assertTrue(grid.getColumns().stream().allMatch(column -> column.getFlexGrow() == 1));
             assertTrue(grid.getColumns().stream().allMatch(column -> column.getTextAlign() == ColumnTextAlign.START));
         } finally {
