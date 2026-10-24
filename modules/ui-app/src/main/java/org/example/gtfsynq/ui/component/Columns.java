@@ -2,6 +2,8 @@ package org.example.gtfsynq.ui.component;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.grid.Grid.Column;
+import com.vaadin.flow.component.grid.HeaderRow;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
@@ -142,12 +144,14 @@ public final class Columns {
         grid.addComponentColumn(row -> row instanceof TripUpdateRow trip
                         ? UiComponents.badge(trip.update().getFeedId())
                         : new Span())
-                .setHeader(grid.getTranslation("column.feed"));
+                .setHeader(grid.getTranslation("column.feed"))
+                .setKey("feed");
 
         grid.addColumn(row -> row instanceof TripUpdateRow trip
                         ? UiFormat.text(trip.update().getAgencyName())
                         : "")
-                .setHeader(grid.getTranslation("column.agency"));
+                .setHeader(grid.getTranslation("column.agency"))
+                .setKey("agency");
 
         grid.addComponentColumn(row -> row instanceof TripUpdateRow trip ? label(routeName(trip.update())) : new Span())
                 .setHeader(grid.getTranslation("column.route"))
@@ -158,15 +162,18 @@ public final class Columns {
         grid.addColumn(row -> row instanceof TripUpdateRow trip
                         ? UiFormat.text(trip.update().getStartDate())
                         : "")
-                .setHeader(grid.getTranslation("column.startDate"));
+                .setHeader(grid.getTranslation("column.startDate"))
+                .setKey("startDate");
 
         grid.addColumn(row -> row instanceof TripUpdateRow trip
                         ? UiFormat.time(trip.update().getStartTime())
                         : "")
-                .setHeader(grid.getTranslation("column.startTime"));
+                .setHeader(grid.getTranslation("column.startTime"))
+                .setKey("startTime");
 
         grid.addColumn(row -> row instanceof TripUpdateRow trip ? currentDelay(trip.update()) : "")
                 .setHeader(grid.getTranslation("column.currentDelay"))
+                .setKey("currentDelay")
                 .setPartNameGenerator(row -> row instanceof TripUpdateRow trip
                         ? delayPart(
                                 trip.update().hasCurrentDelay() ? trip.update().getCurrentDelay() : null)
@@ -175,21 +182,26 @@ public final class Columns {
         grid.addColumn(row -> row instanceof StopTimeUpdateRow stop
                         ? String.valueOf(stop.update().getStopSequence())
                         : "")
-                .setHeader(grid.getTranslation("column.stopSequence"));
+                .setHeader(grid.getTranslation("column.stopSequence"))
+                .setKey("stopSequence");
 
         grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? eventTime(stop.update(), true) : "")
-                .setHeader(grid.getTranslation("column.arrivalTime"));
+                .setHeader(grid.getTranslation("column.arrivalTime"))
+                .setKey("arrivalTime");
 
         grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? delay(stop.update(), true) : "")
                 .setHeader(grid.getTranslation("column.arrivalDelay"))
+                .setKey("arrivalDelay")
                 .setPartNameGenerator(
                         row -> row instanceof StopTimeUpdateRow stop ? delayPart(stop.update(), true) : null);
 
         grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? eventTime(stop.update(), false) : "")
-                .setHeader(grid.getTranslation("column.departureTime"));
+                .setHeader(grid.getTranslation("column.departureTime"))
+                .setKey("departureTime");
 
         grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? delay(stop.update(), false) : "")
                 .setHeader(grid.getTranslation("column.departureDelay"))
+                .setKey("departureDelay")
                 .setPartNameGenerator(
                         row -> row instanceof StopTimeUpdateRow stop ? delayPart(stop.update(), false) : null);
 
@@ -211,6 +223,28 @@ public final class Columns {
                 .setKey("lastSeenAt")
                 .setSortProperty("lastSeenAt")
                 .setSortable(true);
+
+        groupHeaderRow(grid);
+    }
+
+    /**
+     * Groups the live tree's columns under a spanning header row so a fourteen-column table stays
+     * scannable. Groups must be contiguous: Vaadin joins adjacent header cells, so the column order
+     * defines the grouping.
+     */
+    private static void groupHeaderRow(TreeGrid<LiveUpdateRow> grid) {
+        var row = grid.prependHeaderRow();
+        join(row, grid, "column.group.trip", "tripId", "feed", "agency", "routeId", "startDate", "startTime");
+        join(row, grid, "column.group.status", "currentDelay", "stopSequence");
+        join(row, grid, "column.group.arrival", "arrivalTime", "arrivalDelay");
+        join(row, grid, "column.group.departure", "departureTime", "departureDelay");
+        join(row, grid, "column.group.freshness", "feedTs", "lastSeenAt");
+    }
+
+    private static void join(HeaderRow row, TreeGrid<LiveUpdateRow> grid, String groupKey, String... columnKeys) {
+        Column<?>[] columns =
+                java.util.Arrays.stream(columnKeys).map(grid::getColumnByKey).toArray(Column<?>[]::new);
+        row.join(columns).setText(grid.getTranslation(groupKey));
     }
 
     private static Component liveLabel(TreeGrid<LiveUpdateRow> grid, LiveUpdateRow row) {

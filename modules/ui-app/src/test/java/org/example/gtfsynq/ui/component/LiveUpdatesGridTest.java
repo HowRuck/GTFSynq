@@ -65,6 +65,19 @@ class LiveUpdatesGridTest {
             assertTrue(grid.getColumns().stream().allMatch(Grid.Column::isResizable));
             assertTrue(grid.getColumns().stream().allMatch(column -> column.getFlexGrow() == 1));
             assertTrue(grid.getColumns().stream().allMatch(column -> column.getTextAlign() == ColumnTextAlign.START));
+
+            assertEquals(2, grid.getHeaderRows().size(), "the grouped header sits above the column headers");
+            var groups = grid.getHeaderRows().getFirst();
+            assertEquals(5, groups.getCells().size(), "one cell per column group");
+            assertEquals(
+                    grid.getTranslation("column.group.trip"),
+                    groups.getCell(grid.getColumnByKey("tripId")).getText());
+            assertEquals(
+                    grid.getTranslation("column.group.arrival"),
+                    groups.getCell(grid.getColumnByKey("arrivalTime")).getText());
+            assertEquals(
+                    grid.getTranslation("column.group.freshness"),
+                    groups.getCell(grid.getColumnByKey("lastSeenAt")).getText());
         } finally {
             UI.setCurrent(null);
         }
