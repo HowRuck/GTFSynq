@@ -8,8 +8,8 @@
 // evaluated after the runner's own init scripts. The proxy therefore stays the
 // first repository (its cache keeps serving normal builds) and Maven Central is
 // only consulted when the proxy reports a miss.
-settingsEvaluated {
-    dependencyResolutionManagement.repositories {
+allprojects {
+    repositories {
         mavenCentral()
     }
 }
