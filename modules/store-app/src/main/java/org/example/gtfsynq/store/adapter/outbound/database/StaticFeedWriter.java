@@ -475,7 +475,7 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
             statement.clearBatch();
             failed = false;
         } catch (SQLException e) {
-            throw new WriteFailed("could not write " + rows.size() + " rows to " + table, e);
+            throw new WriteFailed("could not write " + rows.size() + " rows to " + table, SqlLogSanitizer.sanitize(e));
         } finally {
             metrics.recordBatch(table, rows.size(), System.nanoTime() - start, failed);
         }

@@ -158,7 +158,7 @@ public class TripUpdateRepository {
 
             return new FlushTimings(descriptorsNanos, stopTimesNanos, hotTripRowsNanos, hotStopTimesNanos);
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException(SqlLogSanitizer.sanitize(e));
         }
     }
 
