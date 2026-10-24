@@ -304,30 +304,52 @@ The Vaadin Flow web console (see [Web Console](#web-console)):
 
 ## Runtime Flow
 
-```text
-GTFS-RT sources                        GTFS static (CSV) sources
-        ↓                                        ↓
- ingest-app  ──────────────────┐          ingest-app
-        │                      │                │
-        │             gtfs-trip-updates         │  archive
-        ↓                      │                ↓
-      Kafka  ────────────────► store-app      S3 storage
-                               │                │  fetch + digest check
-                               │   gtfs-static-feeds (object location + digest)
-                               └────────────────┘
-                                ↓
-                     gtfs-static validation (shared validator)
-                                ↓
-                        PostgreSQL / TimescaleDB
-                                ↓
-                              api-app
-                    REST + gRPC :8080
-                         │
-                  ┌──────┴──────────┐
-                  │                 │
-            external clients    ui-app :8083
-                                  (Vaadin)
+```mermaid
+flowchart TB
+  subgraph L1["Inputs"]
+    RTS["GTFS-RT"]
+    STS["GTFS static"]
+  end
+
+  subgraph L2["2 · Ingestion"]
+    ING["ingest-app"]
+    STORE["store-app"]
+  end
+
+  subgraph L3["3 · Messaging and storage"]
+    KAFKA[["Kafka"]]
+    S3[("S3")]
+    DB[("TimescaleDB")]
+    OBS["OTLP"]
+  end
+
+  subgraph L4["4 · Read and presentation"]
+    API["api-app"]
+    UI["ui-app"]
+  end
+
+  subgraph L5["5 · Outputs"]
+    EXT["REST clients"]
+    BR["Browser"]
+  end
+
+  RTS --> ING
+  STS --> ING
+  ING --> KAFKA
+  ING --> S3
+  KAFKA --> STORE
+  S3 --> STORE
+  STORE --> DB
+  DB --> API
+  API -->|"gRPC"| UI
+  API -->|"REST"| EXT
+  UI --> BR
+  L2 -.-> OBS
+  L4 -.-> OBS
 ```
+
+Arrows follow the data, not the request: `api-app` → `ui-app` and `api-app` →
+REST clients mean the API answers them. Dashed arrows are telemetry exports.
 
 ## Static Feed Ingestion
 
