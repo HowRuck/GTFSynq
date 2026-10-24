@@ -9,6 +9,7 @@ on:
       - "settings.gradle"
       - "gradle.properties"
       - "gradle/**"
+      - ".github/gradle/**"
       - ".github/workflows/images.yml"
   workflow_dispatch:
 
@@ -70,7 +71,7 @@ jobs:
       - name: build-and-push-jvm-image
         # Quarkus/Jib builds the image without a Docker daemon and reads the
         # registry credentials written by docker/login-action.
-        run: ./gradlew :${{ matrix.app }}:imageBuild -Dquarkus.container-image.push=true
+        run: ./gradlew :${{ matrix.app }}:imageBuild -Dquarkus.container-image.push=true --init-script .github/gradle/maven-central-fallback.init.gradle.kts
 
       - name: build-and-push-native-image
         # Native compilation happens in the GraalVM builder container (Docker is
@@ -84,3 +85,4 @@ jobs:
           -Dquarkus.native.enabled=true
           -Dquarkus.native.container-build=true
           -Dquarkus.package.jar.enabled=false
+          --init-script .github/gradle/maven-central-fallback.init.gradle.kts
