@@ -179,8 +179,9 @@ message TripUpdate {
   optional string start_time = 9;
   // Number of rows in rt_stop_time_updates_hot, used to decide whether the trip is expandable.
   int32 stop_time_update_count = 10;
-  // Delay in seconds at the first upcoming stop that reports one, so the trip
-  // row can show its current delay without loading the stop time updates.
+  // Delay in seconds at the last stop that reports one (highest stop sequence),
+  // so the trip row shows the most advanced prediction without loading the stop
+  // time updates.
   optional int32 current_delay = 11;
   // Display names resolved from the static schedule; absent when the feed has
   // no matching row or does not publish the field.

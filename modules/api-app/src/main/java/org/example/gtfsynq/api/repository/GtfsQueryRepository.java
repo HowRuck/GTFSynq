@@ -308,7 +308,9 @@ public class GtfsQueryRepository {
                         FROM rt_stop_time_updates_hot s
                         WHERE s.trip_update_id = h.trip_update_id
                           AND COALESCE(s.arrival_delay, s.departure_delay) IS NOT NULL
-                        ORDER BY s.stop_sequence ASC
+                        -- The last stop that reports a delay, not the first: the lowest stop
+                        -- sequence is often a stale value for a stop the trip has already passed.
+                        ORDER BY s.stop_sequence DESC
                         LIMIT 1) AS current_delay
                 FROM rt_trip_updates_hot h
                 LEFT JOIN rt_trip_updates_meta m ON m.id = h.trip_update_id
