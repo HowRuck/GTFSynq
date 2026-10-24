@@ -160,7 +160,7 @@ public final class Columns {
                 .setSortable(true);
 
         grid.addColumn(row -> row instanceof TripUpdateRow trip && trip.update().hasRouteType()
-                        ? String.valueOf(trip.update().getRouteType())
+                        ? routeTypeLabel(grid, trip.update().getRouteType())
                         : "")
                 .setHeader(grid.getTranslation("column.routeType"))
                 .setKey("routeType");
@@ -255,6 +255,16 @@ public final class Columns {
         join(row, grid, "column.group.arrival", "arrivalTime", "arrivalDelay");
         join(row, grid, "column.group.departure", "departureTime", "departureDelay");
         join(row, grid, "column.group.freshness", "feedTs", "lastSeenAt");
+    }
+
+    /**
+     * Translated GTFS route type for display. Extended route types have no label in the bundle and
+     * fall back to the numeric code.
+     */
+    static String routeTypeLabel(Grid<?> grid, int routeType) {
+        return Filters.ROUTE_TYPES.contains(routeType)
+                ? grid.getTranslation("filter.routeType." + routeType)
+                : String.valueOf(routeType);
     }
 
     private static void join(HeaderRow row, TreeGrid<LiveUpdateRow> grid, String groupKey, String... columnKeys) {

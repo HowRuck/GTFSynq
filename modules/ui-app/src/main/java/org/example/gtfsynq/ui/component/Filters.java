@@ -16,6 +16,12 @@ import org.example.gtfsynq.ui.client.GtfsQueryClient;
 /** Reusable filter controls for the table views. */
 public final class Filters {
 
+    /**
+     * GTFS route types the translations cover. Extended route types (100+) are valid but have no
+     * label here, so callers fall back to the numeric code for those.
+     */
+    public static final List<Integer> ROUTE_TYPES = List.of(0, 1, 2, 3, 4, 5, 6, 7, 11, 12);
+
     private Filters() {}
 
     /** Feed selector; an empty value means "all feeds". */
@@ -58,7 +64,7 @@ public final class Filters {
     public static ComboBox<Integer> routeType(
             String placeholder, Function<Integer, String> label, Consumer<Integer> onChange) {
         var options = new LinkedHashMap<Integer, String>();
-        for (var type : List.of(0, 1, 2, 3, 4, 5, 6, 7, 11, 12)) {
+        for (var type : ROUTE_TYPES) {
             options.put(type, label.apply(type));
         }
         return select(placeholder, "12rem", options, onChange);

@@ -52,6 +52,13 @@ class LiveUpdatesGridTest {
     }
 
     @Test
+    void fallsBackToTheNumericCodeForExtendedRouteTypes() {
+        assertFalse(Filters.ROUTE_TYPES.contains(100));
+
+        assertEquals("100", Columns.routeTypeLabel(new Grid<LiveUpdateRow>(), 100));
+    }
+
+    @Test
     void buildsTripAndStopColumnsWithTheHierarchyFirst() {
         UI.setCurrent(new UI());
         try {
