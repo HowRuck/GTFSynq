@@ -69,6 +69,9 @@ public class GtfsQueryClient {
         if (query.feedId() != null) {
             request.setFeedId(query.feedId());
         }
+        if (query.routeType() != null) {
+            request.setRouteType(query.routeType());
+        }
         return call(() -> {
             var reply = stub().listRoutes(request.build());
             return page(reply.getItemsList(), reply.getPage());
@@ -84,6 +87,9 @@ public class GtfsQueryClient {
                 .setDirection(query.direction());
         if (query.feedId() != null) {
             request.setFeedId(query.feedId());
+        }
+        if (query.locationType() != null) {
+            request.setLocationType(query.locationType());
         }
         return call(() -> {
             var reply = stub().listStops(request.build());
@@ -101,6 +107,9 @@ public class GtfsQueryClient {
         if (query.feedId() != null) {
             request.setFeedId(query.feedId());
         }
+        if (query.directionId() != null) {
+            request.setDirectionId(query.directionId());
+        }
         return call(() -> {
             var reply = stub().listTrips(request.build());
             return page(reply.getItemsList(), reply.getPage());
@@ -109,6 +118,7 @@ public class GtfsQueryClient {
 
     public PagedResult<TripUpdate> tripUpdates(PageQuery query) {
         var request = TripUpdatesRequest.newBuilder()
+                .setSearch(query.search())
                 .setPage(query.page())
                 .setSize(query.size())
                 .setSort(query.sort())

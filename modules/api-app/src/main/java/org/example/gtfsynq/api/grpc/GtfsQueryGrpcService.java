@@ -70,6 +70,7 @@ public class GtfsQueryGrpcService extends GtfsQueryServiceGrpc.GtfsQueryServiceI
                 () -> GtfsQueryMapper.routesReply(repository.routes(
                         request.getFeedId(),
                         request.getSearch(),
+                        request.hasRouteType() ? request.getRouteType() : null,
                         request.getPage(),
                         request.getSize(),
                         request.getSort(),
@@ -83,6 +84,7 @@ public class GtfsQueryGrpcService extends GtfsQueryServiceGrpc.GtfsQueryServiceI
                 () -> GtfsQueryMapper.stopsReply(repository.stops(
                         request.getFeedId(),
                         request.getSearch(),
+                        request.hasLocationType() ? request.getLocationType() : null,
                         request.getPage(),
                         request.getSize(),
                         request.getSort(),
@@ -96,6 +98,7 @@ public class GtfsQueryGrpcService extends GtfsQueryServiceGrpc.GtfsQueryServiceI
                 () -> GtfsQueryMapper.tripsReply(repository.trips(
                         request.getFeedId(),
                         request.getSearch(),
+                        request.hasDirectionId() ? request.getDirectionId() : null,
                         request.getPage(),
                         request.getSize(),
                         request.getSort(),
@@ -108,6 +111,7 @@ public class GtfsQueryGrpcService extends GtfsQueryServiceGrpc.GtfsQueryServiceI
                 observer,
                 () -> GtfsQueryMapper.tripUpdatesReply(repository.liveTripUpdates(
                         request.getFeedId(),
+                        request.getSearch(),
                         request.getPage(),
                         request.getSize(),
                         request.getSort(),

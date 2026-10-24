@@ -20,12 +20,20 @@ public class RoutesView extends VerticalLayout implements HasDynamicTitle {
     public RoutesView(GtfsQueryClient client) {
         var table = new LazyGrid<Route>(client::routes, "routeId", SortDirection.ASCENDING, Columns::routes);
         var feed = Filters.feed(client, getTranslation("filter.feed.placeholder"), table::setFeedId);
+        var routeType = Filters.routeType(
+                getTranslation("filter.routeType.placeholder"),
+                type -> getTranslation("filter.routeType." + type),
+                table::setRouteType);
         var search = Filters.search(getTranslation("filter.search.placeholder"), table::setSearch);
 
         setSizeFull();
         add(
                 PageHeader.create(
-                        getTranslation("page.routes.title"), getTranslation("page.routes.subtitle"), feed, search),
+                        getTranslation("page.routes.title"),
+                        getTranslation("page.routes.subtitle"),
+                        feed,
+                        routeType,
+                        search),
                 table);
         setFlexGrow(1, table);
     }

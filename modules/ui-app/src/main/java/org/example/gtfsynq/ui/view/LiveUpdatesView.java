@@ -30,13 +30,14 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
         table = new LiveUpdatesGrid(client, "lastSeenAt", SortDirection.DESCENDING);
 
         var feed = Filters.feed(client, getTranslation("filter.feed.placeholder"), table::setFeedId);
+        var search = Filters.search(getTranslation("filter.search.placeholder"), table::setSearch);
         var refresh = new Button(getTranslation("live.refresh"), event -> table.refresh());
         refresh.setIcon(VaadinIcon.REFRESH.create());
 
         setSizeFull();
         add(
                 PageHeader.create(
-                        getTranslation("page.live.title"), getTranslation("page.live.subtitle"), feed, refresh),
+                        getTranslation("page.live.title"), getTranslation("page.live.subtitle"), feed, search, refresh),
                 table);
         setFlexGrow(1, table);
     }

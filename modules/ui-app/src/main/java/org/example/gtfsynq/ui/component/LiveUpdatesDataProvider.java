@@ -36,6 +36,7 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
     private final Set<Long> loadingTrips = new HashSet<>();
 
     private String feedId;
+    private String search;
     private String lastError;
     private RootPage rootPage;
     private CountKey countKey;
@@ -110,6 +111,17 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
         return true;
     }
 
+    /** Applies a search term over entity, trip and route ids; returns whether it changed. */
+    boolean setSearch(String value) {
+        var term = value == null ? "" : value.trim();
+        var normalized = term.length() >= 3 ? term : null;
+        if (Objects.equals(search, normalized)) {
+            return false;
+        }
+        search = normalized;
+        return true;
+    }
+
     /** Drops the cached pages so the next query hits the backend again. */
     void invalidate() {
         generation++;
@@ -128,9 +140,9 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
      */
     private int rootCount(HierarchicalQuery<LiveUpdateRow, Void> query) {
         var key = rootKey(query);
-        var keyWithoutPage = new CountKey(key.feedId(), key.sort(), key.descending());
+        var keyWithoutPage = new CountKey(key.feedId(), key.search(), key.sort(), key.descending());
         if (total < 0 || !keyWithoutPage.equals(countKey)) {
-            var counted = loadRoot(new RootKey(key.feedId(), key.sort(), key.descending(), 0, 1));
+            var counted = loadRoot(new RootKey(key.feedId(), key.search(), key.sort(), key.descending(), 0, 1));
             total = counted.total();
             countKey = keyWithoutPage;
         }
@@ -145,7 +157,7 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
 
         rootPage = loadRoot(key);
         total = rootPage.total();
-        countKey = new CountKey(key.feedId(), key.sort(), key.descending());
+        countKey = new CountKey(key.feedId(), key.search(), key.sort(), key.descending());
         return rootPage;
     }
 
@@ -158,13 +170,21 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
 
         var size = Math.max(query.getLimit(), 1);
         var page = (int) (query.getOffset() / size);
-        return new RootKey(feedId, sort, descending, page, size);
+        return new RootKey(feedId, search, sort, descending, page, size);
     }
 
     private RootPage loadRoot(RootKey key) {
         try {
-            var result = client.tripUpdates(
-                    new PageQuery(key.feedId(), "", key.page(), key.size(), key.sort(), key.descending()));
+            var result = client.tripUpdates(new PageQuery(
+                    key.feedId(),
+                    key.search(),
+                    null,
+                    null,
+                    null,
+                    key.page(),
+                    key.size(),
+                    key.sort(),
+                    key.descending()));
             lastError = null;
             return new RootPage(
                     key, result.items().stream().map(TripUpdateRow::new).toList(), result.total());
@@ -255,9 +275,9 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
         }
     }
 
-    private record RootKey(String feedId, String sort, boolean descending, int page, int size) {}
+    private record RootKey(String feedId, String search, String sort, boolean descending, int page, int size) {}
 
-    private record CountKey(String feedId, String sort, boolean descending) {}
+    private record CountKey(String feedId, String search, String sort, boolean descending) {}
 
     private record RootPage(RootKey key, List<TripUpdateRow> rows, long total) {}
 }

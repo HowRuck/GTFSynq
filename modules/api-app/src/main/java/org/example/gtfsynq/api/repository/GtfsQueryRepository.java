@@ -159,7 +159,7 @@ public class GtfsQueryRepository {
     }
 
     public PageResponse<RouteDto> routes(
-            String feedId, String search, int page, int size, String sort, String direction) {
+            String feedId, String search, Integer routeType, int page, int size, String sort, String direction) {
         List<String> conditions = new ArrayList<>();
         List<Object> parameters = new ArrayList<>();
         if (hasText(feedId)) {
@@ -171,6 +171,10 @@ public class GtfsQueryRepository {
             conditions.add(
                     "(route_id || ' ' || coalesce(route_short_name, '') || ' ' || coalesce(route_long_name, '')) ILIKE ? ESCAPE '\\'");
             addLike(parameters, searchTerm);
+        }
+        if (routeType != null) {
+            conditions.add("route_type = ?");
+            parameters.add(routeType);
         }
 
         String select = """
@@ -198,7 +202,7 @@ public class GtfsQueryRepository {
     }
 
     public PageResponse<StopDto> stops(
-            String feedId, String search, int page, int size, String sort, String direction) {
+            String feedId, String search, Integer locationType, int page, int size, String sort, String direction) {
         List<String> conditions = new ArrayList<>();
         List<Object> parameters = new ArrayList<>();
         if (hasText(feedId)) {
@@ -209,6 +213,10 @@ public class GtfsQueryRepository {
         if (searchTerm != null) {
             conditions.add("(stop_id || ' ' || stop_name) ILIKE ? ESCAPE '\\'");
             addLike(parameters, searchTerm);
+        }
+        if (locationType != null) {
+            conditions.add("location_type = ?");
+            parameters.add(locationType);
         }
 
         String select = """
@@ -236,7 +244,7 @@ public class GtfsQueryRepository {
     }
 
     public PageResponse<TripDto> trips(
-            String feedId, String search, int page, int size, String sort, String direction) {
+            String feedId, String search, Integer directionId, int page, int size, String sort, String direction) {
         List<String> conditions = new ArrayList<>();
         List<Object> parameters = new ArrayList<>();
         if (hasText(feedId)) {
@@ -247,6 +255,10 @@ public class GtfsQueryRepository {
         if (searchTerm != null) {
             conditions.add("(trip_id || ' ' || route_id || ' ' || service_id) ILIKE ? ESCAPE '\\'");
             addLike(parameters, searchTerm);
+        }
+        if (directionId != null) {
+            conditions.add("direction_id = ?");
+            parameters.add(directionId);
         }
 
         String select = """
@@ -272,12 +284,18 @@ public class GtfsQueryRepository {
     }
 
     public PageResponse<TripUpdateDto> liveTripUpdates(
-            String feedId, int page, int size, String sort, String direction, boolean includeTotal) {
+            String feedId, String search, int page, int size, String sort, String direction, boolean includeTotal) {
         List<String> conditions = new ArrayList<>();
         List<Object> parameters = new ArrayList<>();
         if (hasText(feedId)) {
             conditions.add("h.feed_id = CAST(? AS feed_id_enum)");
             parameters.add(feedId);
+        }
+        var searchTerm = normalizedSearch(search);
+        if (searchTerm != null) {
+            conditions.add(
+                    "(coalesce(m.entity_id, '') || ' ' || coalesce(m.trip_id, '') || ' ' || coalesce(m.route_id, '')) ILIKE ? ESCAPE '\\'");
+            addLike(parameters, searchTerm);
         }
 
         String select = """
@@ -300,7 +318,10 @@ public class GtfsQueryRepository {
                 LEFT JOIN static_agency a
                        ON a.feed_id = h.feed_id AND a.agency_id = COALESCE(r.agency_id, '')
                 """;
-        String count = "SELECT count(*) FROM rt_trip_updates_hot h";
+        String count = """
+                SELECT count(*) FROM rt_trip_updates_hot h
+                LEFT JOIN rt_trip_updates_meta m ON m.id = h.trip_update_id
+                """;
         String order =
                 sortColumn(LIVE_SORTS, sort, "h.last_seen_at") + " " + direction(direction) + ", h.trip_update_id DESC";
         return page(

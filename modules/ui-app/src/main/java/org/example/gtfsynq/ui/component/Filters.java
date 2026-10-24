@@ -4,8 +4,12 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.value.ValueChangeMode;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import org.example.gtfsynq.ui.client.DataAccessException;
 import org.example.gtfsynq.ui.client.GtfsQueryClient;
 
@@ -48,5 +52,48 @@ public final class Filters {
         search.setValueChangeTimeout(250);
         search.addValueChangeListener(event -> onChange.accept(event.getValue()));
         return search;
+    }
+
+    /** GTFS route-type selector; values match the numeric route_type feed field. */
+    public static ComboBox<Integer> routeType(
+            String placeholder, Function<Integer, String> label, Consumer<Integer> onChange) {
+        var options = new LinkedHashMap<Integer, String>();
+        for (var type : List.of(0, 1, 2, 3, 4, 5, 6, 7, 11, 12)) {
+            options.put(type, label.apply(type));
+        }
+        return select(placeholder, "12rem", options, onChange);
+    }
+
+    /** GTFS direction-id selector; 0 and 1 are the only standard values. */
+    public static ComboBox<Integer> direction(
+            String placeholder, Function<Integer, String> label, Consumer<Integer> onChange) {
+        var options = new LinkedHashMap<Integer, String>();
+        for (var value : List.of(0, 1)) {
+            options.put(value, label.apply(value));
+        }
+        return select(placeholder, "10rem", options, onChange);
+    }
+
+    /** GTFS location-type selector: stop, station, entrance, node or boarding area. */
+    public static ComboBox<Integer> locationType(
+            String placeholder, Function<Integer, String> label, Consumer<Integer> onChange) {
+        var options = new LinkedHashMap<Integer, String>();
+        for (var type : List.of(0, 1, 2, 3, 4)) {
+            options.put(type, label.apply(type));
+        }
+        return select(placeholder, "13rem", options, onChange);
+    }
+
+    private static ComboBox<Integer> select(
+            String placeholder, String width, Map<Integer, String> options, Consumer<Integer> onChange) {
+        var select = new ComboBox<Integer>();
+        select.setPlaceholder(placeholder);
+        select.setClearButtonVisible(true);
+        select.setAllowCustomValue(false);
+        select.setWidth(width);
+        select.setItems(options.keySet());
+        select.setItemLabelGenerator(options::get);
+        select.addValueChangeListener(event -> onChange.accept(event.getValue()));
+        return select;
     }
 }

@@ -76,6 +76,15 @@ class LiveUpdatesDataProviderTest {
         assertEquals("10:1", provider.getId(child));
     }
 
+    @Test
+    void passesTheSearchTermToTheBackend() {
+        provider.setSearch("12ab");
+
+        provider.fetchChildren(rootQuery()).count();
+
+        assertEquals("12ab", client.lastQuery.search(), "the backend does the filtering, not the grid");
+    }
+
     private static HierarchicalQuery<LiveUpdateRow, Void> rootQuery() {
         return new HierarchicalQuery<>(0, 25, List.of(), null, null, null);
     }
@@ -84,9 +93,11 @@ class LiveUpdatesDataProviderTest {
     private static final class FakeClient extends GtfsQueryClient {
 
         private int stopCalls;
+        private PageQuery lastQuery;
 
         @Override
         public PagedResult<TripUpdate> tripUpdates(PageQuery query) {
+            lastQuery = query;
             var items = List.of(
                     TripUpdate.newBuilder()
                             .setTripUpdateId(10)

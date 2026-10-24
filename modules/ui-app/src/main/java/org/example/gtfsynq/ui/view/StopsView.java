@@ -21,12 +21,20 @@ public class StopsView extends VerticalLayout implements HasDynamicTitle {
     public StopsView(GtfsQueryClient client) {
         var table = new LazyGrid<Stop>(client::stops, "stopName", SortDirection.ASCENDING, Columns::stops);
         var feed = Filters.feed(client, getTranslation("filter.feed.placeholder"), table::setFeedId);
+        var locationType = Filters.locationType(
+                getTranslation("filter.locationType.placeholder"),
+                type -> getTranslation("filter.locationType." + type),
+                table::setLocationType);
         var search = Filters.search(getTranslation("filter.search.placeholder"), table::setSearch);
 
         setSizeFull();
         add(
                 PageHeader.create(
-                        getTranslation("page.stops.title"), getTranslation("page.stops.subtitle"), feed, search),
+                        getTranslation("page.stops.title"),
+                        getTranslation("page.stops.subtitle"),
+                        feed,
+                        locationType,
+                        search),
                 table);
         setFlexGrow(1, table);
     }

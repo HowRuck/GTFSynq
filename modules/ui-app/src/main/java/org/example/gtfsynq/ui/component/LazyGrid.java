@@ -31,6 +31,9 @@ public class LazyGrid<T> extends Grid<T> {
 
     private String feedId;
     private String search;
+    private Integer routeType;
+    private Integer directionId;
+    private Integer locationType;
     private String lastError;
 
     public LazyGrid(
@@ -79,6 +82,33 @@ public class LazyGrid<T> extends Grid<T> {
         refresh();
     }
 
+    /** Filters routes by GTFS route type; {@code null} means all types. */
+    public void setRouteType(Integer value) {
+        if (Objects.equals(routeType, value)) {
+            return;
+        }
+        routeType = value;
+        refresh();
+    }
+
+    /** Filters trips by GTFS direction id; {@code null} means both directions. */
+    public void setDirectionId(Integer value) {
+        if (Objects.equals(directionId, value)) {
+            return;
+        }
+        directionId = value;
+        refresh();
+    }
+
+    /** Filters stops by GTFS location type; {@code null} means all types. */
+    public void setLocationType(Integer value) {
+        if (Objects.equals(locationType, value)) {
+            return;
+        }
+        locationType = value;
+        refresh();
+    }
+
     /** Reloads the grid from the backend. */
     public void refresh() {
         getDataProvider().refreshAll();
@@ -95,7 +125,8 @@ public class LazyGrid<T> extends Grid<T> {
         var page = (int) (query.getOffset() / size);
 
         try {
-            var items = loader.load(new PageQuery(feedId, search, page, size, sortKey, descending))
+            var items = loader.load(new PageQuery(
+                            feedId, search, routeType, directionId, locationType, page, size, sortKey, descending))
                     .items();
             lastError = null;
             return items.stream();

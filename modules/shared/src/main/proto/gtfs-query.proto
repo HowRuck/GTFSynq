@@ -106,6 +106,8 @@ message RoutesRequest {
   int32 size = 4;
   string sort = 5;
   string direction = 6;
+  // GTFS route type, e.g. 3 for bus; unset means no route-type filter.
+  optional int32 route_type = 7;
 }
 
 message RoutesReply {
@@ -130,6 +132,8 @@ message StopsRequest {
   int32 size = 4;
   string sort = 5;
   string direction = 6;
+  // GTFS location type: 0 stop/platform, 1 station, 2 entrance, 3 node, 4 boarding area.
+  optional int32 location_type = 7;
 }
 
 message StopsReply {
@@ -152,6 +156,8 @@ message TripsRequest {
   int32 size = 4;
   string sort = 5;
   string direction = 6;
+  // GTFS direction_id: 0 or 1, as published by the feed.
+  optional int32 direction_id = 7;
 }
 
 message TripsReply {
@@ -195,6 +201,8 @@ message TripUpdatesRequest {
   string direction = 5;
   // When false the backend skips the count query and returns total = -1.
   bool count = 6;
+  // Substring match over the trip's entity, trip and route ids.
+  string search = 7;
 }
 
 message TripUpdatesReply {

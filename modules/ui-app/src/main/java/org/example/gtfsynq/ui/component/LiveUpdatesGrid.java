@@ -45,6 +45,13 @@ public class LiveUpdatesGrid extends TreeGrid<LiveUpdateRow> {
         }
     }
 
+    /** Applies a search term over entity, trip and route ids. */
+    public void setSearch(String value) {
+        if (provider.setSearch(value)) {
+            refresh();
+        }
+    }
+
     /** Reloads trips and stops, keeping expanded trips expanded. */
     public void refresh() {
         provider.invalidate();

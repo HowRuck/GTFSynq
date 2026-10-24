@@ -37,11 +37,12 @@ public class StaticResource {
     public PageResponse<RouteDto> routes(
             @QueryParam("feedId") String feedId,
             @QueryParam("search") @DefaultValue("") String search,
+            @QueryParam("routeType") Integer routeType,
             @QueryParam("page") @DefaultValue("0") int page,
             @QueryParam("size") @DefaultValue("25") int size,
             @QueryParam("sort") @DefaultValue("routeId") String sort,
             @QueryParam("dir") @DefaultValue("asc") String direction) {
-        return repository.routes(feedId, search, page, size, sort, direction);
+        return repository.routes(feedId, search, routeType, page, size, sort, direction);
     }
 
     @GET
@@ -49,11 +50,12 @@ public class StaticResource {
     public PageResponse<StopDto> stops(
             @QueryParam("feedId") String feedId,
             @QueryParam("search") @DefaultValue("") String search,
+            @QueryParam("locationType") Integer locationType,
             @QueryParam("page") @DefaultValue("0") int page,
             @QueryParam("size") @DefaultValue("25") int size,
             @QueryParam("sort") @DefaultValue("stopName") String sort,
             @QueryParam("dir") @DefaultValue("asc") String direction) {
-        return repository.stops(feedId, search, page, size, sort, direction);
+        return repository.stops(feedId, search, locationType, page, size, sort, direction);
     }
 
     @GET
@@ -61,10 +63,11 @@ public class StaticResource {
     public PageResponse<TripDto> trips(
             @QueryParam("feedId") String feedId,
             @QueryParam("search") @DefaultValue("") String search,
+            @QueryParam("directionId") Integer directionId,
             @QueryParam("page") @DefaultValue("0") int page,
             @QueryParam("size") @DefaultValue("25") int size,
             @QueryParam("sort") @DefaultValue("tripId") String sort,
             @QueryParam("dir") @DefaultValue("asc") String direction) {
-        return repository.trips(feedId, search, page, size, sort, direction);
+        return repository.trips(feedId, search, directionId, page, size, sort, direction);
     }
 }

@@ -21,12 +21,20 @@ public class TripsView extends VerticalLayout implements HasDynamicTitle {
     public TripsView(GtfsQueryClient client) {
         var table = new LazyGrid<Trip>(client::trips, "tripId", SortDirection.ASCENDING, Columns::trips);
         var feed = Filters.feed(client, getTranslation("filter.feed.placeholder"), table::setFeedId);
+        var direction = Filters.direction(
+                getTranslation("filter.direction.placeholder"),
+                value -> getTranslation("filter.direction." + value),
+                table::setDirectionId);
         var search = Filters.search(getTranslation("filter.search.placeholder"), table::setSearch);
 
         setSizeFull();
         add(
                 PageHeader.create(
-                        getTranslation("page.trips.title"), getTranslation("page.trips.subtitle"), feed, search),
+                        getTranslation("page.trips.title"),
+                        getTranslation("page.trips.subtitle"),
+                        feed,
+                        direction,
+                        search),
                 table);
         setFlexGrow(1, table);
     }
