@@ -42,6 +42,7 @@ public class GtfsTripUpdateSink {
 
     private final DatabaseDeduplicationService deduplicationService;
     private final GtfsSinkMetrics metrics;
+    private final SinkFlushGuard guard;
 
     private final boolean enabled;
 
@@ -51,6 +52,13 @@ public class GtfsTripUpdateSink {
      */
     private final int maxBufferSize;
 
+    /**
+     * Ceiling for the buffer while flushes are failing; the oldest updates are
+     * dropped once it is crossed, so a database outage cannot grow the buffer
+     * without bound.
+     */
+    private final int maxBufferedUpdates;
+
     @Inject
     public GtfsTripUpdateSink(
             TripUpdateRepository tripUpdateRepository,
@@ -58,13 +66,32 @@ public class GtfsTripUpdateSink {
             DatabaseDeduplicationService deduplicationService,
             GtfsSinkMetrics metrics,
             @ConfigProperty(name = "gtfsynq.sink.enabled", defaultValue = "true") boolean enabled,
-            @ConfigProperty(name = "gtfsynq.sink.max-buffer-size", defaultValue = "20000") int maxBufferSize) {
+            @ConfigProperty(name = "gtfsynq.sink.max-buffer-size", defaultValue = "20000") int maxBufferSize,
+            @ConfigProperty(name = "gtfsynq.sink.max-buffered-updates", defaultValue = "40000") int maxBufferedUpdates,
+            @ConfigProperty(name = "gtfsynq.sink.failure.max-attempts", defaultValue = "3") int failureMaxAttempts,
+            @ConfigProperty(name = "gtfsynq.sink.failure.quarantine-batches", defaultValue = "3") int quarantineBatches,
+            @ConfigProperty(name = "gtfsynq.sink.failure.unhealthy-after", defaultValue = "6") int unhealthyAfter) {
         this.tripUpdateRepository = tripUpdateRepository;
         this.batchMapper = batchMapper;
         this.deduplicationService = deduplicationService;
         this.metrics = metrics;
         this.enabled = enabled;
         this.maxBufferSize = maxBufferSize;
+        this.maxBufferedUpdates = maxBufferedUpdates;
+        this.guard = new SinkFlushGuard(failureMaxAttempts, quarantineBatches, unhealthyAfter, metrics);
+    }
+
+    /**
+     * Whether the flush pipeline is considered degraded, i.e. it has failed
+     * repeatedly for reasons a retry could fix.
+     */
+    public boolean isUnhealthy() {
+        return guard.isUnhealthy();
+    }
+
+    /** Consecutive failed flushes since the last success; exposed for the health check. */
+    public int consecutiveFailures() {
+        return guard.consecutiveFailures();
     }
 
     /**
@@ -152,6 +179,12 @@ public class GtfsTripUpdateSink {
      * matching the previous behavior where the buffer was only cleared after
      * a successful write.
      *
+     * <p>A deterministic failure is retried a few times and then quarantined:
+     * the batch is moved to a bounded side buffer instead of being requeued, so
+     * one poisoned batch cannot block the updates queued behind it. The write
+     * in progress is abandoned either way; because the caller runs in a single
+     * transaction, a failed flush commits as a rollback.
+     *
      * <p>{@code flushLock} is taken before the drain so that a drain and its
      * write stay atomic with respect to other flushes. This preserves
      * write ordering: without it, a slow flush could lose the race and write an
@@ -170,9 +203,15 @@ public class GtfsTripUpdateSink {
 
             try {
                 flushBatch(batch);
+                guard.onSuccess();
             } catch (RuntimeException e) {
-                requeue(batch);
-                throw e;
+                // A retried batch is requeued in front of newer updates to keep
+                // write ordering; a quarantined one is dropped from the retry
+                // path so healthy traffic is not blocked by it.
+                if (guard.onFailure(batch, e) == SinkFlushGuard.Decision.RETRY) {
+                    requeue(batch);
+                    throw e;
+                }
             }
         } finally {
             flushLock.unlock();
@@ -201,6 +240,18 @@ public class GtfsTripUpdateSink {
         bufferLock.lock();
         try {
             buffer.addAll(0, batch);
+            var overflow = buffer.size() - maxBufferedUpdates;
+            if (overflow > 0) {
+                // The oldest updates are the least useful for current-state
+                // consumers, so they are the ones dropped when the buffer is
+                // full during a prolonged failure.
+                buffer.subList(0, overflow).clear();
+                metrics.recordBufferOverflow(overflow);
+                log.warn(
+                        "Buffer exceeded {} updates while retrying; dropped {} oldest updates",
+                        maxBufferedUpdates,
+                        overflow);
+            }
         } finally {
             bufferLock.unlock();
         }
