@@ -61,11 +61,14 @@ public class TripUpdateBatchMapper {
 
         var hotTripsById = new HashMap<Long, HotTripRow>(descriptors.size() * 2 + 16);
 
+        var latestDescriptors = latestDescriptors(descriptors, hotTripsById);
+        var latestStops = latestStops(stopTimes, hotTripsById);
+
         return new TripUpdateRows(
-                latestDescriptors(descriptors, hotTripsById),
+                latestDescriptors,
                 stopTimes,
                 new ArrayList<>(hotTripsById.values()),
-                latestStops(stopTimes, hotTripsById));
+                latestStops);
     }
 
     /**
