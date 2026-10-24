@@ -15,14 +15,17 @@
 // evaluated after the runner's own init scripts. The proxy stays first (its
 // cache keeps serving normal builds) and Maven Central is consulted only when
 // every project-local and settings repository reports a miss.
+//
+// Written in Groovy because Gradle 9's Kotlin init scripts only expose the
+// closure-based Gradle APIs, which makes reading the evaluated settings awkward.
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 
-val settingsRepositoryUrls = mutableListOf<java.net.URI>()
+def settingsRepositoryUrls = []
 
 settingsEvaluated { settings ->
-    settingsRepositoryUrls += settings.dependencyResolutionManagement.repositories
-        .filterIsInstance<MavenArtifactRepository>()
-        .map { it.url }
+    settings.dependencyResolutionManagement.repositories
+        .findAll { it instanceof MavenArtifactRepository }
+        .each { settingsRepositoryUrls << it.url }
 }
 
 allprojects {
@@ -30,9 +33,9 @@ allprojects {
         settingsRepositoryUrls
             // Central is added below; avoid declaring the same source twice, and
             // deduplicate when several builds report the same settings entry.
-            .filterNot { it.host == "repo.maven.apache.org" || it.host == "repo1.maven.org" }
-            .distinct()
-            .forEach { url -> maven { setUrl(url) } }
+            .findAll { !(it.host in ['repo.maven.apache.org', 'repo1.maven.org']) }
+            .unique()
+            .each { url -> maven { setUrl(url) } }
         mavenCentral()
     }
 }

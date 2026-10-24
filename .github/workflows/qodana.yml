@@ -50,7 +50,7 @@ jobs:
       - name: set-up-gradle
         uses: gradle/actions/setup-gradle@v6
       - name: generate-proto-sources
-        run: ./gradlew :shared:generateProto --init-script .github/gradle/maven-central-fallback.init.gradle.kts
+        run: ./gradlew :shared:generateProto --init-script .github/gradle/maven-central-fallback.init.gradle
       - name: qodana-scan
         uses: JetBrains/qodana-action@v2026.2.2
         with:
