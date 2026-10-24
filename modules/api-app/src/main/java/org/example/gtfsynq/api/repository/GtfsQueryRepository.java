@@ -301,7 +301,7 @@ public class GtfsQueryRepository {
         String select = """
                 SELECT h.trip_update_id, h.feed_id::text AS feed_id, h.feed_ts, h.last_seen_at,
                        m.entity_id, m.trip_id, m.route_id, m.start_date, m.start_time,
-                       t.trip_short_name, r.route_short_name, r.route_long_name, a.agency_name,
+                       t.trip_short_name, r.route_short_name, r.route_long_name, r.route_type, a.agency_name,
                        (SELECT count(*) FROM rt_stop_time_updates_hot s
                         WHERE s.trip_update_id = h.trip_update_id) AS stop_time_update_count,
                        (SELECT COALESCE(s.arrival_delay, s.departure_delay)
@@ -347,7 +347,8 @@ public class GtfsQueryRepository {
                         rs.getString("trip_short_name"),
                         rs.getString("route_short_name"),
                         rs.getString("route_long_name"),
-                        rs.getString("agency_name")),
+                        rs.getString("agency_name"),
+                        nullableInt(rs, "route_type")),
                 includeTotal);
     }
 

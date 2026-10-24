@@ -28,6 +28,15 @@ class GtfsQueryMapperTest {
     }
 
     @Test
+    void mapsRouteTypeOnTripUpdates() {
+        var update = GtfsQueryMapper.tripUpdatesReply(page(tripUpdate(null, "Trip 1", "10", "Central - North", 3)))
+                .getItems(0);
+
+        assertTrue(update.hasRouteType());
+        assertEquals(3, update.getRouteType());
+    }
+
+    @Test
     void leavesStaticDisplayNamesAbsentWhenNoStaticRowMatches() {
         var update = GtfsQueryMapper.tripUpdatesReply(page(tripUpdate(null, null, null)))
                 .getItems(0);
@@ -110,6 +119,11 @@ class GtfsQueryMapperTest {
 
     private static TripUpdateDto tripUpdate(
             String agencyName, String tripShortName, String routeShortName, String routeLongName) {
+        return tripUpdate(agencyName, tripShortName, routeShortName, routeLongName, null);
+    }
+
+    private static TripUpdateDto tripUpdate(
+            String agencyName, String tripShortName, String routeShortName, String routeLongName, Integer routeType) {
         return new TripUpdateDto(
                 1,
                 "feed",
@@ -125,7 +139,8 @@ class GtfsQueryMapperTest {
                 tripShortName,
                 routeShortName,
                 routeLongName,
-                agencyName);
+                agencyName,
+                routeType);
     }
 
     private static StopTimeUpdateDto stopTimeUpdate(String stopName) {

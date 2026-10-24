@@ -20,4 +20,5 @@ public record TripUpdateDto(
         String tripShortName,
         String routeShortName,
         String routeLongName,
-        String agencyName) {}
+        String agencyName,
+        Integer routeType) {}

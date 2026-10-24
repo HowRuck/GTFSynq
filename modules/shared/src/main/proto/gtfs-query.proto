@@ -191,6 +191,8 @@ message TripUpdate {
   // static_agency; absent when no static route matches or the feed does not
   // publish an agency.
   optional string agency_name = 15;
+  // GTFS route type resolved from static_routes (3 = bus, 2 = rail, ...).
+  optional int32 route_type = 16;
 }
 
 message TripUpdatesRequest {

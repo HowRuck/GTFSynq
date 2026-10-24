@@ -57,10 +57,11 @@ class LiveUpdatesGridTest {
         try {
             var grid = new LiveUpdatesGrid(new GtfsQueryClient(), "lastSeenAt", SortDirection.DESCENDING);
 
-            assertEquals(14, grid.getColumns().size());
+            assertEquals(15, grid.getColumns().size());
             assertEquals("tripId", grid.getColumns().getFirst().getKey());
             assertNotNull(grid.getColumnByKey("lastSeenAt"));
             assertNotNull(grid.getColumnByKey("feedTs"));
+            assertNotNull(grid.getColumnByKey("routeType"));
             assertTrue(grid.getColumns().stream().allMatch(Grid.Column::isAutoWidth));
             assertTrue(grid.getColumns().stream().allMatch(Grid.Column::isResizable));
             assertTrue(grid.getColumns().stream().allMatch(column -> column.getFlexGrow() == 1));

@@ -135,6 +135,7 @@ final class GtfsQueryMapper {
             setIfPresent(update.routeShortName(), item::setRouteShortName);
             setIfPresent(update.routeLongName(), item::setRouteLongName);
             setIfPresent(update.agencyName(), item::setAgencyName);
+            setIfPresent(update.routeType(), item::setRouteType);
             reply.addItems(item);
         }
         return reply.build();

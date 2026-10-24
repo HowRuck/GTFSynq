@@ -159,6 +159,12 @@ public final class Columns {
                 .setSortProperty("routeId")
                 .setSortable(true);
 
+        grid.addColumn(row -> row instanceof TripUpdateRow trip && trip.update().hasRouteType()
+                        ? String.valueOf(trip.update().getRouteType())
+                        : "")
+                .setHeader(grid.getTranslation("column.routeType"))
+                .setKey("routeType");
+
         grid.addColumn(row -> row instanceof TripUpdateRow trip
                         ? UiFormat.text(trip.update().getStartDate())
                         : "")
@@ -234,7 +240,17 @@ public final class Columns {
      */
     private static void groupHeaderRow(TreeGrid<LiveUpdateRow> grid) {
         var row = grid.prependHeaderRow();
-        join(row, grid, "column.group.trip", "tripId", "feed", "agency", "routeId", "startDate", "startTime");
+        join(
+                row,
+                grid,
+                "column.group.trip",
+                "tripId",
+                "feed",
+                "agency",
+                "routeId",
+                "routeType",
+                "startDate",
+                "startTime");
         join(row, grid, "column.group.status", "currentDelay", "stopSequence");
         join(row, grid, "column.group.arrival", "arrivalTime", "arrivalDelay");
         join(row, grid, "column.group.departure", "departureTime", "departureDelay");
