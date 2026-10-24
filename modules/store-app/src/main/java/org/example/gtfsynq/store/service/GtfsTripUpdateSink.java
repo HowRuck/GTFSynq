@@ -6,6 +6,7 @@ import jakarta.inject.Singleton;
 import jakarta.transaction.Transactional;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -36,13 +37,14 @@ public class GtfsTripUpdateSink {
     private final TripUpdateBatchMapper batchMapper;
 
     private final ReentrantLock bufferLock = new ReentrantLock();
-    private final List<TripUpdateDto> buffer = new ArrayList<>();
+    private final List<BufferedUpdate> buffer = new ArrayList<>();
 
     private final ReentrantLock flushLock = new ReentrantLock();
 
     private final DatabaseDeduplicationService deduplicationService;
     private final GtfsSinkMetrics metrics;
     private final SinkFlushGuard guard;
+    private final AckScheduler ackScheduler;
 
     private final boolean enabled;
 
@@ -65,6 +67,7 @@ public class GtfsTripUpdateSink {
             TripUpdateBatchMapper batchMapper,
             DatabaseDeduplicationService deduplicationService,
             GtfsSinkMetrics metrics,
+            AckScheduler ackScheduler,
             @ConfigProperty(name = "gtfsynq.sink.enabled", defaultValue = "true") boolean enabled,
             @ConfigProperty(name = "gtfsynq.sink.max-buffer-size", defaultValue = "20000") int maxBufferSize,
             @ConfigProperty(name = "gtfsynq.sink.max-buffered-updates", defaultValue = "40000") int maxBufferedUpdates,
@@ -75,6 +78,7 @@ public class GtfsTripUpdateSink {
         this.batchMapper = batchMapper;
         this.deduplicationService = deduplicationService;
         this.metrics = metrics;
+        this.ackScheduler = ackScheduler;
         this.enabled = enabled;
         this.maxBufferSize = maxBufferSize;
         this.maxBufferedUpdates = maxBufferedUpdates;
@@ -97,24 +101,33 @@ public class GtfsTripUpdateSink {
     /**
      * Accepts a feed entity and buffers it for later batch persistence.
      *
+     * <p>The acknowledgement is deferred: it runs only once the update's batch has been written and
+     * committed, so a crash between buffering and persisting replays the Kafka record instead of
+     * dropping it. Updates that are deliberately not persisted (sink disabled, not a TripUpdate,
+     * duplicate) are acknowledged right away - they have no batch to wait for.
+     *
      * @param feedId feed identifier from Kafka key
      * @param entityWithMeta decoded GTFS-RT feed entity with metadata
+     * @param onPersisted acknowledgement releasing the Kafka record, run once the update is durable
      */
-    public void accept(String feedId, FeedEntityWithMetadata entityWithMeta) {
+    public void accept(String feedId, FeedEntityWithMetadata entityWithMeta, Runnable onPersisted) {
         var entity = entityWithMeta.entity();
 
         if (!enabled || entity == null || !entity.hasTripUpdate()) {
+            acknowledgeNow(onPersisted);
             return;
         }
 
         var rawUpdateDto = TripUpdateDto.fromEntity(entity, feedId, entityWithMeta.feedTs());
         if (rawUpdateDto == null) {
+            acknowledgeNow(onPersisted);
             return;
         }
 
         var cleanedUpdate = deduplicationService.cleanState(rawUpdateDto);
         if (cleanedUpdate == null) {
             metrics.recordDroppedDuplicate();
+            acknowledgeNow(onPersisted);
             return;
         }
 
@@ -122,7 +135,7 @@ public class GtfsTripUpdateSink {
         var overLimit = false;
         bufferLock.lock();
         try {
-            buffer.add(cleanedUpdate);
+            buffer.add(new BufferedUpdate(cleanedUpdate, onPersisted));
             bufferedSize = buffer.size();
             overLimit = bufferedSize >= maxBufferSize;
         } finally {
@@ -201,17 +214,26 @@ public class GtfsTripUpdateSink {
                 return;
             }
 
+            var updates = batch.stream().map(BufferedUpdate::update).toList();
+
             try {
-                flushBatch(batch);
+                flushBatch(updates);
                 guard.onSuccess();
+                // Release the records only once the write has committed, so a rollback or a crash
+                // between drain and commit leaves them unacknowledged and Kafka replays them.
+                ackScheduler.afterCommit(() -> batch.forEach(BufferedUpdate::acknowledge));
             } catch (RuntimeException e) {
                 // A retried batch is requeued in front of newer updates to keep
                 // write ordering; a quarantined one is dropped from the retry
                 // path so healthy traffic is not blocked by it.
-                if (guard.onFailure(batch, e) == SinkFlushGuard.Decision.RETRY) {
+                if (guard.onFailure(updates, e) == SinkFlushGuard.Decision.RETRY) {
                     requeue(batch);
                     throw e;
                 }
+                // Quarantined: the payload is discarded by design, so its records are released
+                // rather than left to stall the partition behind an acknowledgement that will
+                // never come. Quarantine metrics and logs already record the loss.
+                batch.forEach(BufferedUpdate::acknowledge);
             }
         } finally {
             flushLock.unlock();
@@ -222,7 +244,7 @@ public class GtfsTripUpdateSink {
      * Swaps the buffer contents into a private batch under the buffer lock.
      * The lock is released before any database work happens.
      */
-    private List<TripUpdateDto> drain() {
+    private List<BufferedUpdate> drain() {
         bufferLock.lock();
         try {
             if (buffer.isEmpty()) {
@@ -236,7 +258,8 @@ public class GtfsTripUpdateSink {
         }
     }
 
-    private void requeue(List<TripUpdateDto> batch) {
+    private void requeue(List<BufferedUpdate> batch) {
+        List<BufferedUpdate> dropped = List.of();
         bufferLock.lock();
         try {
             buffer.addAll(0, batch);
@@ -245,6 +268,7 @@ public class GtfsTripUpdateSink {
                 // The oldest updates are the least useful for current-state
                 // consumers, so they are the ones dropped when the buffer is
                 // full during a prolonged failure.
+                dropped = new ArrayList<>(buffer.subList(0, overflow));
                 buffer.subList(0, overflow).clear();
                 metrics.recordBufferOverflow(overflow);
                 log.warn(
@@ -255,6 +279,10 @@ public class GtfsTripUpdateSink {
         } finally {
             bufferLock.unlock();
         }
+
+        // A dropped update will never be written, so its record is released instead of waiting for
+        // an acknowledgement that can never arrive.
+        dropped.forEach(BufferedUpdate::acknowledge);
     }
 
     private void flushBatch(List<TripUpdateDto> batch) {
@@ -290,5 +318,48 @@ public class GtfsTripUpdateSink {
                 timings.stopTimesNanos() / 1_000_000,
                 timings.hotTripRowsNanos() / 1_000_000,
                 timings.hotStopTimesNanos() / 1_000_000);
+    }
+
+    /** Releases a record whose update is discarded instead of buffered. */
+    private void acknowledgeNow(Runnable acknowledgement) {
+        try {
+            acknowledgement.run();
+        } catch (RuntimeException e) {
+            log.warn("Failed to acknowledge a discarded TripUpdate", e);
+        }
+    }
+
+    /**
+     * A buffered update paired with the acknowledgement that releases its Kafka record.
+     *
+     * <p>Releasing is idempotent: an entry leaves the sink exactly once, whether it was persisted,
+     * quarantined, or dropped by the overflow ceiling, so a double release can never reach the
+     * messaging layer and fail the consumer.
+     */
+    private static final class BufferedUpdate {
+
+        private final TripUpdateDto update;
+        private final Runnable acknowledgement;
+        private final AtomicBoolean released = new AtomicBoolean();
+
+        private BufferedUpdate(TripUpdateDto update, Runnable acknowledgement) {
+            this.update = update;
+            this.acknowledgement = acknowledgement;
+        }
+
+        private TripUpdateDto update() {
+            return update;
+        }
+
+        private void acknowledge() {
+            if (!released.compareAndSet(false, true)) {
+                return;
+            }
+            try {
+                acknowledgement.run();
+            } catch (RuntimeException e) {
+                log.warn("Failed to acknowledge a buffered TripUpdate", e);
+            }
+        }
     }
 }

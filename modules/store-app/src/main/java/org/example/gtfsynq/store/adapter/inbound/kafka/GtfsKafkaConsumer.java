@@ -6,6 +6,8 @@ import io.smallrye.common.annotation.Blocking;
 import io.smallrye.reactive.messaging.kafka.Record;
 import jakarta.inject.Singleton;
 import java.time.Instant;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
@@ -56,27 +58,39 @@ public class GtfsKafkaConsumer {
      *
      * @param feedId Kafka key / feed identifier
      * @param entity parsed GTFS feed entity
+     * @param onPersisted acknowledgement releasing the record once the update is durable; run
+     *     immediately when the entity is discarded
      */
-    public void routeToSink(String feedId, FeedEntityWithMetadata entity) {
+    public void routeToSink(String feedId, FeedEntityWithMetadata entity, Runnable onPersisted) {
         if (entity == null) {
+            onPersisted.run();
             return;
         }
 
-        tripUpdateSink.accept(feedId, entity);
+        tripUpdateSink.accept(feedId, entity, onPersisted);
     }
 
     /**
-     * Consume raw Kafka records
+     * Consume raw Kafka records.
+     *
+     * <p>The returned stage is the record's acknowledgement: it completes only once the sink has
+     * written and committed the batch holding this update. Completing it here rather than letting
+     * the method return keeps the offset uncommitted while the update is still buffered, so a crash
+     * replays it instead of losing it.
      *
      * @param record raw Kafka record, keyed by feed identifier
+     * @return stage completed when the record may be acknowledged
      */
     @Incoming("gtfs-trip-updates")
     @Blocking
-    public void consume(Record<String, byte[]> record) {
+    public CompletionStage<Void> consume(Record<String, byte[]> record) {
         var value = record.value();
         if (value == null) {
-            return;
+            return CompletableFuture.completedFuture(null);
         }
-        routeToSink(record.key(), parseFeedEntity(value));
+
+        var acknowledged = new CompletableFuture<Void>();
+        routeToSink(record.key(), parseFeedEntity(value), () -> acknowledged.complete(null));
+        return acknowledged;
     }
 }

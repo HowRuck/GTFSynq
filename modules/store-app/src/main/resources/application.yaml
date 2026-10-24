@@ -107,6 +107,10 @@ mp:
           deserializer: org.apache.kafka.common.serialization.StringDeserializer
         value:
           deserializer: org.apache.kafka.common.serialization.ByteArrayDeserializer
+        # Records stay in flight until their batch has been flushed and committed, so the channel
+        # needs headroom beyond the default 1024 to reach the sink's early-flush threshold. Keep
+        # this at or above gtfsynq.sink.max-buffer-size.
+        max-inflight-messages: 20000
       # Static feed revisions are validated before they are written; the group is separate from the
       # realtime consumer so a rebalance in one path cannot stall the other.
       gtfs-static-feeds:
