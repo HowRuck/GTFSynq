@@ -66,6 +66,8 @@ quarkus:
 vaadin:
   build:
     pnpm-enable: true
+    node-version: v26.12.1
+    require-home-node-exec: true
 
 # The collector hostname only resolves inside the Compose network, so local dev
 # mode disables the SDK unless QUARKUS_OTEL_SDK_DISABLED is set explicitly.
