@@ -337,6 +337,7 @@ public class GtfsQueryRepository {
                        s.arrival_time, s.arrival_delay, s.scheduled_arrival_time,
                        s.departure_time, s.departure_delay, s.scheduled_departure_time,
                        s.schedule_relationship::text AS schedule_relationship, s.assigned_stop_id,
+                       s.last_seen_at,
                        st.stop_name
                 FROM rt_stop_time_updates_hot s
                 LEFT JOIN static_stops st
@@ -363,7 +364,8 @@ public class GtfsQueryRepository {
                             offsetDateTime(rs, "scheduled_departure_time"),
                             rs.getString("schedule_relationship"),
                             rs.getString("assigned_stop_id"),
-                            rs.getString("stop_name")));
+                            rs.getString("stop_name"),
+                            offsetDateTime(rs, "last_seen_at")));
                 }
                 return items;
             }

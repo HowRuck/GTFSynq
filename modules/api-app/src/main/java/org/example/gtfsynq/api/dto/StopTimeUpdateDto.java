@@ -15,4 +15,5 @@ public record StopTimeUpdateDto(
         OffsetDateTime scheduledDepartureTime,
         String scheduleRelationship,
         String assignedStopId,
-        String stopName) {}
+        String stopName,
+        OffsetDateTime lastSeenAt) {}

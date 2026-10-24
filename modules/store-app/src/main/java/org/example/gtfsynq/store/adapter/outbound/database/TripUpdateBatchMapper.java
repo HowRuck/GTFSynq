@@ -64,11 +64,7 @@ public class TripUpdateBatchMapper {
         var latestDescriptors = latestDescriptors(descriptors, hotTripsById);
         var latestStops = latestStops(stopTimes, hotTripsById);
 
-        return new TripUpdateRows(
-                latestDescriptors,
-                stopTimes,
-                new ArrayList<>(hotTripsById.values()),
-                latestStops);
+        return new TripUpdateRows(latestDescriptors, stopTimes, new ArrayList<>(hotTripsById.values()), latestStops);
     }
 
     /**

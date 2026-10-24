@@ -219,6 +219,10 @@ message StopTimeUpdate {
   // Stop name resolved from the static schedule; absent when no static stop
   // matches or the feed does not publish one.
   optional string stop_name = 12;
+  // When the store last changed this stop prediction. Unlike the trip-level
+  // last_seen_at, unchanged duplicates are deduplicated upstream, so this is
+  // the time of the last meaningful change, not the last feed sighting.
+  google.protobuf.Timestamp last_seen_at = 13;
 }
 
 message StopTimeUpdatesRequest {

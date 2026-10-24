@@ -201,9 +201,12 @@ public final class Columns {
                 .setSortProperty("feedTs")
                 .setSortable(true);
 
-        grid.addColumn(row -> row instanceof TripUpdateRow trip
-                        ? UiFormat.dateTime(trip.update().getLastSeenAt())
-                        : "")
+        grid.addColumn(row -> switch (row) {
+                    case TripUpdateRow trip -> UiFormat.dateTime(trip.update().getLastSeenAt());
+                    case StopTimeUpdateRow stop ->
+                        UiFormat.dateTime(stop.update().getLastSeenAt());
+                    case LoadingRow ignored -> "";
+                })
                 .setHeader(grid.getTranslation("column.lastSeen"))
                 .setKey("lastSeenAt")
                 .setSortProperty("lastSeenAt")

@@ -129,6 +129,6 @@ class GtfsQueryMapperTest {
     }
 
     private static StopTimeUpdateDto stopTimeUpdate(String stopName) {
-        return new StopTimeUpdateDto(1, 1, "stop-id", null, null, null, null, null, null, null, null, stopName);
+        return new StopTimeUpdateDto(1, 1, "stop-id", null, null, null, null, null, null, null, null, stopName, null);
     }
 }
