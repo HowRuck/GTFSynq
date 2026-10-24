@@ -5,14 +5,6 @@ updates:
       - "/"
     schedule:
       interval: daily
-    ignore:
-      # The Avrea CI proxy mirrors a curated subset of Maven Central and
-      # rewrites Central URLs to itself, so it can only serve artifacts it has
-      # synced. Yavi patch releases arrive late and 0.17.2 broke the image
-      # build; stop proposing them until the proxy catches up.
-      - dependency-name: "am.ik.yavi:yavi"
-        update-types:
-          - "version-update:semver-patch"
     commit-message:
       prefix: "build"
       include: scope
