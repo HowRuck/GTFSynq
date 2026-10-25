@@ -354,25 +354,88 @@ public class GtfsQueryRepository {
                 includeTotal);
     }
 
-    /** Current stop time updates of one live trip, ordered by stop sequence. */
+    /**
+     * Stops of one live trip: the whole static schedule with the live stop time updates layered on
+     * top. Stops that the feed has not reported keep their scheduled times and blank delays, so an
+     * active train shows its complete route instead of only the updated subset.
+     */
     public List<StopTimeUpdateDto> liveStopTimeUpdates(long tripUpdateId) {
         String sql = """
-                SELECT s.trip_update_id, s.stop_sequence, s.stop_id,
-                       s.arrival_time, s.arrival_delay, s.scheduled_arrival_time,
-                       s.departure_time, s.departure_delay, s.scheduled_departure_time,
-                       s.schedule_relationship::text AS schedule_relationship, s.assigned_stop_id,
-                       s.last_seen_at,
+                WITH trip AS (
+                    SELECT h.trip_update_id, h.feed_id, m.trip_id, m.start_date, r.agency_id
+                    FROM rt_trip_updates_hot h
+                    LEFT JOIN rt_trip_updates_meta m ON m.id = h.trip_update_id
+                    LEFT JOIN static_routes r
+                           ON r.feed_id = h.feed_id AND r.route_id = m.route_id
+                    WHERE h.trip_update_id = ?
+                ),
+                zone AS (
+                    SELECT COALESCE(
+                               (SELECT a.agency_timezone FROM static_agency a
+                                 WHERE a.feed_id = t.feed_id
+                                   AND a.agency_id = COALESCE(t.agency_id, '')),
+                               (SELECT a.agency_timezone FROM static_agency a
+                                 WHERE a.feed_id = t.feed_id LIMIT 1),
+                               'UTC') AS time_zone
+                    FROM trip t
+                ),
+                live AS (
+                    SELECT * FROM rt_stop_time_updates_hot WHERE trip_update_id = ?
+                ),
+                merged AS (
+                    SELECT t.trip_update_id, t.feed_id, st.stop_sequence,
+                           COALESCE(l.stop_id, st.stop_id) AS stop_id,
+                           l.arrival_time, l.arrival_delay,
+                           COALESCE(l.scheduled_arrival_time,
+                                    CASE WHEN t.start_date IS NOT NULL AND st.arrival_time IS NOT NULL
+                                         THEN (t.start_date + st.arrival_time
+                                               + make_interval(days => COALESCE(st.arrival_time_overflow_days, 0)::int))
+                                              AT TIME ZONE z.time_zone
+                                    END) AS scheduled_arrival_time,
+                           l.departure_time, l.departure_delay,
+                           COALESCE(l.scheduled_departure_time,
+                                    CASE WHEN t.start_date IS NOT NULL AND st.departure_time IS NOT NULL
+                                         THEN (t.start_date + st.departure_time
+                                               + make_interval(days => COALESCE(st.departure_time_overflow_days, 0)::int))
+                                              AT TIME ZONE z.time_zone
+                                    END) AS scheduled_departure_time,
+                           COALESCE(l.schedule_relationship::text, 'SCHEDULED') AS schedule_relationship,
+                           l.assigned_stop_id, l.last_seen_at,
+                           (l.trip_update_id IS NOT NULL) AS realtime
+                    FROM trip t
+                    CROSS JOIN zone z
+                    JOIN static_stop_times st
+                      ON st.feed_id = t.feed_id AND st.trip_id = t.trip_id
+                    LEFT JOIN live l ON l.stop_sequence = st.stop_sequence
+
+                    UNION ALL
+
+                    SELECT t.trip_update_id, t.feed_id, l.stop_sequence, l.stop_id,
+                           l.arrival_time, l.arrival_delay, l.scheduled_arrival_time,
+                           l.departure_time, l.departure_delay, l.scheduled_departure_time,
+                           l.schedule_relationship::text, l.assigned_stop_id, l.last_seen_at,
+                           TRUE
+                    FROM trip t
+                    JOIN live l ON NOT EXISTS (
+                        SELECT 1 FROM static_stop_times st
+                        WHERE st.feed_id = t.feed_id AND st.trip_id = t.trip_id
+                          AND st.stop_sequence = l.stop_sequence)
+                )
+                SELECT m.trip_update_id, m.stop_sequence, m.stop_id,
+                       m.arrival_time, m.arrival_delay, m.scheduled_arrival_time,
+                       m.departure_time, m.departure_delay, m.scheduled_departure_time,
+                       m.schedule_relationship, m.assigned_stop_id, m.last_seen_at, m.realtime,
                        st.stop_name
-                FROM rt_stop_time_updates_hot s
+                FROM merged m
                 LEFT JOIN static_stops st
-                       ON st.feed_id = s.feed_id
-                      AND st.stop_id = COALESCE(s.stop_id, s.assigned_stop_id)
-                WHERE s.trip_update_id = ?
-                ORDER BY s.stop_sequence ASC
+                       ON st.feed_id = m.feed_id
+                      AND st.stop_id = COALESCE(m.stop_id, m.assigned_stop_id)
+                ORDER BY m.stop_sequence ASC
                 """;
         try (Connection connection = dataSource.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setLong(1, tripUpdateId);
+            statement.setLong(2, tripUpdateId);
             try (ResultSet rs = statement.executeQuery()) {
                 List<StopTimeUpdateDto> items = new ArrayList<>();
                 while (rs.next()) {
@@ -389,7 +452,8 @@ public class GtfsQueryRepository {
                             rs.getString("schedule_relationship"),
                             rs.getString("assigned_stop_id"),
                             rs.getString("stop_name"),
-                            offsetDateTime(rs, "last_seen_at")));
+                            offsetDateTime(rs, "last_seen_at"),
+                            rs.getBoolean("realtime")));
                 }
                 return items;
             }

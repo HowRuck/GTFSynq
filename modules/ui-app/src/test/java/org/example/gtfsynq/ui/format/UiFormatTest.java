@@ -44,6 +44,7 @@ class UiFormatTest {
         var scheduled = timestamp("2026-07-01T10:00:00Z");
 
         assertEquals("12:02:00", UiFormat.eventTime(null, scheduled, 120));
+        assertEquals("12:00:00", UiFormat.eventTime(null, scheduled, null), "schedule-only rows");
     }
 
     @Test

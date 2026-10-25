@@ -45,6 +45,17 @@ class LiveUpdatesDataProviderTest {
     }
 
     @Test
+    void everyTripIsExpandableEvenWithoutLiveStopRows() {
+        var tripWithoutLiveStops = (TripUpdateRow) provider.fetchChildren(rootQuery())
+                .filter(row ->
+                        row instanceof TripUpdateRow tripRow && tripRow.update().getStopTimeUpdateCount() == 0)
+                .findFirst()
+                .orElseThrow();
+
+        assertTrue(provider.hasChildren(tripWithoutLiveStops), "the static schedule may still have stops");
+    }
+
+    @Test
     void cachesStopTimesUntilTheNextRefresh() {
         var trip =
                 (TripUpdateRow) provider.fetchChildren(rootQuery()).findFirst().orElseThrow();

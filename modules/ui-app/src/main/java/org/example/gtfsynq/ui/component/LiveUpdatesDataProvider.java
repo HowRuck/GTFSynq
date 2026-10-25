@@ -64,9 +64,15 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
         return HierarchyFormat.NESTED;
     }
 
+    /**
+     * Every trip row is expandable: the expansion query returns the whole static schedule merged
+     * with the live stop time updates, so a trip whose feed reports no stop rows can still show its
+     * scheduled stops. The live count is not used to decide this, which keeps the list query free of
+     * an extra static-table lookup per row.
+     */
     @Override
     public boolean hasChildren(LiveUpdateRow item) {
-        return item instanceof TripUpdateRow trip && trip.update().getStopTimeUpdateCount() > 0;
+        return item instanceof TripUpdateRow;
     }
 
     @Override

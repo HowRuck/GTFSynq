@@ -88,6 +88,11 @@ public final class UiFormat {
                     .build();
             return time(shifted);
         }
+        // No live prediction for this stop: fall back to the static schedule, which is what the
+        // merged live-trip view shows for stops the feed has not updated.
+        if (isSet(scheduled)) {
+            return time(scheduled);
+        }
         return NOT_AVAILABLE;
     }
 

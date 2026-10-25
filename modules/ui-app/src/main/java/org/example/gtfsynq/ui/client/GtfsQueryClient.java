@@ -133,7 +133,7 @@ public class GtfsQueryClient {
         });
     }
 
-    /** All current stop time updates of one live trip, ordered by stop sequence. */
+    /** Stops of one live trip: static schedule merged with the live stop time updates. */
     public List<StopTimeUpdate> stopTimeUpdates(long tripUpdateId) {
         var request = StopTimeUpdatesRequest.newBuilder()
                 .setTripUpdateId(tripUpdateId)

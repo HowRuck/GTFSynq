@@ -1,6 +1,8 @@
 package org.example.gtfsynq.ui.component;
 
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.badge.Badge;
+import com.vaadin.flow.component.badge.BadgeVariant;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.Grid.Column;
 import com.vaadin.flow.component.grid.HeaderRow;
@@ -276,7 +278,7 @@ public final class Columns {
     private static Component liveLabel(TreeGrid<LiveUpdateRow> grid, LiveUpdateRow row) {
         return switch (row) {
             case TripUpdateRow trip -> label(tripName(trip.update()));
-            case StopTimeUpdateRow stop -> stopLabel(stop.update());
+            case StopTimeUpdateRow stop -> stopLabel(grid, stop.update());
             case LoadingRow ignored -> loadingRow(grid);
         };
     }
@@ -305,12 +307,24 @@ public final class Columns {
         return stop.hasStopName() ? stop.getStopName() : stopId(stop);
     }
 
-    private static Span stopLabel(StopTimeUpdate stop) {
+    private static Component stopLabel(TreeGrid<LiveUpdateRow> grid, StopTimeUpdate stop) {
         var id = stopId(stop);
-        if (!stop.hasStopName()) {
-            return label(id);
+        var name = stop.hasStopName() ? label(stop.getStopName(), id == null ? stop.getStopName() : id) : label(id);
+        if (stop.getRealtime()) {
+            return name;
         }
-        return label(stop.getStopName(), id == null ? stop.getStopName() : id);
+
+        // Rows the feed did not update are filled in from the static schedule; mark them so they
+        // are not mistaken for live predictions.
+        var scheduled = new Badge(grid.getTranslation("live.stop.scheduled"));
+        scheduled.addThemeVariants(BadgeVariant.CONTRAST, BadgeVariant.SMALL);
+        scheduled.getElement().setAttribute("title", grid.getTranslation("live.stop.scheduled.title"));
+        var layout = new HorizontalLayout(name, scheduled);
+        layout.setPadding(false);
+        layout.setSpacing(false);
+        layout.setAlignItems(Alignment.CENTER);
+        layout.getElement().getStyle().set("gap", "0.5rem");
+        return layout;
     }
 
     /**

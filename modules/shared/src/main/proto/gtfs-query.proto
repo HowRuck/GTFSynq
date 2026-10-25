@@ -234,14 +234,17 @@ message StopTimeUpdate {
   // last_seen_at, unchanged duplicates are deduplicated upstream, so this is
   // the time of the last meaningful change, not the last feed sighting.
   google.protobuf.Timestamp last_seen_at = 13;
+  // True when the feed has a stop time update for this stop. False means the row
+  // was filled in from the static schedule and only carries scheduled times.
+  bool realtime = 14;
 }
 
 message StopTimeUpdatesRequest {
   int64 trip_update_id = 1;
 }
 
-// One trip has a bounded number of stops, so the reply carries every stop time update for the
-// trip instead of a page.
+// One trip has a bounded number of stops, so the reply carries the whole trip instead of a page:
+// the static schedule with the live stop time updates layered on top.
 message StopTimeUpdatesReply {
   repeated StopTimeUpdate items = 1;
 }

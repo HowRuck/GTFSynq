@@ -143,7 +143,23 @@ class GtfsQueryMapperTest {
                 routeType);
     }
 
+    @Test
+    void mapsWhetherAStopComesFromRealtimeData() {
+        var live = GtfsQueryMapper.stopTimeUpdatesReply(List.of(stopTimeUpdate("Central Station", true)))
+                .getItems(0);
+        var scheduled = GtfsQueryMapper.stopTimeUpdatesReply(List.of(stopTimeUpdate("Central Station", false)))
+                .getItems(0);
+
+        assertTrue(live.getRealtime());
+        assertFalse(scheduled.getRealtime(), "rows filled in from the static schedule are not realtime");
+    }
+
     private static StopTimeUpdateDto stopTimeUpdate(String stopName) {
-        return new StopTimeUpdateDto(1, 1, "stop-id", null, null, null, null, null, null, null, null, stopName, null);
+        return stopTimeUpdate(stopName, true);
+    }
+
+    private static StopTimeUpdateDto stopTimeUpdate(String stopName, boolean realtime) {
+        return new StopTimeUpdateDto(
+                1, 1, "stop-id", null, null, null, null, null, null, null, null, stopName, null, realtime);
     }
 }
