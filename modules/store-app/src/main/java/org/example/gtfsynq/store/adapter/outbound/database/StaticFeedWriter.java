@@ -1,5 +1,6 @@
 package org.example.gtfsynq.store.adapter.outbound.database;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
@@ -13,6 +14,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gtfsynq.shared.protocol.StaticFeedIngested;
 import org.example.gtfsynq.shared.util.GtfsFeedFormatter;
 import org.example.gtfsynq.shared.validation.GtfsStaticArchiveReader;
@@ -25,6 +27,9 @@ import org.example.gtfsynq.shared.validation.GtfsStaticRows.StopRow;
 import org.example.gtfsynq.shared.validation.GtfsStaticRows.StopTimeRow;
 import org.example.gtfsynq.shared.validation.GtfsStaticRows.TripRow;
 import org.example.gtfsynq.store.service.metrics.StaticPersistenceMetrics;
+import org.postgresql.PGConnection;
+import org.postgresql.copy.CopyIn;
+import org.postgresql.copy.CopyManager;
 
 /**
  * Writes one static feed revision, replacing whatever revision that feed held before.
@@ -43,6 +48,7 @@ import org.example.gtfsynq.store.service.metrics.StaticPersistenceMetrics;
  * <p>Closing without {@link #commit()} rolls back and returns the connection, so a failed read or a
  * bind error cannot leave a feed's rows partly deleted.
  */
+@Slf4j
 public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
 
     /** Table names, as keyed in the upsert statements and the row-count report. */
@@ -66,6 +72,39 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
      * only the conflict key is excluded from the update.
      */
     private static final Map<String, String> UPSERT_SQL = upserts();
+
+    /**
+     * COPY target for the largest table. Its 23 columns make a 5,000-row bind batch exceed the
+     * protocol's parameter limit, and incremental index maintenance dominates a multi-million-row
+     * load; COPY avoids both.
+     */
+    private static final String STOP_TIMES_COPY_SQL = """
+            COPY static_stop_times (
+                feed_id,
+                trip_id,
+                stop_sequence,
+                stop_id,
+                arrival_time,
+                arrival_time_overflow_days,
+                departure_time,
+                departure_time_overflow_days,
+                pickup_type,
+                drop_off_type,
+                shape_dist_traveled,
+                timepoint,
+                location_group_id,
+                location_id,
+                stop_headsign,
+                start_pickup_drop_off_window,
+                start_pickup_drop_off_window_overflow_days,
+                end_pickup_drop_off_window,
+                end_pickup_drop_off_window_overflow_days,
+                continuous_pickup,
+                continuous_drop_off,
+                pickup_booking_rule_id,
+                drop_off_booking_rule_id
+            ) FROM STDIN WITH (FORMAT csv)
+            """;
 
     private static Map<String, String> upserts() {
         var sql = new LinkedHashMap<String, String>();
@@ -304,6 +343,8 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
 
     private final Map<String, Long> rowsByTable = new LinkedHashMap<>();
 
+    private CopyIn stopTimesCopy;
+
     private boolean committed;
 
     StaticFeedWriter(
@@ -328,6 +369,7 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
     public void commit() throws WriteFailed {
         var start = System.nanoTime();
         try {
+            endStopTimesCopy();
             if (!unchanged) {
                 recordRevision();
             }
@@ -342,6 +384,9 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
 
     @Override
     public void close() {
+        if (!committed) {
+            cancelStopTimesCopy();
+        }
         try {
             if (!committed && !connection.getAutoCommit()) {
                 var start = System.nanoTime();
@@ -463,6 +508,11 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
         }
         rowsByTable.merge(table, (long) rows.size(), Long::sum);
 
+        if (STOP_TIMES.equals(table)) {
+            copyStopTimes(rows);
+            return;
+        }
+
         var start = System.nanoTime();
         var failed = true;
         try {
@@ -478,6 +528,58 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
             throw new WriteFailed("could not write " + rows.size() + " rows to " + table, SqlLogSanitizer.sanitize(e));
         } finally {
             metrics.recordBatch(table, rows.size(), System.nanoTime() - start, failed);
+        }
+    }
+
+    /**
+     * Streams the chunk into the table's COPY target, keeping the whole revision in one COPY and one
+     * transaction.
+     */
+    private void copyStopTimes(List<?> rows) {
+        var start = System.nanoTime();
+        var failed = true;
+        try {
+            if (stopTimesCopy == null) {
+                stopTimesCopy = copyManager().copyIn(STOP_TIMES_COPY_SQL);
+            }
+            var buffer = new StringBuilder(rows.size() * 160);
+            for (var row : rows) {
+                StopTimeCopyEncoder.appendRow(buffer, feedId, (StopTimeRow) row);
+            }
+            var bytes = buffer.toString().getBytes(StandardCharsets.UTF_8);
+            stopTimesCopy.writeToCopy(bytes, 0, bytes.length);
+            failed = false;
+        } catch (SQLException e) {
+            throw new WriteFailed(
+                    "could not copy " + rows.size() + " rows to " + STOP_TIMES, SqlLogSanitizer.sanitize(e));
+        } catch (RuntimeException e) {
+            throw new WriteFailed("could not encode " + rows.size() + " rows for " + STOP_TIMES, e);
+        } finally {
+            metrics.recordBatch(STOP_TIMES, rows.size(), System.nanoTime() - start, failed);
+        }
+    }
+
+    private CopyManager copyManager() throws SQLException {
+        return connection.unwrap(PGConnection.class).getCopyAPI();
+    }
+
+    private void endStopTimesCopy() throws SQLException {
+        if (stopTimesCopy != null) {
+            stopTimesCopy.endCopy();
+            stopTimesCopy = null;
+        }
+    }
+
+    private void cancelStopTimesCopy() {
+        if (stopTimesCopy == null) {
+            return;
+        }
+        try {
+            stopTimesCopy.cancelCopy();
+        } catch (SQLException e) {
+            log.debug("Could not cancel COPY for static stop times", e);
+        } finally {
+            stopTimesCopy = null;
         }
     }
 
