@@ -64,3 +64,13 @@ vaadin-grid::part(delay-severe) {
     color: var(--vaadin-text-color-secondary);
     font-variant-numeric: tabular-nums;
 }
+
+/*
+ * Stop rows filled in from the static schedule (the feed has no live update for
+ * them) are reference data. The part name comes from Columns.liveUpdates();
+ * the secondary text color keeps them readable without competing with live
+ * predictions.
+ */
+vaadin-grid::part(scheduled-stop) {
+    color: var(--vaadin-text-color-secondary);
+}

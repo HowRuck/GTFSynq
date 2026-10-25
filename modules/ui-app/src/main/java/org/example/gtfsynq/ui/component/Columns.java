@@ -232,6 +232,11 @@ public final class Columns {
                 .setSortProperty("lastSeenAt")
                 .setSortable(true);
 
+        // Schedule-filled rows are reference data, not live predictions: dim their values so they
+        // do not read like current information.
+        grid.setPartNameGenerator(
+                row -> row instanceof StopTimeUpdateRow stop && !stop.update().getRealtime() ? "scheduled-stop" : null);
+
         groupHeaderRow(grid);
     }
 

@@ -3,6 +3,7 @@ package org.example.gtfsynq.ui.component;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.vaadin.flow.component.UI;
@@ -74,6 +75,15 @@ class LiveUpdatesGridTest {
             assertTrue(grid.getColumns().stream().allMatch(Grid.Column::isResizable));
             assertTrue(grid.getColumns().stream().allMatch(column -> column.getFlexGrow() == 1));
             assertTrue(grid.getColumns().stream().allMatch(column -> column.getTextAlign() == ColumnTextAlign.START));
+
+            var partNames = grid.getPartNameGenerator();
+            var scheduled = new StopTimeUpdateRow(
+                    1, StopTimeUpdate.newBuilder().setRealtime(false).build());
+            var live = new StopTimeUpdateRow(
+                    1, StopTimeUpdate.newBuilder().setRealtime(true).build());
+            assertEquals("scheduled-stop", partNames.apply(scheduled));
+            assertNull(partNames.apply(live));
+            assertNull(partNames.apply(new TripUpdateRow(TripUpdate.getDefaultInstance())), "trip rows are not dimmed");
 
             assertEquals(2, grid.getHeaderRows().size(), "the grouped header sits above the column headers");
             var groups = grid.getHeaderRows().getFirst();
