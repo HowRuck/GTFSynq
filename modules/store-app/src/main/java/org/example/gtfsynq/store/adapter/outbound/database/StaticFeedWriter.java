@@ -382,12 +382,25 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
     public void commit() throws WriteFailed {
         var start = System.nanoTime();
         try {
+            var copyStart = System.nanoTime();
+            log.info("Static feed {}: all rows streamed, finalising COPY", feedId);
             endStopTimesCopy();
+            log.info("Static feed {}: COPY finalised in {} ms", feedId, (System.nanoTime() - copyStart) / 1_000_000);
+
+            var markerStart = System.nanoTime();
             if (!unchanged) {
                 recordRevision();
             }
+            log.debug(
+                    "Static feed {}: revision marker written in {} ms",
+                    feedId,
+                    (System.nanoTime() - markerStart) / 1_000_000);
+
+            var commitStart = System.nanoTime();
+            log.info("Static feed {}: committing (WAL flush)…", feedId);
             connection.commit();
             committed = true;
+            log.info("Static feed {}: commit returned in {} ms", feedId, (System.nanoTime() - commitStart) / 1_000_000);
             if (!unchanged) {
                 log.info(
                         "Committed static revision for feed {}: {} rows in {} ms ({}). Stop times used COPY ({} rows, {} chunks, {} ms)",
