@@ -140,6 +140,12 @@ public class GtfsQueryClient {
         if (query.agency() != null) {
             request.setAgency(query.agency());
         }
+        if (query.route() != null) {
+            request.setRoute(query.route());
+        }
+        if (query.routeType() != null) {
+            request.setRouteType(query.routeType());
+        }
         return call(() -> {
             var reply = stub().listTripUpdates(request.build());
             return page(reply.getItemsList(), reply.getPage());

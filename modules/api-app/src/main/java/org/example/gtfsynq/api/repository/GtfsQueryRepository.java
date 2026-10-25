@@ -316,6 +316,8 @@ public class GtfsQueryRepository {
             String feedId,
             String search,
             String agency,
+            String route,
+            Integer routeType,
             int page,
             int size,
             String sort,
@@ -336,6 +338,14 @@ public class GtfsQueryRepository {
         if (hasText(agency)) {
             conditions.add("a.agency_name = ?");
             parameters.add(agency);
+        }
+        if (hasText(route)) {
+            conditions.add("coalesce(t.route_id, m.route_id) ILIKE ? ESCAPE '\\'");
+            addLike(parameters, route);
+        }
+        if (routeType != null) {
+            conditions.add("r.route_type = ?");
+            parameters.add(routeType);
         }
 
         String select = """
@@ -362,7 +372,7 @@ public class GtfsQueryRepository {
                 """;
         // The agency condition reaches static_agency through the trip and route joins; only widen
         // the count query when that filter is actually in use.
-        String count = hasText(agency) ? """
+        String count = hasText(agency) || hasText(route) || routeType != null ? """
                 SELECT count(*) FROM rt_trip_updates_hot h
                 LEFT JOIN rt_trip_updates_meta m ON m.id = h.trip_update_id
                 LEFT JOIN static_trips t ON t.feed_id = h.feed_id AND t.trip_id = m.trip_id

@@ -101,7 +101,13 @@ class LiveUpdatesGridTest {
             assertNull(arrival.apply(prediction), "a live predicted time keeps the normal colour");
             assertEquals("scheduled-value", arrival.apply(delayOnly), "a time derived from the schedule is dimmed");
 
-            assertEquals(2, grid.getHeaderRows().size(), "the grouped header sits above the column headers");
+            assertEquals(3, grid.getHeaderRows().size(), "group, column headers and the inline filter row");
+            var filters = grid.getHeaderRows().get(2);
+            assertNotNull(filters.getCell(grid.getColumnByKey("feed")).getComponent(), "feed filter");
+            assertNotNull(filters.getCell(grid.getColumnByKey("agency")).getComponent(), "agency filter");
+            assertNotNull(filters.getCell(grid.getColumnByKey("routeId")).getComponent(), "route filter");
+            assertNotNull(filters.getCell(grid.getColumnByKey("routeType")).getComponent(), "route-type filter");
+
             var groups = grid.getHeaderRows().getFirst();
             assertEquals(4, groups.getCells().size(), "one cell per column group");
             assertEquals(

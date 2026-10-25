@@ -12,7 +12,6 @@ import com.vaadin.flow.shared.Registration;
 import jakarta.inject.Inject;
 import org.example.gtfsynq.ui.MainLayout;
 import org.example.gtfsynq.ui.client.GtfsQueryClient;
-import org.example.gtfsynq.ui.component.Filters;
 import org.example.gtfsynq.ui.component.LiveUpdatesGrid;
 import org.example.gtfsynq.ui.component.PageHeader;
 
@@ -29,22 +28,12 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
     public LiveUpdatesView(GtfsQueryClient client) {
         table = new LiveUpdatesGrid(client, "lastSeenAt", SortDirection.DESCENDING);
 
-        var feed = Filters.feed(client, getTranslation("filter.feed.placeholder"), table::setFeedId);
-        var agency = Filters.agency(client, getTranslation("filter.agency.placeholder"), table::setAgency);
-        var search = Filters.search(getTranslation("filter.search.placeholder"), table::setSearch);
+        // Feed, agency, route and route type are inline header filters inside the grid.
         var refresh = new Button(getTranslation("live.refresh"), event -> table.refresh());
         refresh.setIcon(VaadinIcon.REFRESH.create());
 
         setSizeFull();
-        add(
-                PageHeader.create(
-                        getTranslation("page.live.title"),
-                        getTranslation("page.live.subtitle"),
-                        feed,
-                        agency,
-                        search,
-                        refresh),
-                table);
+        add(PageHeader.create(getTranslation("page.live.title"), getTranslation("page.live.subtitle"), refresh), table);
         setFlexGrow(1, table);
     }
 

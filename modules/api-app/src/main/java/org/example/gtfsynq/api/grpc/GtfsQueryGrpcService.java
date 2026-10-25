@@ -124,6 +124,8 @@ public class GtfsQueryGrpcService extends GtfsQueryServiceGrpc.GtfsQueryServiceI
                         request.getFeedId(),
                         request.getSearch(),
                         request.hasAgency() ? request.getAgency() : null,
+                        request.hasRoute() ? request.getRoute() : null,
+                        request.hasRouteType() ? request.getRouteType() : null,
                         request.getPage(),
                         request.getSize(),
                         request.getSort(),

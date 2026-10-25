@@ -11,6 +11,7 @@ public record PageQuery(
         String feedId,
         String search,
         String agency,
+        String route,
         Integer routeType,
         Integer directionId,
         Integer locationType,

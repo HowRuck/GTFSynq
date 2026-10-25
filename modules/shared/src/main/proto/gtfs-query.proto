@@ -219,6 +219,10 @@ message TripUpdatesRequest {
   string search = 7;
   // Agency name resolved from the static schedule; unset means all agencies.
   optional string agency = 8;
+  // Substring match on the trip's route id, resolved from the static schedule.
+  optional string route = 9;
+  // GTFS route type, e.g. 3 for bus.
+  optional int32 route_type = 10;
 }
 
 message TripUpdatesReply {

@@ -105,6 +105,17 @@ class LiveUpdatesDataProviderTest {
         assertEquals("Verkehrsgemeinschaft Osnabrück", client.lastQuery.agency());
     }
 
+    @Test
+    void passesTheRouteFiltersToTheBackend() {
+        provider.setRoute("221");
+        provider.setRouteType(3);
+
+        provider.fetchChildren(rootQuery()).count();
+
+        assertEquals("221", client.lastQuery.route());
+        assertEquals(3, client.lastQuery.routeType());
+    }
+
     private static HierarchicalQuery<LiveUpdateRow, Void> rootQuery() {
         return new HierarchicalQuery<>(0, 25, List.of(), null, null, null);
     }

@@ -31,12 +31,14 @@ public class RealtimeResource {
             @QueryParam("feedId") String feedId,
             @QueryParam("search") @DefaultValue("") String search,
             @QueryParam("agency") String agency,
+            @QueryParam("route") String route,
+            @QueryParam("routeType") Integer routeType,
             @QueryParam("page") @DefaultValue("0") int page,
             @QueryParam("size") @DefaultValue("25") int size,
             @QueryParam("sort") @DefaultValue("lastSeenAt") String sort,
             @QueryParam("dir") @DefaultValue("desc") String direction,
             @QueryParam("count") @DefaultValue("true") boolean count) {
-        return repository.liveTripUpdates(feedId, search, agency, page, size, sort, direction, count);
+        return repository.liveTripUpdates(feedId, search, agency, route, routeType, page, size, sort, direction, count);
     }
 
     @GET

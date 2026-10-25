@@ -38,6 +38,8 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
     private String feedId;
     private String search;
     private String agency;
+    private String route;
+    private Integer routeType;
     private String lastError;
     private RootPage rootPage;
     private CountKey countKey;
@@ -128,6 +130,25 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
         return true;
     }
 
+    /** Applies a route-id filter; returns whether it changed. */
+    boolean setRoute(String value) {
+        var normalized = value == null || value.isBlank() ? null : value.trim();
+        if (Objects.equals(route, normalized)) {
+            return false;
+        }
+        route = normalized;
+        return true;
+    }
+
+    /** Applies a GTFS route-type filter; returns whether it changed. */
+    boolean setRouteType(Integer value) {
+        if (Objects.equals(routeType, value)) {
+            return false;
+        }
+        routeType = value;
+        return true;
+    }
+
     /** Applies a search term over entity, trip and route ids; returns whether it changed. */
     boolean setSearch(String value) {
         var term = value == null ? "" : value.trim();
@@ -157,10 +178,19 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
      */
     private int rootCount(HierarchicalQuery<LiveUpdateRow, Void> query) {
         var key = rootKey(query);
-        var keyWithoutPage = new CountKey(key.feedId(), key.search(), key.agency(), key.sort(), key.descending());
+        var keyWithoutPage = new CountKey(
+                key.feedId(), key.search(), key.agency(), key.route(), key.routeType(), key.sort(), key.descending());
         if (total < 0 || !keyWithoutPage.equals(countKey)) {
-            var counted =
-                    loadRoot(new RootKey(key.feedId(), key.search(), key.agency(), key.sort(), key.descending(), 0, 1));
+            var counted = loadRoot(new RootKey(
+                    key.feedId(),
+                    key.search(),
+                    key.agency(),
+                    key.route(),
+                    key.routeType(),
+                    key.sort(),
+                    key.descending(),
+                    0,
+                    1));
             total = counted.total();
             countKey = keyWithoutPage;
         }
@@ -175,7 +205,8 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
 
         rootPage = loadRoot(key);
         total = rootPage.total();
-        countKey = new CountKey(key.feedId(), key.search(), key.agency(), key.sort(), key.descending());
+        countKey = new CountKey(
+                key.feedId(), key.search(), key.agency(), key.route(), key.routeType(), key.sort(), key.descending());
         return rootPage;
     }
 
@@ -188,7 +219,7 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
 
         var size = Math.max(query.getLimit(), 1);
         var page = (int) (query.getOffset() / size);
-        return new RootKey(feedId, search, agency, sort, descending, page, size);
+        return new RootKey(feedId, search, agency, route, routeType, sort, descending, page, size);
     }
 
     private RootPage loadRoot(RootKey key) {
@@ -197,7 +228,8 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
                     key.feedId(),
                     key.search(),
                     key.agency(),
-                    null,
+                    key.route(),
+                    key.routeType(),
                     null,
                     null,
                     key.page(),
@@ -295,9 +327,24 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
     }
 
     private record RootKey(
-            String feedId, String search, String agency, String sort, boolean descending, int page, int size) {}
+            String feedId,
+            String search,
+            String agency,
+            String route,
+            Integer routeType,
+            String sort,
+            boolean descending,
+            int page,
+            int size) {}
 
-    private record CountKey(String feedId, String search, String agency, String sort, boolean descending) {}
+    private record CountKey(
+            String feedId,
+            String search,
+            String agency,
+            String route,
+            Integer routeType,
+            String sort,
+            boolean descending) {}
 
     private record RootPage(RootKey key, List<TripUpdateRow> rows, long total) {}
 }
