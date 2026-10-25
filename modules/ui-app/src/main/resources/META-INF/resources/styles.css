@@ -79,3 +79,11 @@ vaadin-grid::part(scheduled-stop) {
 vaadin-grid::part(scheduled-value) {
     color: var(--vaadin-text-color-secondary);
 }
+
+/*
+ * Live tree: tighten the per-level indentation so expanded stop names sit closer
+ * to the trip column. This is the offset Vaadin applies for each hierarchy level.
+ */
+vaadin-grid-tree-toggle {
+    --vaadin-grid-tree-toggle-level-offset: 0.5rem;
+}
