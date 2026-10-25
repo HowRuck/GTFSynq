@@ -323,7 +323,6 @@ public final class Columns {
         // The sequence replaces the former dedicated column and sits at the left of the row, in the
         // indentation gutter the tree already reserves for child rows.
         var sequence = new Span(String.valueOf(stop.getStopSequence()));
-        sequence.getElement().getStyle().set("flex", "0 0 2.25rem");
         sequence.getElement().getStyle().set("text-align", "right");
         sequence.getElement().getStyle().set("color", "var(--vaadin-text-color-secondary)");
         sequence.getElement().getStyle().set("font-variant-numeric", "tabular-nums");
