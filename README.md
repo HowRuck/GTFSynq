@@ -218,10 +218,11 @@ Behaviour shared by the tables:
 - gRPC failures appear as notifications instead of breaking the view. The API
   host and port come from `GTFS_API_GRPC_HOST` / `GTFS_API_GRPC_PORT`.
 - All text goes through Vaadin's I18N provider
-  (`src/main/resources/vaadin-i18n/translations.properties`); English is the only
-  bundled locale. The look comes from the Aura theme configured in
-  `META-INF/resources/styles.css` (Inter font, orange accent, warm light/dark
-  backgrounds).
+  (`src/main/resources/vaadin-i18n/translations.properties`); English, German and
+  French are bundled, the initial language follows the browser and a navbar
+  switcher overrides it for the session. The look comes from the Aura theme
+  configured in `META-INF/resources/styles.css` (Inter font, orange accent, warm
+  light/dark backgrounds).
 
 ## Project Structure
 
@@ -298,36 +299,58 @@ The Vaadin Flow web console (see [Web Console](#web-console)):
 - an expandable live tree: trip updates load lazily and expand to their stop time
   updates (with a progress-bar loading row while they fetch), refreshed every
   minute through server push
-- English translations via Vaadin I18N, Aura theme with the Inter font and an
-  orange accent palette
+- English, German and French translations via Vaadin I18N, Aura theme with the
+  Inter font and an orange accent palette
 - no database access and no REST calls — it is a pure gRPC client of `api-app`
 
 ## Runtime Flow
 
-```text
-GTFS-RT sources                        GTFS static (CSV) sources
-        ↓                                        ↓
- ingest-app  ──────────────────┐          ingest-app
-        │                      │                │
-        │             gtfs-trip-updates         │  archive
-        ↓                      │                ↓
-      Kafka  ────────────────► store-app      S3 storage
-                               │                │  fetch + digest check
-                               │   gtfs-static-feeds (object location + digest)
-                               └────────────────┘
-                                ↓
-                     gtfs-static validation (shared validator)
-                                ↓
-                        PostgreSQL / TimescaleDB
-                                ↓
-                              api-app
-                    REST + gRPC :8080
-                         │
-                  ┌──────┴──────────┐
-                  │                 │
-            external clients    ui-app :8083
-                                  (Vaadin)
+```mermaid
+flowchart TB
+  subgraph L1["Inputs"]
+    RTS["GTFS-RT"]
+    STS["GTFS static"]
+  end
+
+  subgraph L2["2 · Ingestion"]
+    ING["ingest-app"]
+    STORE["store-app"]
+  end
+
+  subgraph L3["3 · Messaging and storage"]
+    KAFKA[["Kafka"]]
+    S3[("S3")]
+    DB[("TimescaleDB")]
+    OBS["OTLP"]
+  end
+
+  subgraph L4["4 · Read and presentation"]
+    API["api-app"]
+    UI["ui-app"]
+  end
+
+  subgraph L5["5 · Outputs"]
+    EXT["REST clients"]
+    BR["Browser"]
+  end
+
+  RTS --> ING
+  STS --> ING
+  ING --> KAFKA
+  ING --> S3
+  KAFKA --> STORE
+  S3 --> STORE
+  STORE --> DB
+  DB --> API
+  API -->|"gRPC"| UI
+  API -->|"REST"| EXT
+  UI --> BR
+  L2 -.-> OBS
+  L4 -.-> OBS
 ```
+
+Arrows follow the data, not the request: `api-app` → `ui-app` and `api-app` →
+REST clients mean the API answers them. Dashed arrows are telemetry exports.
 
 ## Static Feed Ingestion
 

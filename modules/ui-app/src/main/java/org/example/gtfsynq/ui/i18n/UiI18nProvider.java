@@ -10,7 +10,7 @@ import java.util.Locale;
 /**
  * Translations for the console.
  *
- * <p>English is the only language for now. Adding one means adding its locale here and a
+ * <p>English, German and French are bundled. Adding a language means adding its locale here and a
  * {@code vaadin-i18n/translations_<lang>.properties} file next to the base bundle; the keys are
  * already shared by every view.
  *
@@ -21,7 +21,7 @@ import java.util.Locale;
 @VaadinServiceEnabled
 public class UiI18nProvider implements I18NProvider {
 
-    private static final List<Locale> LOCALES = List.of(Locale.ENGLISH);
+    private static final List<Locale> LOCALES = List.of(Locale.ENGLISH, Locale.GERMAN, Locale.FRENCH);
 
     private final I18NProvider delegate = new DefaultI18NProvider(LOCALES, UiI18nProvider.class.getClassLoader());
 

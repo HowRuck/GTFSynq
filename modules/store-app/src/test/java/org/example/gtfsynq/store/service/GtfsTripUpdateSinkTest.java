@@ -11,6 +11,7 @@ import com.google.transit.realtime.GtfsRealtime.TripUpdate;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.example.gtfsynq.shared.model.FeedEntityWithMetadata;
 import org.example.gtfsynq.shared.model.dto.TripUpdateDto;
@@ -24,11 +25,13 @@ class GtfsTripUpdateSinkTest {
 
     private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
     private final FakeRepository repository = new FakeRepository();
+    private final AtomicInteger acknowledged = new AtomicInteger();
     private final GtfsTripUpdateSink sink = new GtfsTripUpdateSink(
             repository,
             new TripUpdateBatchMapper(),
             new PassthroughDeduplication(),
             new GtfsSinkMetrics(registry),
+            Runnable::run,
             true,
             20_000,
             2,
@@ -37,10 +40,57 @@ class GtfsTripUpdateSinkTest {
             6);
 
     @Test
+    void acknowledgesOnlyAfterASuccessfulFlush() {
+        sink.accept("feed", entity(1), acknowledged::incrementAndGet);
+
+        assertEquals(0, acknowledged.get(), "a buffered update must stay unacknowledged");
+
+        sink.flushNow();
+
+        assertEquals(1, acknowledged.get());
+    }
+
+    @Test
+    void keepsTheAcknowledgementPendingWhileTheBatchIsRetried() {
+        repository.failure = transientFailure();
+
+        sink.accept("feed", entity(1), acknowledged::incrementAndGet);
+        assertThrows(RuntimeException.class, sink::flushNow);
+
+        assertEquals(0, acknowledged.get(), "a failed flush must leave its records unacknowledged");
+
+        repository.failure = null;
+        sink.flushNow();
+
+        assertEquals(1, acknowledged.get());
+    }
+
+    @Test
+    void acknowledgesDuplicatesWithoutBuffering() {
+        var droppingSink = new GtfsTripUpdateSink(
+                repository,
+                new TripUpdateBatchMapper(),
+                new DroppingDeduplication(),
+                new GtfsSinkMetrics(registry),
+                Runnable::run,
+                true,
+                20_000,
+                40_000,
+                3,
+                3,
+                6);
+
+        droppingSink.accept("feed", entity(1), acknowledged::incrementAndGet);
+
+        assertEquals(1, acknowledged.get(), "a deduplicated update has no batch to wait for");
+        assertEquals(0, repository.writtenUpdates);
+    }
+
+    @Test
     void quarantinesAPoisonedBatchAndResumesWithNewUpdates() {
         repository.failure = deterministic();
 
-        sink.accept("feed", entity(1));
+        sink.accept("feed", entity(1), acknowledged::incrementAndGet);
         assertThrows(RuntimeException.class, sink::flushNow);
         assertThrows(RuntimeException.class, sink::flushNow);
         sink.flushNow();
@@ -48,37 +98,41 @@ class GtfsTripUpdateSinkTest {
         assertEquals(1.0, gauge("gtfs.sink.quarantine.batches"));
         assertEquals(1.0, counter("gtfs.sink.dead_lettered.batches"));
         assertEquals(0.0, gauge("gtfs.sink.consecutive.failures"));
+        assertEquals(1, acknowledged.get(), "a quarantined payload is discarded, so its record is released");
 
         repository.failure = null;
-        sink.accept("feed", entity(2));
+        sink.accept("feed", entity(2), acknowledged::incrementAndGet);
         sink.flushNow();
 
         assertEquals(1, repository.writtenUpdates, "the quarantined batch must not be retried");
         assertEquals(1.0, gauge("gtfs.sink.quarantine.batches"), "the quarantined batch stays parked");
+        assertEquals(2, acknowledged.get());
     }
 
     @Test
     void capsTheBufferByDroppingOldestUpdatesDuringATransientOutage() {
         repository.failure = transientFailure();
 
-        sink.accept("feed", entity(1));
-        sink.accept("feed", entity(2));
-        sink.accept("feed", entity(3));
+        sink.accept("feed", entity(1), acknowledged::incrementAndGet);
+        sink.accept("feed", entity(2), acknowledged::incrementAndGet);
+        sink.accept("feed", entity(3), acknowledged::incrementAndGet);
         assertThrows(RuntimeException.class, sink::flushNow);
 
         assertEquals(1.0, counter("gtfs.sink.buffer.overflow.rows"));
+        assertEquals(1, acknowledged.get(), "the dropped oldest update is released, not retried");
 
         repository.failure = null;
         sink.flushNow();
 
         assertEquals(2, repository.writtenUpdates, "only the newest two updates survive the ceiling");
+        assertEquals(3, acknowledged.get());
         assertEquals(0.0, gauge("gtfs.sink.consecutive.failures"), "success resets the streak");
     }
 
     @Test
     void becomesUnhealthyAfterSustainedTransientFailuresAndRecoversOnSuccess() {
         repository.failure = transientFailure();
-        sink.accept("feed", entity(1));
+        sink.accept("feed", entity(1), acknowledged::incrementAndGet);
 
         for (var attempt = 0; attempt < 6; attempt++) {
             assertThrows(RuntimeException.class, sink::flushNow);
@@ -95,7 +149,7 @@ class GtfsTripUpdateSinkTest {
     @Test
     void healthCheckFollowsTheSinkState() {
         repository.failure = transientFailure();
-        sink.accept("feed", entity(1));
+        sink.accept("feed", entity(1), acknowledged::incrementAndGet);
 
         for (var attempt = 0; attempt < 6; attempt++) {
             assertThrows(RuntimeException.class, sink::flushNow);
@@ -167,6 +221,18 @@ class GtfsTripUpdateSinkTest {
         @Override
         public TripUpdateDto cleanState(TripUpdateDto entity) {
             return entity;
+        }
+    }
+
+    private static final class DroppingDeduplication extends DatabaseDeduplicationService {
+
+        private DroppingDeduplication() {
+            super(null);
+        }
+
+        @Override
+        public TripUpdateDto cleanState(TripUpdateDto entity) {
+            return null;
         }
     }
 }

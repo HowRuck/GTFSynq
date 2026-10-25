@@ -7,11 +7,15 @@ import com.vaadin.flow.component.badge.Badge;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
+import com.vaadin.flow.component.select.Select;
 import com.vaadin.flow.component.tabs.Tab;
 import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.flow.router.AfterNavigationEvent;
 import com.vaadin.flow.router.AfterNavigationObserver;
+import com.vaadin.flow.server.VaadinSession;
 import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import org.example.gtfsynq.ui.view.FeedsView;
 import org.example.gtfsynq.ui.view.LiveUpdatesView;
@@ -22,6 +26,8 @@ import org.example.gtfsynq.ui.view.TripsView;
 
 /** Top navigation and router shell shared by all views. */
 public class MainLayout extends AppLayout implements AfterNavigationObserver {
+
+    private static final List<Locale> LANGUAGES = List.of(Locale.ENGLISH, Locale.GERMAN, Locale.FRENCH);
 
     private final Tabs tabs = new Tabs();
     private final Map<Tab, NavItem> routes = new LinkedHashMap<>();
@@ -51,14 +57,43 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
             UI.getCurrent().navigate(routes.get(tab).view());
         });
 
-        var navbar = new HorizontalLayout(brand, tabs, clock());
+        var navbar = new HorizontalLayout(brand, tabs, languageSwitcher(), clock());
         navbar.setPadding(false);
         navbar.setWidthFull();
         navbar.setAlignItems(Alignment.CENTER);
-        // The tabs take the free space so the clock stays at the far right.
+        // The tabs take the free space so the switcher and clock stay at the far right.
         navbar.expand(tabs);
 
         addToNavbar(navbar);
+    }
+
+    /**
+     * Lets the user override the browser's language. The choice is stored on the session and the
+     * page is reloaded so every label built by the current UI is rebuilt in the new locale.
+     */
+    private Select<Locale> languageSwitcher() {
+        var select = new Select<Locale>();
+        select.setItems(LANGUAGES);
+        select.setItemLabelGenerator(locale -> locale.getDisplayLanguage(locale));
+        select.setValue(currentLanguage());
+        select.setAriaLabel(getTranslation("language.label"));
+        select.addValueChangeListener(event -> {
+            if (event.getValue() == null) {
+                return;
+            }
+            VaadinSession.getCurrent().setLocale(event.getValue());
+            UI.getCurrent().getPage().reload();
+        });
+        return select;
+    }
+
+    /** Maps a browser locale such as {@code de-DE} onto one of the bundled languages. */
+    private static Locale currentLanguage() {
+        var current = UI.getCurrent().getLocale();
+        return LANGUAGES.stream()
+                .filter(locale -> locale.getLanguage().equals(current.getLanguage()))
+                .findFirst()
+                .orElse(Locale.ENGLISH);
     }
 
     /**

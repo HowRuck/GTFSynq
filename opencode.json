@@ -9,6 +9,16 @@
       "vaadin-directory": {
         "type": "remote",
         "url": "https://vaadin.com/directory/mcp"
+      },
+      "gradle": {
+        "type": "local",
+        "command": [
+          "jbang",
+          "run",
+          "--quiet",
+          "--fresh",
+          "gradle-mcp@rnett"
+        ]
       }
     }
   }
