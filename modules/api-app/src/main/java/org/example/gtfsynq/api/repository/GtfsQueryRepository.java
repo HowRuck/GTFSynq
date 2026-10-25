@@ -6,9 +6,12 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -356,78 +359,32 @@ public class GtfsQueryRepository {
 
     /**
      * Stops of one live trip: the whole static schedule with the live stop time updates layered on
-     * top. Stops that the feed has not reported keep their scheduled times and blank delays, so an
-     * active train shows its complete route instead of only the updated subset.
+     * top. Both sides are fetched with simple index lookups and merged in Java, so the SQL cannot
+     * fan out across stop sequences.
      */
     public List<StopTimeUpdateDto> liveStopTimeUpdates(long tripUpdateId) {
+        return TripStopMerge.merge(scheduledStops(tripUpdateId), liveStopTimes(tripUpdateId));
+    }
+
+    /** Live stop time updates of one trip, with static stop names resolved. */
+    private List<StopTimeUpdateDto> liveStopTimes(long tripUpdateId) {
         String sql = """
-                WITH trip AS (
-                    SELECT h.trip_update_id, h.feed_id, m.trip_id, m.start_date, r.agency_id
-                    FROM rt_trip_updates_hot h
-                    LEFT JOIN rt_trip_updates_meta m ON m.id = h.trip_update_id
-                    LEFT JOIN static_routes r
-                           ON r.feed_id = h.feed_id AND r.route_id = m.route_id
-                    WHERE h.trip_update_id = ?
-                ),
-                zone AS (
-                    SELECT COALESCE(
-                               (SELECT a.agency_timezone FROM static_agency a
-                                 WHERE a.feed_id = t.feed_id
-                                   AND a.agency_id = COALESCE(t.agency_id, '')),
-                               (SELECT a.agency_timezone FROM static_agency a
-                                 WHERE a.feed_id = t.feed_id LIMIT 1),
-                               'UTC') AS time_zone
-                    FROM trip t
-                ),
-                schedule AS (
-                    SELECT st.stop_sequence, st.stop_id,
-                           CASE WHEN t.start_date IS NOT NULL AND st.arrival_time IS NOT NULL
-                                THEN (t.start_date + st.arrival_time
-                                      + make_interval(days => COALESCE(st.arrival_time_overflow_days, 0)::int))
-                                     AT TIME ZONE z.time_zone
-                           END AS scheduled_arrival_time,
-                           CASE WHEN t.start_date IS NOT NULL AND st.departure_time IS NOT NULL
-                                THEN (t.start_date + st.departure_time
-                                      + make_interval(days => COALESCE(st.departure_time_overflow_days, 0)::int))
-                                     AT TIME ZONE z.time_zone
-                           END AS scheduled_departure_time
-                    FROM trip t
-                    CROSS JOIN zone z
-                    JOIN static_stop_times st
-                      ON st.feed_id = t.feed_id AND st.trip_id = t.trip_id
-                )
-                SELECT t.trip_update_id, r.stop_sequence, r.stop_id,
-                       r.arrival_time, r.arrival_delay, r.scheduled_arrival_time,
-                       r.departure_time, r.departure_delay, r.scheduled_departure_time,
-                       r.schedule_relationship, r.assigned_stop_id, r.last_seen_at, r.realtime,
+                SELECT s.trip_update_id, s.stop_sequence, s.stop_id,
+                       s.arrival_time, s.arrival_delay, s.scheduled_arrival_time,
+                       s.departure_time, s.departure_delay, s.scheduled_departure_time,
+                       s.schedule_relationship::text AS schedule_relationship, s.assigned_stop_id,
+                       s.last_seen_at,
                        st.stop_name
-                FROM trip t
-                -- A full outer join keeps schedule-only stops and live-only (e.g. ADDED) stops in
-                -- one pass; live values win where both sides have the sequence.
-                CROSS JOIN (
-                    SELECT COALESCE(s.stop_sequence, l.stop_sequence) AS stop_sequence,
-                           COALESCE(l.stop_id, s.stop_id) AS stop_id,
-                           l.arrival_time, l.arrival_delay,
-                           COALESCE(l.scheduled_arrival_time, s.scheduled_arrival_time) AS scheduled_arrival_time,
-                           l.departure_time, l.departure_delay,
-                           COALESCE(l.scheduled_departure_time, s.scheduled_departure_time) AS scheduled_departure_time,
-                           COALESCE(l.schedule_relationship::text, 'SCHEDULED') AS schedule_relationship,
-                           l.assigned_stop_id, l.last_seen_at,
-                           (l.trip_update_id IS NOT NULL) AS realtime
-                    FROM schedule s
-                    FULL OUTER JOIN rt_stop_time_updates_hot l
-                      ON l.trip_update_id = ?
-                     AND l.stop_sequence = s.stop_sequence
-                ) r
+                FROM rt_stop_time_updates_hot s
                 LEFT JOIN static_stops st
-                       ON st.feed_id = t.feed_id
-                      AND st.stop_id = COALESCE(r.stop_id, r.assigned_stop_id)
-                ORDER BY r.stop_sequence ASC
+                       ON st.feed_id = s.feed_id
+                      AND st.stop_id = COALESCE(s.stop_id, s.assigned_stop_id)
+                WHERE s.trip_update_id = ?
+                ORDER BY s.stop_sequence ASC
                 """;
         try (Connection connection = dataSource.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setLong(1, tripUpdateId);
-            statement.setLong(2, tripUpdateId);
             try (ResultSet rs = statement.executeQuery()) {
                 List<StopTimeUpdateDto> items = new ArrayList<>();
                 while (rs.next()) {
@@ -445,7 +402,7 @@ public class GtfsQueryRepository {
                             rs.getString("assigned_stop_id"),
                             rs.getString("stop_name"),
                             offsetDateTime(rs, "last_seen_at"),
-                            rs.getBoolean("realtime")));
+                            true));
                 }
                 return items;
             }
@@ -453,6 +410,133 @@ public class GtfsQueryRepository {
             throw new IllegalStateException("Failed to query GTFS data", e);
         }
     }
+
+    /**
+     * The trip's static schedule, with scheduled times turned into absolute instants.
+     *
+     * <p>GTFS times are local to the agency's time zone and may exceed 24:00:00, so the service
+     * date, the overflow days and the agency time zone all participate in the conversion.
+     */
+    private List<StopTimeUpdateDto> scheduledStops(long tripUpdateId) {
+        var context = tripContext(tripUpdateId);
+        if (context == null) {
+            return List.of();
+        }
+
+        String sql = """
+                SELECT st.stop_sequence, st.stop_id,
+                       st.arrival_time, st.arrival_time_overflow_days,
+                       st.departure_time, st.departure_time_overflow_days,
+                       s.stop_name
+                FROM static_stop_times st
+                LEFT JOIN static_stops s
+                       ON s.feed_id = st.feed_id AND s.stop_id = st.stop_id
+                WHERE st.feed_id = CAST(? AS feed_id_enum) AND st.trip_id = ?
+                ORDER BY st.stop_sequence ASC
+                """;
+        try (Connection connection = dataSource.getConnection();
+                PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, context.feedId());
+            statement.setString(2, context.tripId());
+            try (ResultSet rs = statement.executeQuery()) {
+                List<StopTimeUpdateDto> items = new ArrayList<>();
+                while (rs.next()) {
+                    items.add(new StopTimeUpdateDto(
+                            tripUpdateId,
+                            rs.getInt("stop_sequence"),
+                            rs.getString("stop_id"),
+                            null,
+                            null,
+                            scheduledAt(
+                                    context.startDate(),
+                                    rs.getObject("arrival_time", LocalTime.class),
+                                    nullableShort(rs, "arrival_time_overflow_days"),
+                                    context.zone()),
+                            null,
+                            null,
+                            scheduledAt(
+                                    context.startDate(),
+                                    rs.getObject("departure_time", LocalTime.class),
+                                    nullableShort(rs, "departure_time_overflow_days"),
+                                    context.zone()),
+                            "SCHEDULED",
+                            null,
+                            rs.getString("stop_name"),
+                            null,
+                            false));
+                }
+                return items;
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to query GTFS data", e);
+        }
+    }
+
+    /**
+     * Resolves the trip's feed, static trip id, service date and agency time zone. Returns
+     * {@code null} when the trip has no matching static trip, in which case only live rows remain.
+     */
+    private TripContext tripContext(long tripUpdateId) {
+        String sql = """
+                SELECT h.feed_id::text AS feed_id, m.trip_id, m.start_date,
+                       COALESCE(
+                           (SELECT a.agency_timezone FROM static_agency a
+                             WHERE a.feed_id = h.feed_id
+                               AND a.agency_id = COALESCE(r.agency_id, '')),
+                           (SELECT a.agency_timezone FROM static_agency a
+                             WHERE a.feed_id = h.feed_id LIMIT 1),
+                           'UTC') AS time_zone
+                FROM rt_trip_updates_hot h
+                LEFT JOIN rt_trip_updates_meta m ON m.id = h.trip_update_id
+                LEFT JOIN static_routes r
+                       ON r.feed_id = h.feed_id AND r.route_id = m.route_id
+                WHERE h.trip_update_id = ?
+                """;
+        try (Connection connection = dataSource.getConnection();
+                PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setLong(1, tripUpdateId);
+            try (ResultSet rs = statement.executeQuery()) {
+                if (!rs.next()) {
+                    return null;
+                }
+                var tripId = rs.getString("trip_id");
+                if (tripId == null || tripId.isBlank()) {
+                    return null;
+                }
+                return new TripContext(
+                        rs.getString("feed_id"),
+                        tripId,
+                        rs.getObject("start_date", LocalDate.class),
+                        zoneOf(rs.getString("time_zone")));
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to query GTFS data", e);
+        }
+    }
+
+    private static OffsetDateTime scheduledAt(
+            LocalDate serviceDate, LocalTime time, Integer overflowDays, ZoneId zone) {
+        if (serviceDate == null || time == null) {
+            return null;
+        }
+        var days = overflowDays == null ? 0 : overflowDays;
+        return serviceDate.plusDays(days).atTime(time).atZone(zone).toOffsetDateTime();
+    }
+
+    private static ZoneId zoneOf(String timeZone) {
+        try {
+            return timeZone == null || timeZone.isBlank() ? ZoneOffset.UTC : ZoneId.of(timeZone);
+        } catch (DateTimeException e) {
+            return ZoneOffset.UTC;
+        }
+    }
+
+    private static Integer nullableShort(ResultSet rs, String column) throws SQLException {
+        var value = rs.getShort(column);
+        return rs.wasNull() ? null : (int) value;
+    }
+
+    private record TripContext(String feedId, String tripId, LocalDate startDate, ZoneId zone) {}
 
     private <T> PageResponse<T> page(
             String select,
