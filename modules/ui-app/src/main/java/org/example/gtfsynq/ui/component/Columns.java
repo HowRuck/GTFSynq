@@ -195,7 +195,11 @@ public final class Columns {
 
         grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? eventTime(stop.update(), true) : "")
                 .setHeader(grid.getTranslation("column.arrivalTime"))
-                .setKey("arrivalTime");
+                .setKey("arrivalTime")
+                .setPartNameGenerator(row ->
+                        row instanceof StopTimeUpdateRow stop && !stop.update().hasArrivalTime()
+                                ? "scheduled-value"
+                                : null);
 
         grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? delay(stop.update(), true) : "")
                 .setHeader(grid.getTranslation("column.arrivalDelay"))
@@ -205,7 +209,11 @@ public final class Columns {
 
         grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? eventTime(stop.update(), false) : "")
                 .setHeader(grid.getTranslation("column.departureTime"))
-                .setKey("departureTime");
+                .setKey("departureTime")
+                .setPartNameGenerator(row ->
+                        row instanceof StopTimeUpdateRow stop && !stop.update().hasDepartureTime()
+                                ? "scheduled-value"
+                                : null);
 
         grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? delay(stop.update(), false) : "")
                 .setHeader(grid.getTranslation("column.departureDelay"))

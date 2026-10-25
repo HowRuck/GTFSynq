@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.protobuf.Timestamp;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.grid.ColumnTextAlign;
 import com.vaadin.flow.component.grid.Grid;
@@ -84,6 +85,17 @@ class LiveUpdatesGridTest {
             assertEquals("scheduled-stop", partNames.apply(scheduled));
             assertNull(partNames.apply(live));
             assertNull(partNames.apply(new TripUpdateRow(TripUpdate.getDefaultInstance())), "trip rows are not dimmed");
+
+            var arrival = grid.getColumnByKey("arrivalTime").getPartNameGenerator();
+            var prediction = new StopTimeUpdateRow(
+                    1,
+                    StopTimeUpdate.newBuilder()
+                            .setArrivalTime(Timestamp.newBuilder().setSeconds(1))
+                            .build());
+            var delayOnly = new StopTimeUpdateRow(
+                    1, StopTimeUpdate.newBuilder().setArrivalDelay(120).build());
+            assertNull(arrival.apply(prediction), "a live predicted time keeps the normal colour");
+            assertEquals("scheduled-value", arrival.apply(delayOnly), "a time derived from the schedule is dimmed");
 
             assertEquals(2, grid.getHeaderRows().size(), "the grouped header sits above the column headers");
             var groups = grid.getHeaderRows().getFirst();

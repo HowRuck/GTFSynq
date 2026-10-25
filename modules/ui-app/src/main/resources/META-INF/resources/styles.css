@@ -74,3 +74,8 @@ vaadin-grid::part(delay-severe) {
 vaadin-grid::part(scheduled-stop) {
     color: var(--vaadin-text-color-secondary);
 }
+
+/* A time cell drawn from the static schedule rather than a live prediction. */
+vaadin-grid::part(scheduled-value) {
+    color: var(--vaadin-text-color-secondary);
+}
