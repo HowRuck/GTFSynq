@@ -36,8 +36,8 @@ class UiI18nProviderTest {
     @Test
     void resolvesGerman() {
         assertEquals("Statische Feeds", provider.getTranslation("nav.feeds", Locale.GERMAN));
-        assertEquals("Haltestellen · GTFSynq",
-                provider.getTranslation("document.title", Locale.GERMAN, "Haltestellen"));
+        assertEquals(
+                "Haltestellen · GTFSynq", provider.getTranslation("document.title", Locale.GERMAN, "Haltestellen"));
         assertEquals("Statische Feeds", provider.getTranslation("nav.feeds", Locale.GERMANY));
     }
 

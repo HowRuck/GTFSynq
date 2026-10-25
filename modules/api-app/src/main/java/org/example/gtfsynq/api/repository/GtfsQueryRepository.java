@@ -379,58 +379,50 @@ public class GtfsQueryRepository {
                                'UTC') AS time_zone
                     FROM trip t
                 ),
-                live AS (
-                    SELECT * FROM rt_stop_time_updates_hot WHERE trip_update_id = ?
-                ),
-                merged AS (
-                    SELECT t.trip_update_id, t.feed_id, st.stop_sequence,
-                           COALESCE(l.stop_id, st.stop_id) AS stop_id,
-                           l.arrival_time, l.arrival_delay,
-                           COALESCE(l.scheduled_arrival_time,
-                                    CASE WHEN t.start_date IS NOT NULL AND st.arrival_time IS NOT NULL
-                                         THEN (t.start_date + st.arrival_time
-                                               + make_interval(days => COALESCE(st.arrival_time_overflow_days, 0)::int))
-                                              AT TIME ZONE z.time_zone
-                                    END) AS scheduled_arrival_time,
-                           l.departure_time, l.departure_delay,
-                           COALESCE(l.scheduled_departure_time,
-                                    CASE WHEN t.start_date IS NOT NULL AND st.departure_time IS NOT NULL
-                                         THEN (t.start_date + st.departure_time
-                                               + make_interval(days => COALESCE(st.departure_time_overflow_days, 0)::int))
-                                              AT TIME ZONE z.time_zone
-                                    END) AS scheduled_departure_time,
-                           COALESCE(l.schedule_relationship::text, 'SCHEDULED') AS schedule_relationship,
-                           l.assigned_stop_id, l.last_seen_at,
-                           (l.trip_update_id IS NOT NULL) AS realtime
+                schedule AS (
+                    SELECT st.stop_sequence, st.stop_id,
+                           CASE WHEN t.start_date IS NOT NULL AND st.arrival_time IS NOT NULL
+                                THEN (t.start_date + st.arrival_time
+                                      + make_interval(days => COALESCE(st.arrival_time_overflow_days, 0)::int))
+                                     AT TIME ZONE z.time_zone
+                           END AS scheduled_arrival_time,
+                           CASE WHEN t.start_date IS NOT NULL AND st.departure_time IS NOT NULL
+                                THEN (t.start_date + st.departure_time
+                                      + make_interval(days => COALESCE(st.departure_time_overflow_days, 0)::int))
+                                     AT TIME ZONE z.time_zone
+                           END AS scheduled_departure_time
                     FROM trip t
                     CROSS JOIN zone z
                     JOIN static_stop_times st
                       ON st.feed_id = t.feed_id AND st.trip_id = t.trip_id
-                    LEFT JOIN live l ON l.stop_sequence = st.stop_sequence
-
-                    UNION ALL
-
-                    SELECT t.trip_update_id, t.feed_id, l.stop_sequence, l.stop_id,
-                           l.arrival_time, l.arrival_delay, l.scheduled_arrival_time,
-                           l.departure_time, l.departure_delay, l.scheduled_departure_time,
-                           l.schedule_relationship::text, l.assigned_stop_id, l.last_seen_at,
-                           TRUE
-                    FROM trip t
-                    JOIN live l ON NOT EXISTS (
-                        SELECT 1 FROM static_stop_times st
-                        WHERE st.feed_id = t.feed_id AND st.trip_id = t.trip_id
-                          AND st.stop_sequence = l.stop_sequence)
                 )
-                SELECT m.trip_update_id, m.stop_sequence, m.stop_id,
-                       m.arrival_time, m.arrival_delay, m.scheduled_arrival_time,
-                       m.departure_time, m.departure_delay, m.scheduled_departure_time,
-                       m.schedule_relationship, m.assigned_stop_id, m.last_seen_at, m.realtime,
+                SELECT t.trip_update_id, r.stop_sequence, r.stop_id,
+                       r.arrival_time, r.arrival_delay, r.scheduled_arrival_time,
+                       r.departure_time, r.departure_delay, r.scheduled_departure_time,
+                       r.schedule_relationship, r.assigned_stop_id, r.last_seen_at, r.realtime,
                        st.stop_name
-                FROM merged m
+                FROM trip t
+                -- A full outer join keeps schedule-only stops and live-only (e.g. ADDED) stops in
+                -- one pass; live values win where both sides have the sequence.
+                CROSS JOIN (
+                    SELECT COALESCE(s.stop_sequence, l.stop_sequence) AS stop_sequence,
+                           COALESCE(l.stop_id, s.stop_id) AS stop_id,
+                           l.arrival_time, l.arrival_delay,
+                           COALESCE(l.scheduled_arrival_time, s.scheduled_arrival_time) AS scheduled_arrival_time,
+                           l.departure_time, l.departure_delay,
+                           COALESCE(l.scheduled_departure_time, s.scheduled_departure_time) AS scheduled_departure_time,
+                           COALESCE(l.schedule_relationship::text, 'SCHEDULED') AS schedule_relationship,
+                           l.assigned_stop_id, l.last_seen_at,
+                           (l.trip_update_id IS NOT NULL) AS realtime
+                    FROM schedule s
+                    FULL OUTER JOIN rt_stop_time_updates_hot l
+                      ON l.trip_update_id = ?
+                     AND l.stop_sequence = s.stop_sequence
+                ) r
                 LEFT JOIN static_stops st
-                       ON st.feed_id = m.feed_id
-                      AND st.stop_id = COALESCE(m.stop_id, m.assigned_stop_id)
-                ORDER BY m.stop_sequence ASC
+                       ON st.feed_id = t.feed_id
+                      AND st.stop_id = COALESCE(r.stop_id, r.assigned_stop_id)
+                ORDER BY r.stop_sequence ASC
                 """;
         try (Connection connection = dataSource.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
