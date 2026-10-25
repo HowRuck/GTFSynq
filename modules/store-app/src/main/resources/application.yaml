@@ -155,16 +155,6 @@ gtfsynq:
     flush-interval: 10s
     # Reaching this many buffered updates triggers an early flush.
     max-buffer-size: 20000
-    # Hard ceiling while flushes are failing: the oldest updates are dropped so a
-    # database outage cannot grow the buffer without bound.
-    max-buffered-updates: 40000
-    failure:
-      # Deterministic failures are requeued this many times, then quarantined.
-      max-attempts: 3
-      # Bounded side buffer of diagnostic entries (feed and trip ids, no payload).
-      quarantine-batches: 3
-      # Consecutive transient failures before the readiness check reports DOWN.
-      unhealthy-after: 6
 
   # ---- Hot data retention --------------------------------------------------
   retention:

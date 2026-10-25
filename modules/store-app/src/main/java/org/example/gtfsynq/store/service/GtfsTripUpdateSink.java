@@ -43,7 +43,6 @@ public class GtfsTripUpdateSink {
 
     private final DatabaseDeduplicationService deduplicationService;
     private final GtfsSinkMetrics metrics;
-    private final SinkFlushGuard guard;
     private final AckScheduler ackScheduler;
 
     private final boolean enabled;
@@ -54,13 +53,6 @@ public class GtfsTripUpdateSink {
      */
     private final int maxBufferSize;
 
-    /**
-     * Ceiling for the buffer while flushes are failing; the oldest updates are
-     * dropped once it is crossed, so a database outage cannot grow the buffer
-     * without bound.
-     */
-    private final int maxBufferedUpdates;
-
     @Inject
     public GtfsTripUpdateSink(
             TripUpdateRepository tripUpdateRepository,
@@ -69,11 +61,7 @@ public class GtfsTripUpdateSink {
             GtfsSinkMetrics metrics,
             AckScheduler ackScheduler,
             @ConfigProperty(name = "gtfsynq.sink.enabled", defaultValue = "true") boolean enabled,
-            @ConfigProperty(name = "gtfsynq.sink.max-buffer-size", defaultValue = "20000") int maxBufferSize,
-            @ConfigProperty(name = "gtfsynq.sink.max-buffered-updates", defaultValue = "40000") int maxBufferedUpdates,
-            @ConfigProperty(name = "gtfsynq.sink.failure.max-attempts", defaultValue = "3") int failureMaxAttempts,
-            @ConfigProperty(name = "gtfsynq.sink.failure.quarantine-batches", defaultValue = "3") int quarantineBatches,
-            @ConfigProperty(name = "gtfsynq.sink.failure.unhealthy-after", defaultValue = "6") int unhealthyAfter) {
+            @ConfigProperty(name = "gtfsynq.sink.max-buffer-size", defaultValue = "20000") int maxBufferSize) {
         this.tripUpdateRepository = tripUpdateRepository;
         this.batchMapper = batchMapper;
         this.deduplicationService = deduplicationService;
@@ -81,21 +69,6 @@ public class GtfsTripUpdateSink {
         this.ackScheduler = ackScheduler;
         this.enabled = enabled;
         this.maxBufferSize = maxBufferSize;
-        this.maxBufferedUpdates = maxBufferedUpdates;
-        this.guard = new SinkFlushGuard(failureMaxAttempts, quarantineBatches, unhealthyAfter, metrics);
-    }
-
-    /**
-     * Whether the flush pipeline is considered degraded, i.e. it has failed
-     * repeatedly for reasons a retry could fix.
-     */
-    public boolean isUnhealthy() {
-        return guard.isUnhealthy();
-    }
-
-    /** Consecutive failed flushes since the last success; exposed for the health check. */
-    public int consecutiveFailures() {
-        return guard.consecutiveFailures();
     }
 
     /**
@@ -192,11 +165,9 @@ public class GtfsTripUpdateSink {
      * matching the previous behavior where the buffer was only cleared after
      * a successful write.
      *
-     * <p>A deterministic failure is retried a few times and then quarantined:
-     * the batch is moved to a bounded side buffer instead of being requeued, so
-     * one poisoned batch cannot block the updates queued behind it. The write
-     * in progress is abandoned either way; because the caller runs in a single
-     * transaction, a failed flush commits as a rollback.
+     * <p>The write in progress is abandoned on failure; because the caller runs in a single
+     * transaction, a failed flush commits as a rollback and the requeued records stay
+     * unacknowledged.
      *
      * <p>{@code flushLock} is taken before the drain so that a drain and its
      * write stay atomic with respect to other flushes. This preserves
@@ -218,22 +189,12 @@ public class GtfsTripUpdateSink {
 
             try {
                 flushBatch(updates);
-                guard.onSuccess();
                 // Release the records only once the write has committed, so a rollback or a crash
                 // between drain and commit leaves them unacknowledged and Kafka replays them.
                 ackScheduler.afterCommit(() -> batch.forEach(BufferedUpdate::acknowledge));
             } catch (RuntimeException e) {
-                // A retried batch is requeued in front of newer updates to keep
-                // write ordering; a quarantined one is dropped from the retry
-                // path so healthy traffic is not blocked by it.
-                if (guard.onFailure(updates, e) == SinkFlushGuard.Decision.RETRY) {
-                    requeue(batch);
-                    throw e;
-                }
-                // Quarantined: the payload is discarded by design, so its records are released
-                // rather than left to stall the partition behind an acknowledgement that will
-                // never come. Quarantine metrics and logs already record the loss.
-                batch.forEach(BufferedUpdate::acknowledge);
+                requeue(batch);
+                throw e;
             }
         } finally {
             flushLock.unlock();
@@ -259,30 +220,14 @@ public class GtfsTripUpdateSink {
     }
 
     private void requeue(List<BufferedUpdate> batch) {
-        List<BufferedUpdate> dropped = List.of();
         bufferLock.lock();
         try {
+            // Requeue at the head so a retried batch keeps its write ordering; the deferred
+            // acknowledgements travel with the entries and stay pending until a flush commits.
             buffer.addAll(0, batch);
-            var overflow = buffer.size() - maxBufferedUpdates;
-            if (overflow > 0) {
-                // The oldest updates are the least useful for current-state
-                // consumers, so they are the ones dropped when the buffer is
-                // full during a prolonged failure.
-                dropped = new ArrayList<>(buffer.subList(0, overflow));
-                buffer.subList(0, overflow).clear();
-                metrics.recordBufferOverflow(overflow);
-                log.warn(
-                        "Buffer exceeded {} updates while retrying; dropped {} oldest updates",
-                        maxBufferedUpdates,
-                        overflow);
-            }
         } finally {
             bufferLock.unlock();
         }
-
-        // A dropped update will never be written, so its record is released instead of waiting for
-        // an acknowledgement that can never arrive.
-        dropped.forEach(BufferedUpdate::acknowledge);
     }
 
     private void flushBatch(List<TripUpdateDto> batch) {
@@ -332,9 +277,8 @@ public class GtfsTripUpdateSink {
     /**
      * A buffered update paired with the acknowledgement that releases its Kafka record.
      *
-     * <p>Releasing is idempotent: an entry leaves the sink exactly once, whether it was persisted,
-     * quarantined, or dropped by the overflow ceiling, so a double release can never reach the
-     * messaging layer and fail the consumer.
+     * <p>Releasing is idempotent: an entry leaves the sink exactly once, so a double release can
+     * never reach the messaging layer and fail the consumer.
      */
     private static final class BufferedUpdate {
 

@@ -30,11 +30,7 @@ class GtfsKafkaConsumerTest {
             new GtfsSinkMetrics(new SimpleMeterRegistry()),
             Runnable::run,
             true,
-            20_000,
-            40_000,
-            3,
-            3,
-            6);
+            20_000);
 
     private final GtfsKafkaConsumer consumer = new GtfsKafkaConsumer(sink);
 
