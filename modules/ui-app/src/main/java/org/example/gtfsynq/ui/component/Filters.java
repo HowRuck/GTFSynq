@@ -49,6 +49,30 @@ public final class Filters {
         return feed;
     }
 
+    /** Agency selector; an empty value means "all agencies". */
+    public static ComboBox<String> agency(GtfsQueryClient client, String placeholder, Consumer<String> onChange) {
+        var agency = new ComboBox<String>();
+        agency.setPlaceholder(placeholder);
+        agency.setClearButtonVisible(true);
+        agency.setAllowCustomValue(false);
+        agency.setWidth("16rem");
+        agency.addValueChangeListener(event -> onChange.accept(event.getValue()));
+
+        var ui = UI.getCurrent();
+        if (ui == null) {
+            return agency;
+        }
+        CompletableFuture.runAsync(() -> {
+            try {
+                var names = client.agencyNames(null);
+                ui.access(() -> agency.setItems(names));
+            } catch (DataAccessException ignored) {
+                // The table shows the gRPC failure; an empty selector is enough here.
+            }
+        });
+        return agency;
+    }
+
     public static TextField search(String placeholder, Consumer<String> onChange) {
         var search = new TextField();
         search.setPlaceholder(placeholder);

@@ -161,6 +161,32 @@ public class GtfsQueryRepository {
                         stringList(rs, "agency_names")));
     }
 
+    /**
+     * Agency names available in the static tables, optionally limited to one feed.
+     *
+     * @param feedId feed filter, or {@code null} for all feeds
+     * @return distinct agency names in collation order
+     */
+    public List<String> agencyNames(String feedId) {
+        var filter = hasText(feedId) ? " WHERE feed_id = CAST(? AS feed_id_enum)" : "";
+        String sql = "SELECT DISTINCT agency_name FROM static_agency" + filter + " ORDER BY agency_name";
+        List<String> names = new ArrayList<>();
+        try (Connection connection = dataSource.getConnection();
+                PreparedStatement statement = connection.prepareStatement(sql)) {
+            if (hasText(feedId)) {
+                statement.setString(1, feedId);
+            }
+            try (ResultSet rs = statement.executeQuery()) {
+                while (rs.next()) {
+                    names.add(rs.getString(1));
+                }
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to list agencies", e);
+        }
+        return names;
+    }
+
     public PageResponse<RouteDto> routes(
             String feedId, String search, Integer routeType, int page, int size, String sort, String direction) {
         List<String> conditions = new ArrayList<>();
@@ -287,7 +313,14 @@ public class GtfsQueryRepository {
     }
 
     public PageResponse<TripUpdateDto> liveTripUpdates(
-            String feedId, String search, int page, int size, String sort, String direction, boolean includeTotal) {
+            String feedId,
+            String search,
+            String agency,
+            int page,
+            int size,
+            String sort,
+            String direction,
+            boolean includeTotal) {
         List<String> conditions = new ArrayList<>();
         List<Object> parameters = new ArrayList<>();
         if (hasText(feedId)) {
@@ -299,6 +332,10 @@ public class GtfsQueryRepository {
             conditions.add(
                     "(coalesce(m.entity_id, '') || ' ' || coalesce(m.trip_id, '') || ' ' || coalesce(m.route_id, '')) ILIKE ? ESCAPE '\\'");
             addLike(parameters, searchTerm);
+        }
+        if (hasText(agency)) {
+            conditions.add("a.agency_name = ?");
+            parameters.add(agency);
         }
 
         String select = """
@@ -323,7 +360,17 @@ public class GtfsQueryRepository {
                 LEFT JOIN static_agency a
                        ON a.feed_id = h.feed_id AND a.agency_id = COALESCE(r.agency_id, '')
                 """;
-        String count = """
+        // The agency condition reaches static_agency through the trip and route joins; only widen
+        // the count query when that filter is actually in use.
+        String count = hasText(agency) ? """
+                SELECT count(*) FROM rt_trip_updates_hot h
+                LEFT JOIN rt_trip_updates_meta m ON m.id = h.trip_update_id
+                LEFT JOIN static_trips t ON t.feed_id = h.feed_id AND t.trip_id = m.trip_id
+                LEFT JOIN static_routes r
+                       ON r.feed_id = h.feed_id AND r.route_id = COALESCE(t.route_id, m.route_id)
+                LEFT JOIN static_agency a
+                       ON a.feed_id = h.feed_id AND a.agency_id = COALESCE(r.agency_id, '')
+                """ : """
                 SELECT count(*) FROM rt_trip_updates_hot h
                 LEFT JOIN rt_trip_updates_meta m ON m.id = h.trip_update_id
                 """;

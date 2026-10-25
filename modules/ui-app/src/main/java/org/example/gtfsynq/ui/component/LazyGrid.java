@@ -126,7 +126,16 @@ public class LazyGrid<T> extends Grid<T> {
 
         try {
             var items = loader.load(new PageQuery(
-                            feedId, search, routeType, directionId, locationType, page, size, sortKey, descending))
+                            feedId,
+                            search,
+                            null,
+                            routeType,
+                            directionId,
+                            locationType,
+                            page,
+                            size,
+                            sortKey,
+                            descending))
                     .items();
             lastError = null;
             return items.stream();

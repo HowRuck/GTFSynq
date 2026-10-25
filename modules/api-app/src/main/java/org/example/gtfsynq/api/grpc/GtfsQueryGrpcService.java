@@ -7,6 +7,8 @@ import io.smallrye.common.annotation.Blocking;
 import jakarta.inject.Inject;
 import java.util.function.Supplier;
 import org.example.gtfsynq.api.repository.GtfsQueryRepository;
+import org.example.gtfsynq.shared.protocol.query.AgencyNamesReply;
+import org.example.gtfsynq.shared.protocol.query.AgencyNamesRequest;
 import org.example.gtfsynq.shared.protocol.query.FeedIdsReply;
 import org.example.gtfsynq.shared.protocol.query.FeedIdsRequest;
 import org.example.gtfsynq.shared.protocol.query.GtfsQueryServiceGrpc;
@@ -53,6 +55,15 @@ public class GtfsQueryGrpcService extends GtfsQueryServiceGrpc.GtfsQueryServiceI
                 observer,
                 () -> FeedIdsReply.newBuilder()
                         .addAllFeedIds(repository.feedIds())
+                        .build());
+    }
+
+    @Override
+    public void listAgencyNames(AgencyNamesRequest request, StreamObserver<AgencyNamesReply> observer) {
+        unary(
+                observer,
+                () -> AgencyNamesReply.newBuilder()
+                        .addAllAgencyNames(repository.agencyNames(request.hasFeedId() ? request.getFeedId() : null))
                         .build());
     }
 
@@ -112,6 +123,7 @@ public class GtfsQueryGrpcService extends GtfsQueryServiceGrpc.GtfsQueryServiceI
                 () -> GtfsQueryMapper.tripUpdatesReply(repository.liveTripUpdates(
                         request.getFeedId(),
                         request.getSearch(),
+                        request.hasAgency() ? request.getAgency() : null,
                         request.getPage(),
                         request.getSize(),
                         request.getSort(),

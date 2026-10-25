@@ -45,6 +45,13 @@ public class LiveUpdatesGrid extends TreeGrid<LiveUpdateRow> {
         }
     }
 
+    /** Applies an agency filter. */
+    public void setAgency(String value) {
+        if (provider.setAgency(value)) {
+            refresh();
+        }
+    }
+
     /** Applies a search term over entity, trip and route ids. */
     public void setSearch(String value) {
         if (provider.setSearch(value)) {

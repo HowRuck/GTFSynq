@@ -10,6 +10,7 @@ package org.example.gtfsynq.ui.client;
 public record PageQuery(
         String feedId,
         String search,
+        String agency,
         Integer routeType,
         Integer directionId,
         Integer locationType,

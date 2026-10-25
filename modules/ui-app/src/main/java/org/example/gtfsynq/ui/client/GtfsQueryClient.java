@@ -8,6 +8,7 @@ import jakarta.inject.Inject;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import org.example.gtfsynq.shared.protocol.query.AgencyNamesRequest;
 import org.example.gtfsynq.shared.protocol.query.FeedIdsRequest;
 import org.example.gtfsynq.shared.protocol.query.GtfsQueryServiceGrpc;
 import org.example.gtfsynq.shared.protocol.query.OverviewReply;
@@ -48,6 +49,15 @@ public class GtfsQueryClient {
     public List<String> feedIds() {
         return call(
                 () -> stub().listFeedIds(FeedIdsRequest.getDefaultInstance()).getFeedIdsList());
+    }
+
+    /** Agency names, optionally limited to one feed. */
+    public List<String> agencyNames(String feedId) {
+        var request = AgencyNamesRequest.newBuilder();
+        if (feedId != null && !feedId.isBlank()) {
+            request.setFeedId(feedId);
+        }
+        return call(() -> stub().listAgencyNames(request.build()).getAgencyNamesList());
     }
 
     public PagedResult<StaticFeed> staticFeeds(int page, int size) {
@@ -126,6 +136,9 @@ public class GtfsQueryClient {
                 .setCount(true);
         if (query.feedId() != null) {
             request.setFeedId(query.feedId());
+        }
+        if (query.agency() != null) {
+            request.setAgency(query.agency());
         }
         return call(() -> {
             var reply = stub().listTripUpdates(request.build());

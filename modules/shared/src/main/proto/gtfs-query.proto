@@ -20,6 +20,9 @@ service GtfsQueryService {
   // Feed identifiers present in the static or realtime tables.
   rpc ListFeedIds(FeedIdsRequest) returns (FeedIdsReply);
 
+  // Agency names present in the static tables, optionally limited to one feed.
+  rpc ListAgencyNames(AgencyNamesRequest) returns (AgencyNamesReply);
+
   // One current revision per feed.
   rpc ListStaticFeeds(StaticFeedsRequest) returns (StaticFeedsReply);
 
@@ -54,6 +57,14 @@ message FeedIdsRequest {}
 
 message FeedIdsReply {
   repeated string feed_ids = 1;
+}
+
+message AgencyNamesRequest {
+  optional string feed_id = 1;
+}
+
+message AgencyNamesReply {
+  repeated string agency_names = 1;
 }
 
 // Paging metadata mirroring PageResponse from the REST resources.
@@ -206,6 +217,8 @@ message TripUpdatesRequest {
   bool count = 6;
   // Substring match over the trip's entity, trip and route ids.
   string search = 7;
+  // Agency name resolved from the static schedule; unset means all agencies.
+  optional string agency = 8;
 }
 
 message TripUpdatesReply {

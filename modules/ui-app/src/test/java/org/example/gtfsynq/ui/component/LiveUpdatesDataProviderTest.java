@@ -96,6 +96,15 @@ class LiveUpdatesDataProviderTest {
         assertEquals("12ab", client.lastQuery.search(), "the backend does the filtering, not the grid");
     }
 
+    @Test
+    void passesTheAgencyFilterToTheBackend() {
+        provider.setAgency("Verkehrsgemeinschaft Osnabrück");
+
+        provider.fetchChildren(rootQuery()).count();
+
+        assertEquals("Verkehrsgemeinschaft Osnabrück", client.lastQuery.agency());
+    }
+
     private static HierarchicalQuery<LiveUpdateRow, Void> rootQuery() {
         return new HierarchicalQuery<>(0, 25, List.of(), null, null, null);
     }
