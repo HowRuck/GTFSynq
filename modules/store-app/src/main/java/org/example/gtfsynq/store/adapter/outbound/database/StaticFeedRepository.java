@@ -23,16 +23,16 @@ import org.example.gtfsynq.store.service.metrics.StaticPersistenceMetrics;
  * replaces the old one instead of merging with it. Clearing and writing share a transaction, so a
  * feed is never left half-replaced.
  *
- * <p>Loads are serialised per feed with a transaction-scoped advisory lock, so two events for the
- * same feed cannot interleave their delete and insert even if they are consumed concurrently.
- * Locks on different feeds never block each other.
+ * <p>Loads are serialised per feed with a session-scoped advisory lock, because a revision spans
+ * two transactions: the staging load and the short partition swap. Locks on different feeds never
+ * block each other.
  */
 @ApplicationScoped
 @RequiredArgsConstructor
 @Slf4j
 public class StaticFeedRepository {
 
-    /** Tables holding static rows, in the order they are cleared. */
+    /** Tables holding static rows; every one is partitioned by feed and swapped together. */
     private static final List<String> ROW_TABLES = List.of(
             StaticFeedWriter.STOP_TIMES,
             StaticFeedWriter.TRIPS,
@@ -42,8 +42,9 @@ public class StaticFeedRepository {
             StaticFeedWriter.CALENDAR,
             StaticFeedWriter.AGENCY);
 
+    /** Session-scoped lock: the revision spans two transactions (load, then swap). */
     private static final String LOCK_FEED_SQL = """
-            SELECT pg_advisory_xact_lock(hashtext(?))
+            SELECT pg_advisory_lock(hashtext(?))
             """;
 
     private static final String CURRENT_DIGEST_SQL = """
@@ -76,6 +77,12 @@ public class StaticFeedRepository {
             var handedOver = false;
             try {
                 connection.setAutoCommit(false);
+                // The staging load is disposable until the swap commits; skipping its WAL fsync
+                // removes the multi-minute wait at the end of a large COPY. The swap transaction
+                // keeps the default, so the revision switch itself stays durable.
+                try (var statement = connection.createStatement()) {
+                    statement.execute("SET LOCAL synchronous_commit = off");
+                }
                 lockFeed(connection, event.getFeedId());
                 var unchanged = isCurrentRevision(connection, event);
                 log.debug(
@@ -83,15 +90,18 @@ public class StaticFeedRepository {
                         event.getFeedId(),
                         shortDigest(event.getSha256()),
                         unchanged);
-                if (!unchanged) {
+                StaticFeedWriter writer;
+                if (unchanged) {
+                    writer = new StaticFeedWriter(connection, event, true, metrics, null);
+                } else {
                     log.info(
-                            "Replacing static revision of feed {} (previous digest {}) with {}",
-                            event.getFeedId(),
+                            "Loading revision {} of feed {} into a staging schema for {}",
                             shortDigest(event.getSha256()),
+                            event.getFeedId(),
                             event.getObjectKey());
-                    clearFeed(connection, event.getFeedId());
+                    var stagingSchema = stagingSchema(connection, event);
+                    writer = new StaticFeedWriter(connection, event, false, metrics, stagingSchema);
                 }
-                var writer = new StaticFeedWriter(connection, event, unchanged, metrics);
                 handedOver = true;
                 return writer;
             } catch (SQLException e) {
@@ -109,6 +119,29 @@ public class StaticFeedRepository {
 
     private static String shortDigest(String sha256) {
         return sha256 == null || sha256.length() <= 12 ? sha256 : sha256.substring(0, 12);
+    }
+
+    /**
+     * Creates an empty per-revision schema whose tables mirror the static tables, and points the
+     * load transaction's search_path at it. The writer can then use the same unqualified SQL; the
+     * swap later attaches these tables as partitions.
+     */
+    private String stagingSchema(Connection connection, StaticFeedIngested event) throws SQLException {
+        var schema = "static_stage_" + event.getFeedId().replaceAll("[^A-Za-z0-9_]", "_") + "_"
+                + shortDigest(event.getSha256());
+        try (var statement = connection.createStatement()) {
+            statement.execute("DROP SCHEMA IF EXISTS " + schema + " CASCADE");
+            statement.execute("CREATE SCHEMA " + schema);
+            for (var table : ROW_TABLES) {
+                statement.execute(
+                        "CREATE TABLE " + schema + "." + table + " (LIKE public." + table + " INCLUDING ALL)");
+                statement.execute("ALTER TABLE " + schema + "." + table + " ADD CONSTRAINT " + table
+                        + "_feed_bound CHECK (feed_id = '" + event.getFeedId() + "')");
+            }
+            // Unqualified table names in the writer resolve to the staging copies for the load.
+            statement.execute("SET LOCAL search_path TO " + schema + ", public");
+        }
+        return schema;
     }
 
     private void lockFeed(Connection connection, String feedId) throws SQLException {
@@ -138,25 +171,6 @@ public class StaticFeedRepository {
         } finally {
             metrics.recordTransactionPhase(
                     StaticPersistenceMetrics.TransactionPhase.REVISION_LOOKUP, System.nanoTime() - start);
-        }
-    }
-
-    private void clearFeed(Connection connection, String feedId) throws SQLException {
-        var start = System.nanoTime();
-        try {
-            for (var table : ROW_TABLES) {
-                try (PreparedStatement preparedStatement =
-                        connection.prepareStatement("DELETE FROM " + table + " WHERE feed_id = ?")) {
-                    preparedStatement.setObject(1, feedId, Types.OTHER);
-                    var deleted = preparedStatement.executeUpdate();
-                    if (deleted > 0) {
-                        log.debug(
-                                "Cleared {} rows of the previous revision of feed {} from {}", deleted, feedId, table);
-                    }
-                }
-            }
-        } finally {
-            metrics.recordTransactionPhase(StaticPersistenceMetrics.TransactionPhase.CLEAR, System.nanoTime() - start);
         }
     }
 

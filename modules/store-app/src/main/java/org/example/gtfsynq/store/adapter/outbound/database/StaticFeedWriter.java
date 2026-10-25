@@ -5,15 +5,18 @@ import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gtfsynq.shared.protocol.StaticFeedIngested;
 import org.example.gtfsynq.shared.util.GtfsFeedFormatter;
@@ -34,8 +37,9 @@ import org.postgresql.copy.CopyManager;
 /**
  * Writes one static feed revision, replacing whatever revision that feed held before.
  *
- * <p>Obtained from {@link StaticFeedRepository#openRevision}, which has already cleared the feed's
- * previous rows, so this only has to insert what the archive streams in. It is a
+ * <p>Obtained from {@link StaticFeedRepository#openRevision}, which has prepared a staging schema
+ * for the revision, so this only has to insert what the archive streams in. Committing loads the
+ * staging tables and then swaps them in as the feed's partitions. It is a
  * {@link StaticRowSink}: {@link GtfsStaticArchiveReader} hands it the rows of each file in turn and
  * they are batched into that file's insert as they arrive, so the whole archive is never held in
  * memory on either side.
@@ -72,6 +76,10 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
      * only the conflict key is excluded from the update.
      */
     private static final Map<String, String> UPSERT_SQL = upserts();
+
+    /** Tables swapped together; order does not matter because the static tables have no FKs. */
+    private static final List<String> TABLES =
+            List.of(STOP_TIMES, TRIPS, ROUTES, STOPS, CALENDAR_DATES, CALENDAR, AGENCY);
 
     /**
      * COPY target for the largest table. Its 23 columns make a 5,000-row bind batch exceed the
@@ -339,6 +347,9 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
 
     private final StaticPersistenceMetrics metrics;
 
+    /** Schema holding this revision's not-yet-attached tables; {@code null} when unchanged. */
+    private final String stagingSchema;
+
     private final Map<String, PreparedStatement> statements = new HashMap<>();
 
     private final Map<String, Long> rowsByTable = new LinkedHashMap<>();
@@ -361,12 +372,17 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
     private static final long COPY_PROGRESS_INTERVAL = 500_000;
 
     StaticFeedWriter(
-            Connection connection, StaticFeedIngested event, boolean unchanged, StaticPersistenceMetrics metrics) {
+            Connection connection,
+            StaticFeedIngested event,
+            boolean unchanged,
+            StaticPersistenceMetrics metrics,
+            String stagingSchema) {
         this.connection = connection;
         this.event = event;
         this.feedId = event.getFeedId();
         this.unchanged = unchanged;
         this.metrics = metrics;
+        this.stagingSchema = stagingSchema;
     }
 
     /** Whether the feed already holds this revision, so the archive is discarded instead of written. */
@@ -387,35 +403,95 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
             endStopTimesCopy();
             log.info("Static feed {}: COPY finalised in {} ms", feedId, (System.nanoTime() - copyStart) / 1_000_000);
 
-            var markerStart = System.nanoTime();
-            if (!unchanged) {
-                recordRevision();
+            if (unchanged) {
+                connection.commit();
+                committed = true;
+                return;
             }
-            log.debug(
-                    "Static feed {}: revision marker written in {} ms",
-                    feedId,
-                    (System.nanoTime() - markerStart) / 1_000_000);
 
-            var commitStart = System.nanoTime();
-            log.info("Static feed {}: committing (WAL flush)…", feedId);
+            var loadCommitStart = System.nanoTime();
+            log.info("Static feed {}: committing the staging tables…", feedId);
             connection.commit();
+            log.info(
+                    "Static feed {}: staging commit returned in {} ms",
+                    feedId,
+                    (System.nanoTime() - loadCommitStart) / 1_000_000);
+
+            swapRevision();
             committed = true;
-            log.info("Static feed {}: commit returned in {} ms", feedId, (System.nanoTime() - commitStart) / 1_000_000);
-            if (!unchanged) {
-                log.info(
-                        "Committed static revision for feed {}: {} rows in {} ms ({}). Stop times used COPY ({} rows, {} chunks, {} ms)",
-                        feedId,
-                        rowsByTable.values().stream().mapToLong(Long::longValue).sum(),
-                        (System.nanoTime() - startedAt) / 1_000_000,
-                        perTableMillis(),
-                        rowsByTable.getOrDefault(STOP_TIMES, 0L),
-                        tableChunks.getOrDefault(STOP_TIMES, 0),
-                        tableNanos.getOrDefault(STOP_TIMES, 0L) / 1_000_000);
-            }
+
+            log.info(
+                    "Committed static revision for feed {}: {} rows in {} ms ({}). Stop times used COPY ({} rows, {} chunks, {} ms)",
+                    feedId,
+                    rowsByTable.values().stream().mapToLong(Long::longValue).sum(),
+                    (System.nanoTime() - startedAt) / 1_000_000,
+                    perTableMillis(),
+                    rowsByTable.getOrDefault(STOP_TIMES, 0L),
+                    tableChunks.getOrDefault(STOP_TIMES, 0),
+                    tableNanos.getOrDefault(STOP_TIMES, 0L) / 1_000_000);
         } catch (SQLException e) {
             throw new WriteFailed("could not commit static revision of feed " + feedId, e);
         } finally {
             metrics.recordTransactionPhase(StaticPersistenceMetrics.TransactionPhase.COMMIT, System.nanoTime() - start);
+        }
+    }
+
+    /**
+     * Swaps the loaded staging tables in as the feed's partitions and drops the previous ones.
+     *
+     * <p>Detach and attach take short catalog locks on the parent; readers keep serving the old
+     * rows until this transaction commits, then see the new revision. Dropping the previous
+     * revision is a file unlink, not a row-by-row delete.
+     */
+    private void swapRevision() throws SQLException {
+        var swapStart = System.nanoTime();
+        var oldSchemas = new HashSet<String>();
+        try (var statement = connection.createStatement()) {
+            for (var table : TABLES) {
+                detachCurrentPartition(statement, table, oldSchemas);
+                statement.execute("ALTER TABLE public." + table + " ATTACH PARTITION " + stagingSchema + "." + table
+                        + " FOR VALUES IN ('" + feedId.replace("'", "''") + "')");
+            }
+            for (var schema : oldSchemas) {
+                if (schema.equals(stagingSchema)) {
+                    continue;
+                }
+                statement.execute("DROP SCHEMA IF EXISTS " + schema + " CASCADE");
+            }
+            recordRevision();
+            connection.commit();
+        }
+        log.info(
+                "Static feed {}: partition swap committed in {} ms",
+                feedId,
+                (System.nanoTime() - swapStart) / 1_000_000);
+    }
+
+    private void detachCurrentPartition(Statement statement, String table, Set<String> oldSchemas) throws SQLException {
+        String sql = """
+                SELECT c.oid::regclass::text AS partition, n2.nspname AS child_schema
+                FROM pg_inherits i
+                JOIN pg_class c ON c.oid = i.inhrelid
+                JOIN pg_namespace n2 ON n2.oid = c.relnamespace
+                JOIN pg_class p ON p.oid = i.inhparent
+                JOIN pg_namespace n ON n.oid = p.relnamespace
+                WHERE n.nspname = 'public' AND p.relname = ? AND pg_get_expr(c.relpartbound, c.oid) LIKE ?
+                """;
+        try (var query = connection.prepareStatement(sql)) {
+            query.setString(1, table);
+            query.setString(2, "%" + feedId.replace("'", "''") + "%");
+            try (var rs = query.executeQuery()) {
+                while (rs.next()) {
+                    var partition = rs.getString("partition");
+                    var childSchema = rs.getString("child_schema");
+                    statement.execute("ALTER TABLE public." + table + " DETACH PARTITION " + partition);
+                    if ("public".equals(childSchema)) {
+                        statement.execute("DROP TABLE " + partition);
+                    } else {
+                        oldSchemas.add(childSchema);
+                    }
+                }
+            }
         }
     }
 
@@ -433,13 +509,37 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
                     metrics.recordTransactionPhase(
                             StaticPersistenceMetrics.TransactionPhase.ROLLBACK, System.nanoTime() - start);
                 }
+                dropStagingSchema();
             }
         } catch (SQLException e) {
             // The connection is being discarded anyway; Agroal resets it on return to the pool.
             closeQuietly();
             return;
         }
+        unlockFeed();
         closeQuietly();
+    }
+
+    /** Removes a staging schema left behind by a failed swap; harmless when the load rolled back. */
+    private void dropStagingSchema() {
+        if (stagingSchema == null) {
+            return;
+        }
+        try (var statement = connection.createStatement()) {
+            statement.execute("DROP SCHEMA IF EXISTS " + stagingSchema + " CASCADE");
+            connection.commit();
+        } catch (SQLException e) {
+            log.debug("Could not drop staging schema {} for feed {}", stagingSchema, feedId, e);
+        }
+    }
+
+    private void unlockFeed() {
+        try (var statement = connection.prepareStatement("SELECT pg_advisory_unlock(hashtext(?))")) {
+            statement.setString(1, feedId);
+            statement.execute();
+        } catch (SQLException e) {
+            log.debug("Could not release the static revision lock for feed {}", feedId, e);
+        }
     }
 
     @Override
