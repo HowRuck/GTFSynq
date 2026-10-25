@@ -63,6 +63,13 @@ public class GtfsStaticFeedPersistenceService {
         }
 
         var start = System.nanoTime();
+        log.info(
+                "Persisting static feed {} revision {} from {}",
+                event.getFeedId(),
+                event.getSha256() == null || event.getSha256().length() <= 12
+                        ? event.getSha256()
+                        : event.getSha256().substring(0, 12),
+                event.getObjectKey());
         try (var writer = repository.openRevision(event)) {
             if (!writer.unchanged()) {
                 reader.read(archive, properties.batchSize(), writer);
@@ -71,6 +78,9 @@ public class GtfsStaticFeedPersistenceService {
             var result = result(writer);
             metrics.recordResult(event.getFeedId(), result);
             metrics.recordRows(event.getFeedId(), writer.rows(), writer.rowsByTable());
+            if (log.isDebugEnabled() && !writer.unchanged()) {
+                log.debug("Static feed {} wrote {} rows: {}", event.getFeedId(), writer.rows(), writer.rowsByTable());
+            }
             logRevision(event, writer);
             return result == StaticPersistenceMetrics.Result.UNCHANGED ? Outcome.UNCHANGED : Outcome.LOADED;
         } catch (IOException | RuntimeException e) {

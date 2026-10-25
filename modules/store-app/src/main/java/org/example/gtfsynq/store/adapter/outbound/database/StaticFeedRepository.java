@@ -78,7 +78,17 @@ public class StaticFeedRepository {
                 connection.setAutoCommit(false);
                 lockFeed(connection, event.getFeedId());
                 var unchanged = isCurrentRevision(connection, event);
+                log.debug(
+                        "Static revision for feed {} digest {}: unchanged={}",
+                        event.getFeedId(),
+                        shortDigest(event.getSha256()),
+                        unchanged);
                 if (!unchanged) {
+                    log.info(
+                            "Replacing static revision of feed {} (previous digest {}) with {}",
+                            event.getFeedId(),
+                            shortDigest(event.getSha256()),
+                            event.getObjectKey());
                     clearFeed(connection, event.getFeedId());
                 }
                 var writer = new StaticFeedWriter(connection, event, unchanged, metrics);
@@ -95,6 +105,10 @@ public class StaticFeedRepository {
         } catch (SQLException e) {
             throw new IllegalStateException("could not open static revision for feed " + event.getFeedId(), e);
         }
+    }
+
+    private static String shortDigest(String sha256) {
+        return sha256 == null || sha256.length() <= 12 ? sha256 : sha256.substring(0, 12);
     }
 
     private void lockFeed(Connection connection, String feedId) throws SQLException {

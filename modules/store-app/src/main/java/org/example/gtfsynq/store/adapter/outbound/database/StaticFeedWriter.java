@@ -347,6 +347,19 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
 
     private boolean committed;
 
+    /** Wall-clock start of the revision, for the commit summary. */
+    private final long startedAt = System.nanoTime();
+
+    /** Per-table write time and chunk count, reported when the revision commits. */
+    private final Map<String, Long> tableNanos = new LinkedHashMap<>();
+
+    private final Map<String, Integer> tableChunks = new LinkedHashMap<>();
+
+    /** Rows streamed into COPY so far, used for coarse progress logging. */
+    private long stopTimeRowsCopied;
+
+    private static final long COPY_PROGRESS_INTERVAL = 500_000;
+
     StaticFeedWriter(
             Connection connection, StaticFeedIngested event, boolean unchanged, StaticPersistenceMetrics metrics) {
         this.connection = connection;
@@ -375,6 +388,17 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
             }
             connection.commit();
             committed = true;
+            if (!unchanged) {
+                log.info(
+                        "Committed static revision for feed {}: {} rows in {} ms ({}). Stop times used COPY ({} rows, {} chunks, {} ms)",
+                        feedId,
+                        rowsByTable.values().stream().mapToLong(Long::longValue).sum(),
+                        (System.nanoTime() - startedAt) / 1_000_000,
+                        perTableMillis(),
+                        rowsByTable.getOrDefault(STOP_TIMES, 0L),
+                        tableChunks.getOrDefault(STOP_TIMES, 0),
+                        tableNanos.getOrDefault(STOP_TIMES, 0L) / 1_000_000);
+            }
         } catch (SQLException e) {
             throw new WriteFailed("could not commit static revision of feed " + feedId, e);
         } finally {
@@ -515,6 +539,7 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
 
         var start = System.nanoTime();
         var failed = true;
+        tableChunks.merge(table, 1, Integer::sum);
         try {
             var statement = statementFor(table);
             for (var row : rows) {
@@ -527,7 +552,9 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
         } catch (SQLException e) {
             throw new WriteFailed("could not write " + rows.size() + " rows to " + table, SqlLogSanitizer.sanitize(e));
         } finally {
-            metrics.recordBatch(table, rows.size(), System.nanoTime() - start, failed);
+            var elapsed = System.nanoTime() - start;
+            tableNanos.merge(table, elapsed, Long::sum);
+            metrics.recordBatch(table, rows.size(), elapsed, failed);
         }
     }
 
@@ -538,6 +565,7 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
     private void copyStopTimes(List<?> rows) {
         var start = System.nanoTime();
         var failed = true;
+        tableChunks.merge(STOP_TIMES, 1, Integer::sum);
         try {
             if (stopTimesCopy == null) {
                 stopTimesCopy = copyManager().copyIn(STOP_TIMES_COPY_SQL);
@@ -548,6 +576,21 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
             }
             var bytes = buffer.toString().getBytes(StandardCharsets.UTF_8);
             stopTimesCopy.writeToCopy(bytes, 0, bytes.length);
+            log.debug(
+                    "Copied {} static_stop_times rows ({} bytes) for feed {}, {} chunks so far",
+                    rows.size(),
+                    bytes.length,
+                    feedId,
+                    tableChunks.get(STOP_TIMES));
+            var before = stopTimeRowsCopied;
+            stopTimeRowsCopied += rows.size();
+            if (before / COPY_PROGRESS_INTERVAL != stopTimeRowsCopied / COPY_PROGRESS_INTERVAL) {
+                log.info(
+                        "Static feed {}: copied {} stop-time rows so far ({} chunks)",
+                        feedId,
+                        stopTimeRowsCopied,
+                        tableChunks.get(STOP_TIMES));
+            }
             failed = false;
         } catch (SQLException e) {
             throw new WriteFailed(
@@ -555,8 +598,21 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
         } catch (RuntimeException e) {
             throw new WriteFailed("could not encode " + rows.size() + " rows for " + STOP_TIMES, e);
         } finally {
-            metrics.recordBatch(STOP_TIMES, rows.size(), System.nanoTime() - start, failed);
+            var elapsed = System.nanoTime() - start;
+            tableNanos.merge(STOP_TIMES, elapsed, Long::sum);
+            metrics.recordBatch(STOP_TIMES, rows.size(), elapsed, failed);
         }
+    }
+
+    private String perTableMillis() {
+        var summary = new StringBuilder();
+        tableNanos.forEach((table, nanos) -> {
+            if (!summary.isEmpty()) {
+                summary.append(", ");
+            }
+            summary.append(table).append('=').append(nanos / 1_000_000).append("ms");
+        });
+        return summary.toString();
     }
 
     private CopyManager copyManager() throws SQLException {
