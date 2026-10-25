@@ -67,7 +67,7 @@ class LiveUpdatesGridTest {
         try {
             var grid = new LiveUpdatesGrid(new GtfsQueryClient(), "lastSeenAt", SortDirection.DESCENDING);
 
-            assertEquals(15, grid.getColumns().size());
+            assertEquals(14, grid.getColumns().size());
             assertEquals("tripId", grid.getColumns().getFirst().getKey());
             assertNotNull(grid.getColumnByKey("lastSeenAt"));
             assertNotNull(grid.getColumnByKey("feedTs"));
@@ -93,13 +93,17 @@ class LiveUpdatesGridTest {
                             .setArrivalTime(Timestamp.newBuilder().setSeconds(1))
                             .build());
             var delayOnly = new StopTimeUpdateRow(
-                    1, StopTimeUpdate.newBuilder().setArrivalDelay(120).build());
+                    1,
+                    StopTimeUpdate.newBuilder()
+                            .setArrivalDelay(120)
+                            .setScheduledArrivalTime(Timestamp.newBuilder().setSeconds(1))
+                            .build());
             assertNull(arrival.apply(prediction), "a live predicted time keeps the normal colour");
             assertEquals("scheduled-value", arrival.apply(delayOnly), "a time derived from the schedule is dimmed");
 
             assertEquals(2, grid.getHeaderRows().size(), "the grouped header sits above the column headers");
             var groups = grid.getHeaderRows().getFirst();
-            assertEquals(5, groups.getCells().size(), "one cell per column group");
+            assertEquals(4, groups.getCells().size(), "one cell per column group");
             assertEquals(
                     grid.getTranslation("column.group.trip"),
                     groups.getCell(grid.getColumnByKey("tripId")).getText());

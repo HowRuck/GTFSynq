@@ -187,19 +187,14 @@ public final class Columns {
                                 trip.update().hasCurrentDelay() ? trip.update().getCurrentDelay() : null)
                         : null);
 
-        grid.addColumn(row -> row instanceof StopTimeUpdateRow stop
-                        ? String.valueOf(stop.update().getStopSequence())
-                        : "")
-                .setHeader(grid.getTranslation("column.stopSequence"))
-                .setKey("stopSequence");
-
         grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? eventTime(stop.update(), true) : "")
                 .setHeader(grid.getTranslation("column.arrivalTime"))
                 .setKey("arrivalTime")
-                .setPartNameGenerator(row ->
-                        row instanceof StopTimeUpdateRow stop && !stop.update().hasArrivalTime()
-                                ? "scheduled-value"
-                                : null);
+                .setPartNameGenerator(row -> row instanceof StopTimeUpdateRow stop
+                                && !stop.update().hasArrivalTime()
+                                && stop.update().hasScheduledArrivalTime()
+                        ? "scheduled-value"
+                        : null);
 
         grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? delay(stop.update(), true) : "")
                 .setHeader(grid.getTranslation("column.arrivalDelay"))
@@ -210,10 +205,11 @@ public final class Columns {
         grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? eventTime(stop.update(), false) : "")
                 .setHeader(grid.getTranslation("column.departureTime"))
                 .setKey("departureTime")
-                .setPartNameGenerator(row ->
-                        row instanceof StopTimeUpdateRow stop && !stop.update().hasDepartureTime()
-                                ? "scheduled-value"
-                                : null);
+                .setPartNameGenerator(row -> row instanceof StopTimeUpdateRow stop
+                                && !stop.update().hasDepartureTime()
+                                && stop.update().hasScheduledDepartureTime()
+                        ? "scheduled-value"
+                        : null);
 
         grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? delay(stop.update(), false) : "")
                 .setHeader(grid.getTranslation("column.departureDelay"))
@@ -265,8 +261,8 @@ public final class Columns {
                 "routeId",
                 "routeType",
                 "startDate",
-                "startTime");
-        join(row, grid, "column.group.status", "currentDelay", "stopSequence");
+                "startTime",
+                "currentDelay");
         join(row, grid, "column.group.arrival", "arrivalTime", "arrivalDelay");
         join(row, grid, "column.group.departure", "departureTime", "departureDelay");
         join(row, grid, "column.group.freshness", "feedTs", "lastSeenAt");
@@ -323,20 +319,29 @@ public final class Columns {
     private static Component stopLabel(TreeGrid<LiveUpdateRow> grid, StopTimeUpdate stop) {
         var id = stopId(stop);
         var name = stop.hasStopName() ? label(stop.getStopName(), id == null ? stop.getStopName() : id) : label(id);
-        if (stop.getRealtime()) {
-            return name;
-        }
 
-        // Rows the feed did not update are filled in from the static schedule; mark them so they
-        // are not mistaken for live predictions.
-        var scheduled = new Badge(grid.getTranslation("live.stop.scheduled"));
-        scheduled.addThemeVariants(BadgeVariant.CONTRAST, BadgeVariant.SMALL);
-        scheduled.getElement().setAttribute("title", grid.getTranslation("live.stop.scheduled.title"));
-        var layout = new HorizontalLayout(name, scheduled);
+        // The sequence replaces the former dedicated column and sits at the left of the row, in the
+        // indentation gutter the tree already reserves for child rows.
+        var sequence = new Span(String.valueOf(stop.getStopSequence()));
+        sequence.getElement().getStyle().set("flex", "0 0 2.25rem");
+        sequence.getElement().getStyle().set("text-align", "right");
+        sequence.getElement().getStyle().set("color", "var(--vaadin-text-color-secondary)");
+        sequence.getElement().getStyle().set("font-variant-numeric", "tabular-nums");
+
+        var layout = new HorizontalLayout(sequence, name);
         layout.setPadding(false);
         layout.setSpacing(false);
         layout.setAlignItems(Alignment.CENTER);
         layout.getElement().getStyle().set("gap", "0.5rem");
+
+        if (!stop.getRealtime()) {
+            // Rows the feed did not update are filled in from the static schedule; mark them so
+            // they are not mistaken for live predictions.
+            var scheduled = new Badge(grid.getTranslation("live.stop.scheduled"));
+            scheduled.addThemeVariants(BadgeVariant.CONTRAST, BadgeVariant.SMALL);
+            scheduled.getElement().setAttribute("title", grid.getTranslation("live.stop.scheduled.title"));
+            layout.add(scheduled);
+        }
         return layout;
     }
 
