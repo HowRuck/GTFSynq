@@ -102,7 +102,9 @@ mp:
         # throughput at one record per flush. The batch is acknowledged only when all its rows are
         # durable, preserving at-least-once delivery.
         batch: true
-        max.poll.records: 10000
+        max:
+          poll:
+            records: 10000
         group:
           id: gtfsynq-store
         auto:
