@@ -36,7 +36,7 @@ class GtfsKafkaConsumerTest {
 
     @Test
     void defersAcknowledgementUntilTheBatchIsFlushed() {
-        CompletionStage<Void> stage = consumer.consume(Record.of("feed", payload(1)));
+        CompletionStage<Void> stage = consumer.consumeRecord(Record.of("feed", payload(1)));
 
         assertFalse(
                 stage.toCompletableFuture().isDone(),
@@ -50,7 +50,7 @@ class GtfsKafkaConsumerTest {
 
     @Test
     void acknowledgesAnUnparseablePayloadImmediately() {
-        CompletionStage<Void> stage = consumer.consume(Record.of("feed", new byte[] {1, 2, 3}));
+        CompletionStage<Void> stage = consumer.consumeRecord(Record.of("feed", new byte[] {1, 2, 3}));
 
         assertTrue(stage.toCompletableFuture().isDone(), "a poison record must not stall the partition");
     }

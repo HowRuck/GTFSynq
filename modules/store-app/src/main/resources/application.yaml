@@ -98,6 +98,11 @@ mp:
       gtfs-trip-updates:
         connector: smallrye-kafka
         topic: gtfs-trip-updates
+        # Consume and acknowledge in batches: a single record waiting for its 10s flush would cap
+        # throughput at one record per flush. The batch is acknowledged only when all its rows are
+        # durable, preserving at-least-once delivery.
+        batch: true
+        max.poll.records: 10000
         group:
           id: gtfsynq-store
         auto:
