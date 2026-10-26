@@ -45,8 +45,12 @@ const CLUSTER_LAYER = 'live-trips-clusters';
 const CLUSTER_COUNT_LAYER = 'live-trips-cluster-count';
 const POINT_LAYER = 'live-trips-points';
 
-/** Map-space tuning, in CSS-free map units: pixels below the cluster radius are merged. */
-const CLUSTER_MAX_ZOOM = 12;
+/**
+ * Map-space tuning, in CSS-free map units: pixels below the cluster radius are merged. Clustering
+ * stays on until street zoom: many trips share the same latest stop, and unclustering too early
+ * would stack their markers on one pixel even though the cluster counted them separately.
+ */
+const CLUSTER_MAX_ZOOM = 16;
 const CLUSTER_RADIUS = 48;
 
 /**

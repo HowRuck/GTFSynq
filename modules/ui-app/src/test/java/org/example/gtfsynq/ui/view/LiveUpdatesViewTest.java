@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.vaadin.flow.component.UI;
+import java.util.List;
 import org.example.gtfsynq.shared.protocol.query.TripMarker;
 import org.example.gtfsynq.ui.client.GtfsQueryClient;
 import org.junit.jupiter.api.Test;
@@ -65,6 +66,38 @@ class LiveUpdatesViewTest {
                     marker(3, "10", "Trip 1").toBuilder().setLat(Double.NaN).build();
 
             assertTrue(view.marker(update).isEmpty());
+        });
+    }
+
+    @Test
+    void keepsASingleTripAtTheStopCoordinate() {
+        withView(view -> {
+            var markers = view.markers(List.of(marker(3, "10", "Trip 1")));
+
+            assertEquals(1, markers.size());
+            assertEquals(52.5, markers.getFirst().lat());
+            assertEquals(13.4, markers.getFirst().lon());
+        });
+    }
+
+    @Test
+    void spreadsTripsThatShareOneStopCoordinate() {
+        withView(view -> {
+            var first = marker(3, "10", "Trip 1");
+            var second = marker(3, "10", "Trip 2");
+
+            var markers = view.markers(List.of(first, second));
+
+            assertEquals(2, markers.size());
+            assertTrue(
+                    Math.abs(markers.get(0).lat() - markers.get(1).lat()) > 0
+                            || Math.abs(markers.get(0).lon() - markers.get(1).lon()) > 0,
+                    "co-located markers must not collapse into one visible dot");
+            for (var marker : markers) {
+                // The spread is a few metres, well below the ~0.1 m coordinate rounding limit.
+                assertTrue(Math.abs(marker.lat() - 52.5) < 0.001);
+                assertTrue(Math.abs(marker.lon() - 13.4) < 0.001);
+            }
         });
     }
 

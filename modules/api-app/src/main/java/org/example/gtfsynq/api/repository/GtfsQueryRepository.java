@@ -462,7 +462,7 @@ public class GtfsQueryRepository {
                        latest_stop.stop_time, latest_stop.stop_sequence,
                        latest.stop_lat, latest.stop_lon, latest.stop_name,
                        r.route_short_name, r.route_type, t.trip_short_name,
-                       m.route_id, m.trip_id,
+                       m.route_id, m.trip_id, m.entity_id,
                        COALESCE(
                            latest_stop.stop_delay,
                            (SELECT COALESCE(s.arrival_delay, s.departure_delay)
@@ -546,14 +546,21 @@ public class GtfsQueryRepository {
                         rs.getString("stop_name"),
                         nullableInt(rs, "current_delay"));
                 var tripId = rs.getString("trip_id");
-                if (tripId == null || tripId.isBlank()) {
-                    // Without a trip id there is nothing to deduplicate on.
+                var keyId = tripId;
+                if (keyId == null || keyId.isBlank()) {
+                    // Some feeds publish frequency-based updates without a trip id; the entity id is
+                    // then the only stable identifier across messages.
+                    var entityId = rs.getString("entity_id");
+                    keyId = entityId == null || entityId.isBlank() ? null : "entity:" + entityId;
+                }
+                if (keyId == null) {
+                    // Without either identifier there is nothing to deduplicate on.
                     unkeyed.add(marker);
                     continue;
                 }
                 var stopTime = offsetDateTime(rs, "stop_time");
                 var stopSequence = rs.getInt("stop_sequence");
-                var key = new TripKey(rs.getString("feed_id"), tripId);
+                var key = new TripKey(rs.getString("feed_id"), keyId);
                 var existing = byTrip.get(key);
                 if (existing == null || isLater(stopTime, stopSequence, existing.stopTime(), existing.stopSequence())) {
                     byTrip.put(key, new MarkerRow(marker, stopTime, stopSequence));

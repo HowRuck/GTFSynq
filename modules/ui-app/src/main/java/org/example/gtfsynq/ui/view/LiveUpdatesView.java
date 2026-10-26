@@ -17,6 +17,9 @@ import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.shared.Registration;
 import jakarta.inject.Inject;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -135,13 +138,68 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
         });
     }
 
-    /** One marker per trip that has coordinates for the most advanced stop it has reached. */
-    private List<LiveMap.Marker> markers(List<TripMarker> markers) {
-        return markers.stream().map(this::marker).flatMap(Optional::stream).toList();
+    /**
+     * One marker per trip that has coordinates for the most advanced stop it has reached.
+     *
+     * <p>Trips that reached the same stop would otherwise share one exact coordinate and render as
+     * one dot at high zoom, even though the cluster counted them separately. Co-located markers are
+     * spread over a few metres — a few pixels at street zoom — so the cluster count matches the
+     * markers a user can actually see and click.
+     */
+    List<LiveMap.Marker> markers(List<TripMarker> markers) {
+        var byPosition = new LinkedHashMap<Position, List<TripMarker>>();
+        for (var marker : markers) {
+            if (!Double.isFinite(marker.getLat()) || !Double.isFinite(marker.getLon())) {
+                continue;
+            }
+            byPosition
+                    .computeIfAbsent(new Position(marker.getLat(), marker.getLon()), position -> new ArrayList<>())
+                    .add(marker);
+        }
+
+        var result = new ArrayList<LiveMap.Marker>(markers.size());
+        for (var group : byPosition.values()) {
+            // A stable order keeps each trip in the same slot from one poll to the next.
+            group.sort(Comparator.comparing(this::tripKey));
+            for (var index = 0; index < group.size(); index++) {
+                var update = group.get(index);
+                var offset = group.size() == 1 ? Spread.NONE : spread(index, group.size(), update.getLat());
+                marker(update, update.getLat() + offset.lat(), update.getLon() + offset.lon())
+                        .ifPresent(result::add);
+            }
+        }
+        return result;
+    }
+
+    /** Stable identity used to order co-located markers. */
+    private String tripKey(TripMarker marker) {
+        var trip = marker.hasTripId() ? marker.getTripId() : "";
+        var route = marker.hasRouteId() ? marker.getRouteId() : "";
+        return trip + '|' + route;
+    }
+
+    /**
+     * Places the {@code index}-th of {@code count} co-located markers on a small ring. Twelve fit on
+     * the first ring; a busy terminal uses further rings instead of one crowded circle.
+     */
+    private static Spread spread(int index, int count, double latitude) {
+        var perRing = 12;
+        var ring = index / perRing;
+        var slot = index % perRing;
+        var ringCount = Math.min(count - ring * perRing, perRing);
+        var angle = 2 * Math.PI * slot / ringCount;
+        var metres = 6.0 + ring * 5.0;
+        var lat = metres * Math.sin(angle) / 111_320.0;
+        var lon = metres * Math.cos(angle) / (111_320.0 * Math.cos(Math.toRadians(latitude)));
+        return new Spread(lat, lon);
     }
 
     Optional<LiveMap.Marker> marker(TripMarker update) {
-        if (!Double.isFinite(update.getLat()) || !Double.isFinite(update.getLon())) {
+        return marker(update, update.getLat(), update.getLon());
+    }
+
+    private Optional<LiveMap.Marker> marker(TripMarker update, double lat, double lon) {
+        if (!Double.isFinite(lat) || !Double.isFinite(lon)) {
             return Optional.empty();
         }
         var label = join(route(update), trip(update));
@@ -149,11 +207,7 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
                 update.hasStopName() ? update.getStopName() : null,
                 update.hasDelaySeconds() ? getTranslation("live.map.delay", delay(update.getDelaySeconds())) : null);
         return Optional.of(new LiveMap.Marker(
-                update.getLat(),
-                update.getLon(),
-                label,
-                detail,
-                update.hasDelaySeconds() ? update.getDelaySeconds() : null));
+                lat, lon, label, detail, update.hasDelaySeconds() ? update.getDelaySeconds() : null));
     }
 
     /** Route part of the label: the route type names the mode, then the short name or id. */
@@ -223,5 +277,11 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
         }
         detachEvent.getUI().setPollInterval(-1);
         super.onDetach(detachEvent);
+    }
+
+    private record Position(double lat, double lon) {}
+
+    private record Spread(double lat, double lon) {
+        private static final Spread NONE = new Spread(0, 0);
     }
 }
