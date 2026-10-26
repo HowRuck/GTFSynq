@@ -371,6 +371,11 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
 
     private static final long COPY_PROGRESS_INTERVAL = 500_000;
 
+    /** A lock wait longer than this aborts one swap attempt so it can be retried. */
+    private static final String SWAP_LOCK_TIMEOUT = "30s";
+
+    private static final int SWAP_MAX_ATTEMPTS = 4;
+
     StaticFeedWriter(
             Connection connection,
             StaticFeedIngested event,
@@ -439,12 +444,47 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
     /**
      * Swaps the loaded staging tables in as the feed's partitions and drops the previous ones.
      *
-     * <p>Detach and attach take short catalog locks on the parent; readers keep serving the old
-     * rows until this transaction commits, then see the new revision. Dropping the previous
-     * revision is a file unlink, not a row-by-row delete.
+     * <p>Detach/attach need locks on the parent table and can queue behind long-running readers,
+     * autovacuum or an idle-in-transaction session. Each attempt therefore runs with a lock
+     * timeout; on lock contention the transaction is rolled back and retried, so a stuck lock
+     * delays the revision instead of hanging the loader forever.
      */
     private void swapRevision() throws SQLException {
         var swapStart = System.nanoTime();
+        try (var statement = connection.createStatement()) {
+            statement.execute("SET lock_timeout = '" + SWAP_LOCK_TIMEOUT + "'");
+        }
+
+        try {
+            for (var attempt = 1; ; attempt++) {
+                try {
+                    swapOnce();
+                    log.info(
+                            "Static feed {}: partition swap committed in {} ms (attempt {})",
+                            feedId,
+                            (System.nanoTime() - swapStart) / 1_000_000,
+                            attempt);
+                    return;
+                } catch (SQLException e) {
+                    rollbackQuietly();
+                    if (!isLockTimeout(e) || attempt >= SWAP_MAX_ATTEMPTS) {
+                        throw e;
+                    }
+                    log.warn("Static feed {}: partition swap attempt {} hit a lock wait; retrying", feedId, attempt);
+                    sleepQuietly(attempt * 2_000L);
+                }
+            }
+        } finally {
+            try (var statement = connection.createStatement()) {
+                statement.execute("RESET lock_timeout");
+            } catch (SQLException e) {
+                log.debug("Could not reset lock_timeout for feed {}", feedId, e);
+            }
+        }
+    }
+
+    /** One swap attempt; owns its own transaction so a lock timeout can be rolled back cleanly. */
+    private void swapOnce() throws SQLException {
         var oldSchemas = new HashSet<String>();
         try (var statement = connection.createStatement()) {
             for (var table : TABLES) {
@@ -461,10 +501,26 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
             recordRevision();
             connection.commit();
         }
-        log.info(
-                "Static feed {}: partition swap committed in {} ms",
-                feedId,
-                (System.nanoTime() - swapStart) / 1_000_000);
+    }
+
+    private void rollbackQuietly() {
+        try {
+            connection.rollback();
+        } catch (SQLException e) {
+            log.debug("Could not roll back a failed partition swap for feed {}", feedId, e);
+        }
+    }
+
+    private static boolean isLockTimeout(SQLException e) {
+        return "55P03".equals(e.getSQLState());
+    }
+
+    private static void sleepQuietly(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private void detachCurrentPartition(Statement statement, String table, Set<String> oldSchemas) throws SQLException {
