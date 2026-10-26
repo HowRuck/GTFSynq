@@ -122,9 +122,11 @@ public class GtfsTripUpdateSink {
         // Backpressure: drain the buffer when it grows past the limit. The flush runs in the
         // background, never on the Kafka consumer thread: an 18-second flush there delayed the
         // batch acknowledgement past the connector's 60-second threshold and killed the channel.
-        if (overLimit) {
+        // While that flush is running every further record would be "over the limit", so the request
+        // is coalesced and the log line belongs to the one request that actually starts a flush —
+        // otherwise a busy buffer writes one line per record.
+        if (overLimit && requestBackgroundFlush()) {
             log.info("Buffer reached {} buffered updates, flushing early", bufferedSize);
-            requestBackgroundFlush();
         }
     }
 
@@ -190,10 +192,15 @@ public class GtfsTripUpdateSink {
         }
     }
 
-    /** Runs one flush off the consumer thread, coalescing concurrent requests. */
-    private void requestBackgroundFlush() {
+    /**
+     * Runs one flush off the consumer thread, coalescing concurrent requests.
+     *
+     * @return whether this call started a flush, so the caller logs once per flush instead of once
+     *     per buffered record
+     */
+    private boolean requestBackgroundFlush() {
         if (!backgroundFlushRequested.compareAndSet(false, true)) {
-            return;
+            return false;
         }
         CompletableFuture.runAsync(() -> {
             try {
@@ -204,6 +211,7 @@ public class GtfsTripUpdateSink {
                 backgroundFlushRequested.set(false);
             }
         });
+        return true;
     }
 
     /**
