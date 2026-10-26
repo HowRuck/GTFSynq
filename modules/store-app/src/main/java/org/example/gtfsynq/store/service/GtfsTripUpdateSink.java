@@ -6,6 +6,8 @@ import jakarta.inject.Singleton;
 import jakarta.transaction.Transactional;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -39,6 +41,9 @@ public class GtfsTripUpdateSink {
     private final List<TripUpdateDto> buffer = new ArrayList<>();
 
     private final ReentrantLock flushLock = new ReentrantLock();
+
+    /** Guards against queueing more than one background flush at a time. */
+    private final AtomicBoolean backgroundFlushRequested = new AtomicBoolean();
 
     private final DatabaseDeduplicationService deduplicationService;
     private final GtfsSinkMetrics metrics;
@@ -114,13 +119,12 @@ public class GtfsTripUpdateSink {
                 feedId,
                 bufferedSize);
 
-        // Backpressure: flush early on the producer thread instead of
-        // letting the buffer grow unbounded when intake outpaces the
-        // scheduled flush. The buffer lock is already released here, so
-        // other producers keep buffering while this flush runs.
+        // Backpressure: drain the buffer when it grows past the limit. The flush runs in the
+        // background, never on the Kafka consumer thread: an 18-second flush there delayed the
+        // batch acknowledgement past the connector's 60-second threshold and killed the channel.
         if (overLimit) {
             log.info("Buffer reached {} buffered updates, flushing early", bufferedSize);
-            flush();
+            requestBackgroundFlush();
         }
     }
 
@@ -184,6 +188,22 @@ public class GtfsTripUpdateSink {
         } finally {
             flushLock.unlock();
         }
+    }
+
+    /** Runs one flush off the consumer thread, coalescing concurrent requests. */
+    private void requestBackgroundFlush() {
+        if (!backgroundFlushRequested.compareAndSet(false, true)) {
+            return;
+        }
+        CompletableFuture.runAsync(() -> {
+            try {
+                flush();
+            } catch (RuntimeException e) {
+                log.warn("Background flush failed; the batch will be retried", e);
+            } finally {
+                backgroundFlushRequested.set(false);
+            }
+        });
     }
 
     /**
