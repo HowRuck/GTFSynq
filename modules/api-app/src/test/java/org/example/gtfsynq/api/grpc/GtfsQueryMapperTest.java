@@ -37,6 +37,31 @@ class GtfsQueryMapperTest {
     }
 
     @Test
+    void mapsTheLatestStopCoordinatesForTheMap() {
+        var update = GtfsQueryMapper.tripUpdatesReply(page(tripUpdateWithPosition(52.52, 13.405, "Central Station")))
+                .getItems(0);
+
+        assertTrue(update.hasLatestStopLat());
+        assertTrue(update.hasLatestStopLon());
+        assertTrue(update.hasLatestStopName());
+        assertEquals(52.52, update.getLatestStopLat());
+        assertEquals(13.405, update.getLatestStopLon());
+        assertEquals("Central Station", update.getLatestStopName());
+    }
+
+    @Test
+    void leavesTheLatestStopCoordinatesAbsentWithoutAStaticMatch() {
+        var update = GtfsQueryMapper.tripUpdatesReply(page(tripUpdate(null, null, null)))
+                .getItems(0);
+
+        assertFalse(
+                update.hasLatestStopLat(),
+                "a trip without a static stop has no position, and mapper must" + " not fabricate 0,0");
+        assertFalse(update.hasLatestStopLon());
+        assertFalse(update.hasLatestStopName());
+    }
+
+    @Test
     void leavesStaticDisplayNamesAbsentWhenNoStaticRowMatches() {
         var update = GtfsQueryMapper.tripUpdatesReply(page(tripUpdate(null, null, null)))
                 .getItems(0);
@@ -93,6 +118,29 @@ class GtfsQueryMapperTest {
         var feed = GtfsQueryMapper.staticFeedsReply(staticFeedPage(List.of())).getItems(0);
 
         assertTrue(feed.getAgencyNamesList().isEmpty());
+    }
+
+    private static TripUpdateDto tripUpdateWithPosition(double lat, double lon, String stopName) {
+        return new TripUpdateDto(
+                1,
+                "feed",
+                OffsetDateTime.parse("2026-10-23T10:00:00Z"),
+                OffsetDateTime.parse("2026-10-23T10:01:00Z"),
+                "entity",
+                "trip-id",
+                "route-id",
+                null,
+                null,
+                1,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                lat,
+                lon,
+                stopName);
     }
 
     private static PageResponse<TripUpdateDto> page(TripUpdateDto update) {
