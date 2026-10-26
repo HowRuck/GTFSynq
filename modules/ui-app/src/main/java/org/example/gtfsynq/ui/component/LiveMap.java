@@ -34,7 +34,10 @@ public class LiveMap extends Component {
                 .set("width", "100%")
                 .set("height", "20rem")
                 .set("border-radius", "var(--vaadin-radius-m)")
-                .set("overflow", "hidden");
+                .set("overflow", "hidden")
+                // The canvas is transparent until a style paints its background layer, so an
+                // unreachable basemap would otherwise leave a hole in the page.
+                .set("background", "var(--vaadin-background-color, transparent)");
     }
 
     /**
