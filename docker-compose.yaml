@@ -176,7 +176,7 @@ services:
         restart: "no"
 
     s3:
-        image: docker.io/versity/versitygw:v1.9.0
+        image: docker.io/versity/versitygw:v1.10.0
         container_name: gtfsynq-s3
         # S3-compatible object store for downloaded GTFS static feed archives.
         # MinIO's Docker Hub images were withdrawn, so this uses the Versity S3
