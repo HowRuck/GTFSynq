@@ -488,6 +488,11 @@ Important defaults:
   Services containers; external infrastructure comes from Compose)
 - Console backend: `GTFS_API_GRPC_HOST` (default `localhost`) and
   `GTFS_API_GRPC_PORT` (default `8080`, the api-app HTTP port)
+- Live-map transport overlay: disabled by default. Set
+  `GTFS_MAP_TRANSPORT_OVERLAY_URL` to a Thunderforest Transport raster template
+  (API key required) and optionally `GTFS_MAP_TRANSPORT_OVERLAY_OPACITY`
+  (default `0.55`). The tiles are attributed to OpenStreetMap contributors and
+  Thunderforest; their usage terms apply.
 
 When running through Docker Compose, these values are overridden with container hostnames.
 

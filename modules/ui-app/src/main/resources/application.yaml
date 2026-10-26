@@ -69,6 +69,12 @@ quarkus:
 # that holder visible in the log instead of only the threads waiting for it.
 gtfsynq:
   ui:
+    map:
+      # Optional raster overlay blended over the vector basemap, for example Thunderforest's
+      # Transport map. Thunderforest requires an API key and its own attribution/terms, so this is
+      # opt-in. Leave the URL empty to disable; {z}/{x}/{y} are substituted by MapLibre.
+      transport-overlay-url: ${GTFS_MAP_TRANSPORT_OVERLAY_URL:}
+      transport-overlay-opacity: ${GTFS_MAP_TRANSPORT_OVERLAY_OPACITY:0.55}
     session-lock:
       # A lock wait or hold longer than this is logged at WARN with the stack that took the lock.
       warn-after: 10s

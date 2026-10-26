@@ -43,4 +43,15 @@ class LiveMapTest {
 
         assertEquals("[]", json, "MapLibre cannot render, and JSON cannot express, non-finite coordinates");
     }
+
+    @Test
+    void exposesTheTransportOverlayProperties() {
+        var map = new LiveMap();
+
+        map.setTransportOverlay("https://tile.example/{z}/{x}/{y}.png", 0.4);
+
+        assertEquals("https://tile.example/{z}/{x}/{y}.png", map.getElement().getProperty("transportOverlayUrl"));
+        assertEquals(
+                0.4, Double.parseDouble(String.valueOf(map.getElement().getProperty("transportOverlayOpacity"))), 1e-9);
+    }
 }

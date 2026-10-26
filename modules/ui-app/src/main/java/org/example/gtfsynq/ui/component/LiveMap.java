@@ -70,6 +70,21 @@ public class LiveMap extends Component {
     }
 
     /**
+     * Adds an optional raster overlay above the vector basemap and below the trip markers, for
+     * example Thunderforest's Transport map.
+     *
+     * <p>An empty URL removes the overlay. The tiles are loaded by the browser, so the URL (and any
+     * API key it contains) is visible to the user; use a key restricted to the deployment's referrer.
+     *
+     * @param tilesUrl raster tile URL template, e.g. {@code https://tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey=...}
+     * @param opacity blend opacity, clamped to 0..1 by the element
+     */
+    public void setTransportOverlay(String tilesUrl, double opacity) {
+        getElement().setProperty("transportOverlayUrl", tilesUrl == null ? "" : tilesUrl);
+        getElement().setProperty("transportOverlayOpacity", opacity);
+    }
+
+    /**
      * Replaces the markers shown on the map.
      *
      * <p>Markers without finite coordinates are dropped: MapLibre cannot render them, and a JSON

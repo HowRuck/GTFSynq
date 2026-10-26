@@ -46,6 +46,11 @@ const CLUSTER_LAYER = 'live-trips-clusters';
 const CLUSTER_COUNT_LAYER = 'live-trips-cluster-count';
 const POINT_LAYER = 'live-trips-points';
 
+/** Optional raster overlay blended over the vector basemap (e.g. Thunderforest Transport). */
+const TRANSPORT_SOURCE = 'transport-overlay';
+const TRANSPORT_LAYER = 'transport-overlay';
+const TRANSPORT_ATTRIBUTION = '\u00a9 OpenStreetMap contributors, Thunderforest';
+
 /**
  * Map-space tuning, in CSS-free map units: pixels below the cluster radius are merged. Clustering
  * stays on until street zoom: many trips share the same latest stop, and unclustering too early
@@ -141,6 +146,8 @@ class LiveMap extends HTMLElement {
   private markersAt = Date.now();
   private reachedJustNowText = 'Reached just now';
   private reachedMinutesFormat = 'Reached {0} min ago';
+  private transportUrl?: string;
+  private transportOpacity = 0.55;
 
   connectedCallback(): void {
     if (this.map) {
@@ -171,7 +178,6 @@ class LiveMap extends HTMLElement {
     map.on('style.load', () => {
       this.styleLoaded = true;
       window.clearTimeout(this.fallbackTimer);
-      this.installLayers();
       this.updateSource();
     });
     // A basemap that cannot be fetched leaves an empty map with no explanation; log the failure and
@@ -238,6 +244,21 @@ class LiveMap extends HTMLElement {
   /** Localized text with a {0} placeholder for the elapsed minutes. */
   set reachedMinutes(value: string) {
     this.reachedMinutesFormat = value || 'Reached {0} min ago';
+  }
+
+  /** Optional raster tile URL; an empty value removes the overlay. */
+  set transportOverlayUrl(url: string) {
+    this.transportUrl = url || undefined;
+    this.syncTransportOverlay();
+  }
+
+  /** Opacity of the transport overlay, clamped to 0..1. */
+  set transportOverlayOpacity(value: number) {
+    this.transportOpacity = Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0.55;
+    const map = this.map;
+    if (map?.getLayer(TRANSPORT_LAYER)) {
+      map.setPaintProperty(TRANSPORT_LAYER, 'raster-opacity', this.transportOpacity);
+    }
   }
 
   private currentStyle(): string {
@@ -346,10 +367,54 @@ class LiveMap extends HTMLElement {
     if (!map || !map.isStyleLoaded()) {
       return;
     }
+    this.syncTransportOverlay();
     this.installLayers();
     const source = map.getSource(SOURCE_ID) as GeoJSONSource | undefined;
     source?.setData(this.featureCollection());
     this.fitMarkers();
+  }
+
+  /**
+   * Adds or removes the optional raster basemap overlay. It is inserted below the marker layers so
+   * clusters and points stay readable on top of it.
+   */
+  private syncTransportOverlay(): void {
+    const map = this.map;
+    if (!map || !map.isStyleLoaded()) {
+      return;
+    }
+    if (!this.transportUrl) {
+      if (map.getLayer(TRANSPORT_LAYER)) {
+        map.removeLayer(TRANSPORT_LAYER);
+      }
+      if (map.getSource(TRANSPORT_SOURCE)) {
+        map.removeSource(TRANSPORT_SOURCE);
+      }
+      return;
+    }
+    if (!map.getSource(TRANSPORT_SOURCE)) {
+      map.addSource(TRANSPORT_SOURCE, {
+        type: 'raster',
+        tiles: [this.transportUrl],
+        tileSize: 256,
+        maxzoom: 19,
+        attribution: TRANSPORT_ATTRIBUTION,
+      });
+    }
+    if (!map.getLayer(TRANSPORT_LAYER)) {
+      const before = map.getLayer(CLUSTER_LAYER) ? CLUSTER_LAYER : undefined;
+      map.addLayer(
+        {
+          id: TRANSPORT_LAYER,
+          type: 'raster',
+          source: TRANSPORT_SOURCE,
+          paint: { 'raster-opacity': this.transportOpacity },
+        },
+        before,
+      );
+    } else {
+      map.setPaintProperty(TRANSPORT_LAYER, 'raster-opacity', this.transportOpacity);
+    }
   }
 
   private featureCollection(): {

@@ -26,6 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.example.gtfsynq.shared.protocol.query.TripMarker;
 import org.example.gtfsynq.ui.MainLayout;
 import org.example.gtfsynq.ui.client.DataAccessException;
@@ -45,6 +46,13 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
     private final LiveUpdatesGrid table;
     private final LiveMap map = new LiveMap();
     private final Div loadingOverlay;
+
+    @ConfigProperty(name = "gtfsynq.ui.map.transport-overlay-url")
+    Optional<String> transportOverlayUrl;
+
+    @ConfigProperty(name = "gtfsynq.ui.map.transport-overlay-opacity", defaultValue = "0.55")
+    double transportOverlayOpacity;
+
     private Registration pollRegistration;
     private boolean attached;
     private boolean markersLoading;
@@ -307,6 +315,9 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
         super.onAttach(attachEvent);
         attached = true;
         var ui = attachEvent.getUI();
+        transportOverlayUrl
+                .filter(url -> !url.isBlank())
+                .ifPresent(url -> map.setTransportOverlay(url, transportOverlayOpacity));
         ui.setPollInterval(POLL_INTERVAL_MS);
         pollRegistration = ui.addPollListener(event -> {
             table.refresh();
