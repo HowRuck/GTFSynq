@@ -32,7 +32,9 @@ public class LiveMap extends Component {
                 .getStyle()
                 .set("display", "block")
                 .set("width", "100%")
-                .set("height", "20rem")
+                // Tall enough to read a city, but bounded so the grid below keeps usable space on
+                // short screens. Relative units only, so it scales with the root font size.
+                .set("height", "clamp(24rem, 42vh, 40rem)")
                 .set("border-radius", "var(--vaadin-radius-m)")
                 .set("overflow", "hidden")
                 // The canvas is transparent until a style paints its background layer, so an
