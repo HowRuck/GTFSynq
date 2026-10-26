@@ -1,6 +1,7 @@
 package org.example.gtfsynq.ui.view;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.vaadin.flow.component.UI;
@@ -67,6 +68,16 @@ class LiveUpdatesViewTest {
 
             assertTrue(view.marker(update).isEmpty());
         });
+    }
+
+    @Test
+    void fingerprintsRawSnapshotsByContent() {
+        var first = List.of(marker(3, "10", "Trip 1"));
+        var again = List.of(marker(3, "10", "Trip 1"));
+        var changed = List.of(marker(3, "10", "Trip 2"));
+
+        assertEquals(LiveUpdatesView.fingerprint(first), LiveUpdatesView.fingerprint(again));
+        assertNotEquals(LiveUpdatesView.fingerprint(first), LiveUpdatesView.fingerprint(changed));
     }
 
     @Test

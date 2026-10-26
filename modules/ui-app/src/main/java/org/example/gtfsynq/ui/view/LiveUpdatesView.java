@@ -46,6 +46,7 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
     private boolean attached;
     private boolean markersLoading;
     private boolean markersLoaded;
+    private long lastMarkersFingerprint;
     private String lastMapError;
 
     @Inject
@@ -131,9 +132,13 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
                     report(error);
                     return;
                 }
+                var fingerprint = fingerprint(loaded);
+                if (!markersLoaded || fingerprint != lastMarkersFingerprint) {
+                    lastMarkersFingerprint = fingerprint;
+                    map.setMarkers(markers(loaded));
+                }
                 markersLoaded = true;
                 lastMapError = null;
-                map.setMarkers(markers(loaded));
             });
         });
     }
@@ -239,6 +244,19 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
 
     private static String delay(int seconds) {
         return seconds == 0 ? "0" : String.format("%+d", seconds);
+    }
+
+    /**
+     * Content fingerprint of the raw snapshot. Protobuf messages hash by value, so an unchanged
+     * reply — which the API cache and the store's deduplication make common — skips label building,
+     * marker spreading and the multi-megabyte JSON serialisation.
+     */
+    static long fingerprint(List<TripMarker> markers) {
+        var hash = 1L;
+        for (var marker : markers) {
+            hash = 31 * hash + marker.hashCode();
+        }
+        return hash;
     }
 
     private void report(DataAccessException e) {

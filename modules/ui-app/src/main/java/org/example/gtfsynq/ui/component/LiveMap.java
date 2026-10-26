@@ -31,11 +31,6 @@ public class LiveMap extends Component {
     /** One trip's latest reported position. */
     public record Marker(double lat, double lon, String label, String detail, Integer delaySeconds) {}
 
-    /** Fingerprint and length of the last snapshot, so an unchanged poll is not pushed again. */
-    private int lastMarkersLength = -1;
-
-    private int lastMarkersHash;
-
     public LiveMap() {
         getElement()
                 .getStyle()
@@ -66,22 +61,13 @@ public class LiveMap extends Component {
      * Replaces the markers shown on the map.
      *
      * <p>Markers without finite coordinates are dropped: MapLibre cannot render them, and a JSON
-     * number cannot represent them either. A snapshot identical to the previous one is not pushed
-     * at all, so a quiet minute costs the browser nothing.
+     * number cannot represent them either. The view only calls this when the marker snapshot
+     * changed, so a quiet poll does not touch the element.
      *
      * @param markers one marker per trip, an empty list clears the map
      */
     public void setMarkers(List<Marker> markers) {
-        var json = json(markers);
-        // Keep only a fingerprint: the serialised snapshot is several megabytes at scale, and the
-        // browser already holds the last copy. A hash collision with an identical length could at
-        // worst skip one poll, after which the next snapshot is compared again.
-        if (json.length() == lastMarkersLength && json.hashCode() == lastMarkersHash) {
-            return;
-        }
-        lastMarkersLength = json.length();
-        lastMarkersHash = json.hashCode();
-        getElement().setProperty("markers", json);
+        getElement().setProperty("markers", json(markers));
     }
 
     /**
