@@ -218,9 +218,10 @@ class LiveMap extends HTMLElement {
     return theme.split(' ').includes('dark') ? STYLE_DARK : STYLE_LIGHT;
   }
 
-  private onMapError(event: { error?: Error; sourceId?: string }): void {
-    console.warn('[live-map]', event.error ?? event);
-    if (event.sourceId && BASEMAP_SOURCE_IDS.includes(event.sourceId)) {
+  private onMapError(event: unknown): void {
+    const failure = event as { error?: Error; sourceId?: string };
+    console.warn('[live-map]', failure.error ?? event);
+    if (failure.sourceId && BASEMAP_SOURCE_IDS.includes(failure.sourceId)) {
       this.basemapFailures += 1;
       if (this.basemapFailures >= FALLBACK_AFTER_ERRORS) {
         this.useFallback('the basemap tiles failed to load');
