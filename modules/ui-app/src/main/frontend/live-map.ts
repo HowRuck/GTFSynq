@@ -118,7 +118,7 @@ class LiveMap extends HTMLElement {
   private resizeObserver?: ResizeObserver;
   private themeObserver?: MutationObserver;
   private followMarkers = true;
-  private styleUrl?: string;
+  private customStyleUrl?: string;
   private basemapFailures = 0;
   private usingFallback = false;
   private styleLoaded = false;
@@ -194,7 +194,7 @@ class LiveMap extends HTMLElement {
 
   /** Overrides the basemap style, for example to point at a self-hosted tile server. */
   set styleUrl(url: string) {
-    this.styleUrl = url || undefined;
+    this.customStyleUrl = url || undefined;
     if (this.map && !this.usingFallback) {
       this.map.setStyle(this.currentStyle());
     }
@@ -211,8 +211,8 @@ class LiveMap extends HTMLElement {
   }
 
   private currentStyle(): string {
-    if (this.styleUrl) {
-      return this.styleUrl;
+    if (this.customStyleUrl) {
+      return this.customStyleUrl;
     }
     const theme = document.documentElement.getAttribute('theme') ?? '';
     return theme.split(' ').includes('dark') ? STYLE_DARK : STYLE_LIGHT;

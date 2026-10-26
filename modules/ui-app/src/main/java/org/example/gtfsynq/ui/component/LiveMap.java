@@ -15,7 +15,9 @@ import java.util.List;
  * clusters the markers, so a whole city stays one readable bubble until the user zooms in.
  *
  * <p>The element is a plain custom element ({@code live-map.ts}); markers are passed as a JSON
- * string property, so a poll only sends the marker list and never re-creates the map.
+ * string property, so a poll only sends the marker list and never re-creates the map. Clustering and
+ * the basemap live in the element: it uses OpenFreeMap vector styles and falls back to raster tiles
+ * when that CDN cannot be reached, so an offline deployment shows markers instead of a blank map.
  */
 @Tag("live-map")
 @NpmPackage(value = "maplibre-gl", version = "6.16.0")
@@ -33,6 +35,17 @@ public class LiveMap extends Component {
                 .set("height", "20rem")
                 .set("border-radius", "var(--vaadin-radius-m)")
                 .set("overflow", "hidden");
+    }
+
+    /**
+     * Points the map at an alternative MapLibre style, for example a self-hosted tile server.
+     *
+     * <p>An empty value restores the built-in OpenFreeMap styles.
+     *
+     * @param styleUrl MapLibre style URL
+     */
+    public void setStyleUrl(String styleUrl) {
+        getElement().setProperty("styleUrl", styleUrl == null ? "" : styleUrl);
     }
 
     /**
