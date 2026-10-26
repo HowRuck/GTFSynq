@@ -569,7 +569,7 @@ public class GtfsQueryRepository {
     }
 
     /** Whether a marker's reached stop is later than the one kept so far for the same trip. */
-    private static boolean isLater(
+    static boolean isLater(
             OffsetDateTime candidateTime, int candidateSequence, OffsetDateTime existingTime, int existingSequence) {
         if (candidateTime != null && existingTime != null) {
             var comparison = candidateTime.compareTo(existingTime);
