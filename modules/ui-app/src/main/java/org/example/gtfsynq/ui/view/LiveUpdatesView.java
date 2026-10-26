@@ -12,6 +12,7 @@ import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.progressbar.ProgressBar;
+import com.vaadin.flow.component.splitlayout.SplitLayout;
 import com.vaadin.flow.data.provider.SortDirection;
 import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
@@ -80,15 +81,26 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
         // The overlay is a sibling of the map, so the map keeps ownership of its canvas and the
         // loading card uses regular Vaadin components and theme colours.
         var mapArea = new Div(map, loadingOverlay);
-        mapArea.getStyle().set("position", "relative").set("width", "100%");
+        mapArea.getStyle().set("position", "relative").set("width", "100%").set("height", "100%");
+        mapArea.setMinHeight("16rem");
+
+        // The component's default height keeps it usable on its own; the split panel decides the
+        // height here, and the map resizes with the splitter.
+        map.getElement().getStyle().set("height", "100%");
+
+        table.setSizeFull();
+        table.setMinHeight("12rem");
+
+        var split = new SplitLayout(mapArea, table);
+        split.setOrientation(SplitLayout.Orientation.VERTICAL);
+        split.setSizeFull();
+        split.setSplitterPosition(50);
 
         setSizeFull();
         add(
                 PageHeader.create(getTranslation("page.live.title"), getTranslation("page.live.subtitle"), refresh),
-                mapArea,
-                table);
-        setFlexGrow(0, mapArea);
-        setFlexGrow(1, table);
+                split);
+        setFlexGrow(1, split);
     }
 
     /**
