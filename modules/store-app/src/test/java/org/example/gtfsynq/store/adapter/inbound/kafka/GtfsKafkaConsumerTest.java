@@ -12,7 +12,9 @@ import io.smallrye.reactive.messaging.kafka.KafkaRecordBatch;
 import io.smallrye.reactive.messaging.kafka.Record;
 import java.lang.reflect.Proxy;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.example.gtfsynq.shared.model.dto.TripUpdateDto;
 import org.example.gtfsynq.shared.protocol.BinaryFeedEntityWithMetadata;
 import org.example.gtfsynq.store.adapter.outbound.database.TripUpdateBatchMapper;
@@ -58,18 +60,24 @@ class GtfsKafkaConsumerTest {
         List<KafkaRecord<String, byte[]>> records =
                 List.of(KafkaRecord.of("feed", payload(1)), KafkaRecord.of("feed", payload(2)));
 
-        CompletionStage<Void> acknowledgement = consumer.consume(batchOf(records));
+        var acknowledged = new AtomicBoolean();
+
+        CompletionStage<Void> acknowledgement = consumer.consume(batchOf(records, acknowledged));
 
         assertTrue(
-                acknowledgement.toCompletableFuture().isDone(),
-                "the batch must be acknowledged on return, not after a database flush");
+                acknowledged.get(),
+                "the batch must be acknowledged explicitly: the connector does not acknowledge it, and"
+                        + " an unacknowledged batch stalls every later offset until the watchdog fails"
+                        + " the channel");
+        assertTrue(acknowledgement.toCompletableFuture().isDone());
         assertEquals(0, repository.writtenUpdates, "the records are buffered, not written yet");
         sink.flushNow();
         assertEquals(2, repository.writtenUpdates);
     }
 
     @SuppressWarnings("unchecked")
-    private static KafkaRecordBatch<String, byte[]> batchOf(List<KafkaRecord<String, byte[]>> records) {
+    private static KafkaRecordBatch<String, byte[]> batchOf(
+            List<KafkaRecord<String, byte[]>> records, AtomicBoolean acknowledged) {
         return (KafkaRecordBatch<String, byte[]>) Proxy.newProxyInstance(
                 GtfsKafkaConsumerTest.class.getClassLoader(),
                 new Class<?>[] {KafkaRecordBatch.class},
@@ -77,6 +85,11 @@ class GtfsKafkaConsumerTest {
                     case "getRecords" -> records;
                     case "getPayload" ->
                         records.stream().map(KafkaRecord::getPayload).toList();
+                    case "ack" -> {
+                        acknowledged.set(true);
+                        yield CompletableFuture.completedFuture(null);
+                    }
+                    case "nack" -> CompletableFuture.completedFuture(null);
                     case "toString" -> "KafkaRecordBatch";
                     case "hashCode" -> System.identityHashCode(proxy);
                     case "equals" -> proxy == args[0];
