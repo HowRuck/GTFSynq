@@ -1,5 +1,17 @@
-import { LngLatBounds, Map as MapLibreMap, NavigationControl, Popup } from 'maplibre-gl';
+import {
+  LngLatBounds,
+  Map as MapLibreMap,
+  NavigationControl,
+  Popup,
+  setWorkerUrl,
+} from 'maplibre-gl';
 import type { GeoJSONSource } from 'maplibre-gl';
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+
+// MapLibre derives its worker URL from its own module location. Once the library is bundled that
+// location is the app chunk, so the worker 404s and no vector tile is ever parsed: the basemap stays
+// blank. Pointing MapLibre at the worker asset Vite emits fixes it for both the dev and build output.
+setWorkerUrl(maplibreWorkerUrl);
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 /**
