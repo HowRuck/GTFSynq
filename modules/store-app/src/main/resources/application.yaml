@@ -98,9 +98,10 @@ mp:
       gtfs-trip-updates:
         connector: smallrye-kafka
         topic: gtfs-trip-updates
-        # Consume and acknowledge in batches: a single record waiting for its 10s flush would cap
-        # throughput at one record per flush. The batch is acknowledged only when all its rows are
-        # durable, preserving at-least-once delivery.
+        # Consume in batches: a single record waiting for its 10s flush would cap throughput at one
+        # record per flush. The batch is acknowledged as soon as it has been parsed and buffered; the
+        # sink writes it to the database in the background, so database latency never holds up the
+        # poll loop (an unacknowledged record used to kill the channel via the throttled commit).
         batch: true
         max:
           poll:
@@ -114,9 +115,8 @@ mp:
           deserializer: org.apache.kafka.common.serialization.StringDeserializer
         value:
           deserializer: org.apache.kafka.common.serialization.ByteArrayDeserializer
-        # Records stay in flight until their batch has been flushed and committed, so the channel
-        # needs headroom beyond the default 1024 to reach the sink's early-flush threshold. Keep
-        # this at or above gtfsynq.sink.max-buffer-size.
+        # Records are acknowledged per batch, so this is only headroom for a poll larger than the
+        # sink's buffer; keep it at or above gtfsynq.sink.max-buffer-size.
         max-inflight-messages: 20000
       # Static feed revisions are validated before they are written; the group is separate from the
       # realtime consumer so a rebalance in one path cannot stall the other.
