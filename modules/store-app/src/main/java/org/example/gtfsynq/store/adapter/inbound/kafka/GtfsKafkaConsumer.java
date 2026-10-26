@@ -7,8 +7,6 @@ import io.smallrye.reactive.messaging.kafka.KafkaRecordBatch;
 import io.smallrye.reactive.messaging.kafka.Record;
 import jakarta.inject.Singleton;
 import java.time.Instant;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.microprofile.reactive.messaging.Incoming;

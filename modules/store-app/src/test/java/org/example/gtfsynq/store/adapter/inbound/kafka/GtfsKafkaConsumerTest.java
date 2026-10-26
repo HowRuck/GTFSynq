@@ -25,7 +25,6 @@ class GtfsKafkaConsumerTest {
             new TripUpdateBatchMapper(),
             new PassthroughDeduplication(),
             new GtfsSinkMetrics(new SimpleMeterRegistry()),
-            Runnable::run,
             true,
             20_000);
 
