@@ -59,45 +59,33 @@ public class GtfsKafkaConsumer {
      *
      * @param feedId Kafka key / feed identifier
      * @param entity parsed GTFS feed entity
-     * @param onPersisted acknowledgement releasing the record once the update is durable; run
-     *     immediately when the entity is discarded
      */
-    public void routeToSink(String feedId, FeedEntityWithMetadata entity, Runnable onPersisted) {
+    public void routeToSink(String feedId, FeedEntityWithMetadata entity) {
         if (entity == null) {
-            onPersisted.run();
             return;
         }
 
-        tripUpdateSink.accept(feedId, entity, onPersisted);
+        tripUpdateSink.accept(feedId, entity);
     }
 
     /**
      * Consumes a polled batch of raw Kafka records.
      *
-     * <p>Records are acknowledged as soon as they are buffered. Deferring the acknowledgement until
-     * the flush committed proved unsafe in practice: a batch whose acks never completed made the
-     * throttled commit strategy kill the channel after 60 seconds, stopping ingestion entirely.
-     * With immediate acknowledgement the consumer cannot wedge; the trade-off is that a crash
-     * loses at most the in-flight buffer, which the next feed poll repopulates.
+     * <p>Records are acknowledged by the connector as soon as this method returns; the sink only
+     * buffers them. There is deliberately no deferred acknowledgement: a stuck acknowledgement
+     * previously killed the consumer channel via the throttled commit strategy.
      *
      * @param batch records polled by the connector, keyed by feed identifier
-     * @return a completed stage, releasing the batch immediately
      */
     @Incoming("gtfs-trip-updates")
     @Blocking
-    public CompletionStage<Void> consume(KafkaRecordBatch<String, byte[]> batch) {
+    public void consume(KafkaRecordBatch<String, byte[]> batch) {
         log.debug("Polled {} gtfs-trip-updates records", batch.getRecords().size());
         for (var record : batch.getRecords()) {
             consumeRecord(record.getKey(), record.getPayload());
         }
-        return CompletableFuture.completedFuture(null);
     }
 
-    /**
-     * Buffers one record; the caller acknowledges it immediately.
-     *
-     * @param record raw Kafka record, keyed by feed identifier
-     */
     void consumeRecord(Record<String, byte[]> record) {
         consumeRecord(record.key(), record.value());
     }
@@ -106,6 +94,6 @@ public class GtfsKafkaConsumer {
         if (value == null) {
             return;
         }
-        routeToSink(key, parseFeedEntity(value), () -> {});
+        routeToSink(key, parseFeedEntity(value));
     }
 }
