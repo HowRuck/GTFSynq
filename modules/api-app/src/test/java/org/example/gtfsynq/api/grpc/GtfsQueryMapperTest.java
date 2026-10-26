@@ -9,6 +9,7 @@ import java.util.List;
 import org.example.gtfsynq.api.dto.PageResponse;
 import org.example.gtfsynq.api.dto.StaticFeedDto;
 import org.example.gtfsynq.api.dto.StopTimeUpdateDto;
+import org.example.gtfsynq.api.dto.TripMarkerDto;
 import org.example.gtfsynq.api.dto.TripUpdateDto;
 import org.junit.jupiter.api.Test;
 
@@ -59,6 +60,38 @@ class GtfsQueryMapperTest {
                 "a trip without a static stop has no position, and mapper must" + " not fabricate 0,0");
         assertFalse(update.hasLatestStopLon());
         assertFalse(update.hasLatestStopName());
+    }
+
+    @Test
+    void mapsTripMarkersForTheMap() {
+        var marker = GtfsQueryMapper.tripMarkersReply(List.of(new TripMarkerDto(
+                        52.52, 13.405, "10", "Trip 1", "route-id", "trip-id", 3, "Central Station", 120)))
+                .getItems(0);
+
+        assertEquals(52.52, marker.getLat());
+        assertEquals(13.405, marker.getLon());
+        assertEquals("10", marker.getRouteShortName());
+        assertEquals("Trip 1", marker.getTripShortName());
+        assertEquals("route-id", marker.getRouteId());
+        assertEquals("trip-id", marker.getTripId());
+        assertEquals(3, marker.getRouteType());
+        assertEquals("Central Station", marker.getStopName());
+        assertEquals(120, marker.getDelaySeconds());
+    }
+
+    @Test
+    void leavesOptionalTripMarkerFieldsAbsentWithoutAStaticMatch() {
+        var marker = GtfsQueryMapper.tripMarkersReply(
+                        List.of(new TripMarkerDto(52.52, 13.405, null, null, null, null, null, null, null)))
+                .getItems(0);
+
+        assertFalse(marker.hasRouteShortName());
+        assertFalse(marker.hasTripShortName());
+        assertFalse(marker.hasRouteId());
+        assertFalse(marker.hasTripId());
+        assertFalse(marker.hasRouteType());
+        assertFalse(marker.hasStopName());
+        assertFalse(marker.hasDelaySeconds());
     }
 
     @Test

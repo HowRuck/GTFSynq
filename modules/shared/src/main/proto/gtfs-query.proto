@@ -38,6 +38,10 @@ service GtfsQueryService {
   // Live trip updates from the hot table.
   rpc ListTripUpdates(TripUpdatesRequest) returns (TripUpdatesReply);
 
+  // One marker per live trip that has a position, unpaged: the map shows the whole
+  // live set while the table pages.
+  rpc ListTripMarkers(TripMarkersRequest) returns (TripMarkersReply);
+
   // The stop time updates of one trip update, ordered by stop sequence.
   rpc ListStopTimeUpdates(StopTimeUpdatesRequest) returns (StopTimeUpdatesReply);
 }
@@ -235,6 +239,31 @@ message TripUpdatesRequest {
 message TripUpdatesReply {
   repeated TripUpdate items = 1;
   PageInfo page = 2;
+}
+
+// No filters: the map shows every live trip regardless of the table's filters and paging.
+message TripMarkersRequest {}
+
+message TripMarker {
+  // Coordinates of the most advanced stop the trip is predicted to reach.
+  double lat = 1;
+  double lon = 2;
+  // Route and trip names for the label; the ids are the fallback when a feed
+  // publishes no short name.
+  optional string route_short_name = 3;
+  optional string trip_short_name = 4;
+  optional string route_id = 5;
+  optional string trip_id = 6;
+  // GTFS route type (3 = bus, 2 = rail, ...), so the label can name the mode.
+  optional int32 route_type = 7;
+  // Static name of the stop at those coordinates, for the popup.
+  optional string stop_name = 8;
+  // The trip's current delay in seconds, for the popup and the marker colour.
+  optional int32 delay_seconds = 9;
+}
+
+message TripMarkersReply {
+  repeated TripMarker items = 1;
 }
 
 message StopTimeUpdate {

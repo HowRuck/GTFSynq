@@ -12,6 +12,7 @@ import org.example.gtfsynq.api.dto.StaticFeedDto;
 import org.example.gtfsynq.api.dto.StopDto;
 import org.example.gtfsynq.api.dto.StopTimeUpdateDto;
 import org.example.gtfsynq.api.dto.TripDto;
+import org.example.gtfsynq.api.dto.TripMarkerDto;
 import org.example.gtfsynq.api.dto.TripUpdateDto;
 import org.example.gtfsynq.shared.protocol.query.OverviewReply;
 import org.example.gtfsynq.shared.protocol.query.PageInfo;
@@ -24,6 +25,8 @@ import org.example.gtfsynq.shared.protocol.query.StopTimeUpdate;
 import org.example.gtfsynq.shared.protocol.query.StopTimeUpdatesReply;
 import org.example.gtfsynq.shared.protocol.query.StopsReply;
 import org.example.gtfsynq.shared.protocol.query.Trip;
+import org.example.gtfsynq.shared.protocol.query.TripMarker;
+import org.example.gtfsynq.shared.protocol.query.TripMarkersReply;
 import org.example.gtfsynq.shared.protocol.query.TripUpdate;
 import org.example.gtfsynq.shared.protocol.query.TripUpdatesReply;
 import org.example.gtfsynq.shared.protocol.query.TripsReply;
@@ -143,6 +146,22 @@ final class GtfsQueryMapper {
                 item.setLatestStopLon(update.latestStopLon());
             }
             setIfPresent(update.latestStopName(), item::setLatestStopName);
+            reply.addItems(item);
+        }
+        return reply.build();
+    }
+
+    static TripMarkersReply tripMarkersReply(List<TripMarkerDto> markers) {
+        var reply = TripMarkersReply.newBuilder();
+        for (var marker : markers) {
+            var item = TripMarker.newBuilder().setLat(marker.lat()).setLon(marker.lon());
+            setIfPresent(marker.routeShortName(), item::setRouteShortName);
+            setIfPresent(marker.tripShortName(), item::setTripShortName);
+            setIfPresent(marker.routeId(), item::setRouteId);
+            setIfPresent(marker.tripId(), item::setTripId);
+            setIfPresent(marker.routeType(), item::setRouteType);
+            setIfPresent(marker.stopName(), item::setStopName);
+            setIfPresent(marker.delaySeconds(), item::setDelaySeconds);
             reply.addItems(item);
         }
         return reply.build();

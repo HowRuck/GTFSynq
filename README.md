@@ -195,7 +195,7 @@ no datasource and never calls the REST API.
 | Routes | `/routes` | Static routes with a feed filter and search |
 | Stops | `/stops` | Stops and stations with coordinates, location type and parent station |
 | Trips | `/trips` | Trips with their route, service and direction |
-| Live Updates | `/live` | Current trip updates with the agency of each trip's route; expand a trip to see its stop time updates |
+| Live Updates | `/live` | Current trip updates with the agency of each trip's route; expand a trip to see its stop time updates, plus a map of every live trip |
 
 Behaviour shared by the tables:
 
@@ -208,7 +208,12 @@ Behaviour shared by the tables:
 - Routes, stops and trips offer a feed selector and a search box (three or more
   characters, matching the API).
 - The live view polls every minute through server push, keeps expanded trips
-  open across refreshes, and has a manual refresh button. Trip, route and stop
+  open across refreshes, and has a manual refresh button. The map above the table
+  plots every live trip that has a static position, independently of the table's
+  filters and paging: it loads its own unpaged `ListTripMarkers` result (cached for
+  ten seconds so open sessions share one query), clusters markers client-side and
+  falls back to raster tiles when the vector basemap is unreachable. Trip, route
+  and stop
   labels prefer their static names and fall back to ids when no matching static
   name is available; long labels are shortened to 32 characters with the full
   value in a tooltip. Each trip row also shows the agency of its route and its
@@ -299,6 +304,8 @@ The Vaadin Flow web console (see [Web Console](#web-console)):
 - an expandable live tree: trip updates load lazily and expand to their stop time
   updates (with a progress-bar loading row while they fetch), refreshed every
   minute through server push
+- a live trip map that loads every positioned trip independently of the table's
+  paging, so the overview stays complete while the tree stays lazy
 - English, German and French translations via Vaadin I18N, Aura theme with the
   Inter font and an orange accent palette
 - no database access and no REST calls — it is a pure gRPC client of `api-app`

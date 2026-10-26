@@ -12,9 +12,7 @@ import com.vaadin.flow.data.provider.SortDirection;
 import com.vaadin.flow.data.value.ValueChangeMode;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
-import org.example.gtfsynq.shared.protocol.query.TripUpdate;
 import org.example.gtfsynq.ui.client.DataAccessException;
 import org.example.gtfsynq.ui.client.GtfsQueryClient;
 
@@ -47,19 +45,6 @@ public class LiveUpdatesGrid extends TreeGrid<LiveUpdateRow> {
                 .filter(column -> defaultSort.equals(column.getKey()))
                 .findFirst()
                 .ifPresent(column -> sort(List.of(new GridSortOrder<>(column, defaultDirection))));
-    }
-
-    /**
-     * Registers a listener for every page of trip rows the grid loads.
-     *
-     * <p>The map uses this to stay on the same rows as the table: same filters, same page, same
-     * refresh cadence, without issuing a second query.
-     *
-     * @param listener receives the trip rows of a freshly loaded page
-     */
-    public void onTripsLoaded(Consumer<List<TripUpdate>> listener) {
-        provider.onRootPageLoaded(
-                rows -> listener.accept(rows.stream().map(TripUpdateRow::update).toList()));
     }
 
     /** Applies a feed filter. */

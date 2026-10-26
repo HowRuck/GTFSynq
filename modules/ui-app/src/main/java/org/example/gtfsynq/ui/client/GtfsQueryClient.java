@@ -23,6 +23,8 @@ import org.example.gtfsynq.shared.protocol.query.StopTimeUpdate;
 import org.example.gtfsynq.shared.protocol.query.StopTimeUpdatesRequest;
 import org.example.gtfsynq.shared.protocol.query.StopsRequest;
 import org.example.gtfsynq.shared.protocol.query.Trip;
+import org.example.gtfsynq.shared.protocol.query.TripMarker;
+import org.example.gtfsynq.shared.protocol.query.TripMarkersRequest;
 import org.example.gtfsynq.shared.protocol.query.TripUpdate;
 import org.example.gtfsynq.shared.protocol.query.TripUpdatesRequest;
 import org.example.gtfsynq.shared.protocol.query.TripsRequest;
@@ -150,6 +152,12 @@ public class GtfsQueryClient {
             var reply = stub().listTripUpdates(request.build());
             return page(reply.getItemsList(), reply.getPage());
         });
+    }
+
+    /** Every live trip that has a position, for the map; unpaged on purpose. */
+    public List<TripMarker> tripMarkers() {
+        return call(() ->
+                stub().listTripMarkers(TripMarkersRequest.getDefaultInstance()).getItemsList());
     }
 
     /** Stops of one live trip: static schedule merged with the live stop time updates. */

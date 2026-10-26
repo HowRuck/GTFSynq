@@ -272,9 +272,9 @@ public final class Columns {
      * Translated GTFS route type for display. Extended route types have no label in the bundle and
      * fall back to the numeric code.
      */
-    static String routeTypeLabel(Grid<?> grid, int routeType) {
+    public static String routeTypeLabel(Component owner, int routeType) {
         return Filters.ROUTE_TYPES.contains(routeType)
-                ? grid.getTranslation("filter.routeType." + routeType)
+                ? owner.getTranslation("filter.routeType." + routeType)
                 : String.valueOf(routeType);
     }
 

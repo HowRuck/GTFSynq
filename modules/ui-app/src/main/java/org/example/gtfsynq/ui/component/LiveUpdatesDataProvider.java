@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import org.example.gtfsynq.ui.client.DataAccessException;
@@ -46,9 +45,6 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
     private CountKey countKey;
     private long total = -1;
     private long generation;
-
-    /** Told about every freshly loaded page of trip rows, so a map can follow the grid. */
-    private Consumer<List<TripUpdateRow>> rootPageListener = rows -> {};
 
     LiveUpdatesDataProvider(
             GtfsQueryClient client,
@@ -112,11 +108,6 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
                 stop.tripUpdateId() + ":" + stop.update().getStopSequence();
             case LoadingRow loading -> loading.tripUpdateId() + ":loading";
         };
-    }
-
-    /** Registers the listener told about every freshly loaded page of trip rows. */
-    void onRootPageLoaded(Consumer<List<TripUpdateRow>> listener) {
-        this.rootPageListener = listener;
     }
 
     /** Applies a feed filter; returns whether it changed. */
@@ -216,7 +207,6 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
         total = rootPage.total();
         countKey = new CountKey(
                 key.feedId(), key.search(), key.agency(), key.route(), key.routeType(), key.sort(), key.descending());
-        rootPageListener.accept(rootPage.rows());
         return rootPage;
     }
 

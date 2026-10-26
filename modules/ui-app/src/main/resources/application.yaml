@@ -19,6 +19,9 @@ quarkus:
         host: ${GTFS_API_GRPC_HOST:localhost}
         port: ${GTFS_API_GRPC_PORT:8080}
         plain-text: true
+        # The live map fetches every positioned trip in one unpaged reply, so a large
+        # deployment can exceed gRPC's 4 MiB default. Keep an explicit ceiling.
+        max-inbound-message-size: 16777216
 
   # ---- Observability (/q/health) -------------------------------------------
   micrometer:

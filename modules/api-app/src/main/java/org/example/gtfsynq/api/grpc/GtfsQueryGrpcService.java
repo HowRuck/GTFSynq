@@ -22,6 +22,8 @@ import org.example.gtfsynq.shared.protocol.query.StopTimeUpdatesReply;
 import org.example.gtfsynq.shared.protocol.query.StopTimeUpdatesRequest;
 import org.example.gtfsynq.shared.protocol.query.StopsReply;
 import org.example.gtfsynq.shared.protocol.query.StopsRequest;
+import org.example.gtfsynq.shared.protocol.query.TripMarkersReply;
+import org.example.gtfsynq.shared.protocol.query.TripMarkersRequest;
 import org.example.gtfsynq.shared.protocol.query.TripUpdatesReply;
 import org.example.gtfsynq.shared.protocol.query.TripUpdatesRequest;
 import org.example.gtfsynq.shared.protocol.query.TripsReply;
@@ -131,6 +133,11 @@ public class GtfsQueryGrpcService extends GtfsQueryServiceGrpc.GtfsQueryServiceI
                         request.getSort(),
                         request.getDirection(),
                         request.getCount())));
+    }
+
+    @Override
+    public void listTripMarkers(TripMarkersRequest request, StreamObserver<TripMarkersReply> observer) {
+        unary(observer, () -> GtfsQueryMapper.tripMarkersReply(repository.liveTripMarkers()));
     }
 
     @Override

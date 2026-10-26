@@ -24,6 +24,7 @@ import org.example.gtfsynq.api.dto.StaticFeedDto;
 import org.example.gtfsynq.api.dto.StopDto;
 import org.example.gtfsynq.api.dto.StopTimeUpdateDto;
 import org.example.gtfsynq.api.dto.TripDto;
+import org.example.gtfsynq.api.dto.TripMarkerDto;
 import org.example.gtfsynq.api.dto.TripUpdateDto;
 
 /**
@@ -47,6 +48,13 @@ public class GtfsQueryRepository {
 
     private static final long OVERVIEW_CACHE_NANOS = TimeUnit.SECONDS.toNanos(10);
 
+    /**
+     * The map polls on the same minute cadence as the table, so a short cache mostly collapses the
+     * queries of several open sessions into one. Staleness is bounded by the same ten seconds as the
+     * overview.
+     */
+    private static final long MARKER_CACHE_NANOS = TimeUnit.SECONDS.toNanos(10);
+
     private static final Map<String, String> ROUTE_SORTS = Map.of(
             "routeId", "route_id",
             "shortName", "route_short_name",
@@ -69,6 +77,10 @@ public class GtfsQueryRepository {
     private volatile OverviewDto cachedOverview;
 
     private volatile long cachedOverviewAt;
+
+    private volatile List<TripMarkerDto> cachedMarkers;
+
+    private volatile long cachedMarkersAt;
 
     @Inject
     public GtfsQueryRepository(DataSource dataSource) {
@@ -432,6 +444,82 @@ public class GtfsQueryRepository {
                         rs.getObject("latest_stop_lon", Double.class),
                         rs.getString("latest_stop_name")),
                 includeTotal);
+    }
+
+    /**
+     * One marker per live trip that has static coordinates for its most advanced stop.
+     *
+     * <p>Unpaged on purpose: the map shows the whole live set, while the table pages. The projection
+     * leaves out the stop count and the agency join the table query adds, so plotting every trip
+     * stays cheap.
+     *
+     * <p>The position and the delay come from one backward primary-key scan per trip. The delay
+     * lookup the table uses only runs as a fallback for trips whose most advanced stop reports no
+     * delay, which keeps the marker identical to the table's current delay while halving the scans
+     * on a typical feed.
+     */
+    public List<TripMarkerDto> liveTripMarkers() {
+        var now = System.nanoTime();
+        var cached = cachedMarkers;
+        if (cached != null && now - cachedMarkersAt < MARKER_CACHE_NANOS) {
+            return cached;
+        }
+
+        String sql = """
+                SELECT latest.stop_lat, latest.stop_lon, latest.stop_name,
+                       r.route_short_name, r.route_type, t.trip_short_name,
+                       m.route_id, m.trip_id,
+                       COALESCE(
+                           latest_stop.stop_delay,
+                           (SELECT COALESCE(s.arrival_delay, s.departure_delay)
+                            FROM rt_stop_time_updates_hot s
+                            WHERE s.trip_update_id = h.trip_update_id
+                              AND COALESCE(s.arrival_delay, s.departure_delay) IS NOT NULL
+                            ORDER BY s.stop_sequence DESC
+                            LIMIT 1)) AS current_delay
+                FROM rt_trip_updates_hot h
+                LEFT JOIN rt_trip_updates_meta m ON m.id = h.trip_update_id
+                LEFT JOIN static_trips t ON t.feed_id = h.feed_id AND t.trip_id = m.trip_id
+                LEFT JOIN static_routes r
+                       ON r.feed_id = h.feed_id AND r.route_id = COALESCE(t.route_id, m.route_id)
+                LEFT JOIN LATERAL (
+                    SELECT COALESCE(s.assigned_stop_id, s.stop_id) AS stop_id,
+                           COALESCE(s.arrival_delay, s.departure_delay) AS stop_delay
+                    FROM rt_stop_time_updates_hot s
+                    WHERE s.trip_update_id = h.trip_update_id
+                    ORDER BY s.stop_sequence DESC
+                    LIMIT 1
+                ) latest_stop ON TRUE
+                LEFT JOIN static_stops latest
+                       ON latest.feed_id = h.feed_id AND latest.stop_id = latest_stop.stop_id
+                -- A trip without a static stop has no position; filtering here keeps those rows off
+                -- the wire instead of dropping them in the UI.
+                WHERE latest.stop_lat IS NOT NULL AND latest.stop_lon IS NOT NULL
+                """;
+        try (Connection connection = dataSource.getConnection();
+                PreparedStatement statement = connection.prepareStatement(sql);
+                ResultSet rs = statement.executeQuery()) {
+            List<TripMarkerDto> items = new ArrayList<>();
+            while (rs.next()) {
+                items.add(new TripMarkerDto(
+                        rs.getDouble("stop_lat"),
+                        rs.getDouble("stop_lon"),
+                        rs.getString("route_short_name"),
+                        rs.getString("trip_short_name"),
+                        rs.getString("route_id"),
+                        rs.getString("trip_id"),
+                        nullableInt(rs, "route_type"),
+                        rs.getString("stop_name"),
+                        nullableInt(rs, "current_delay")));
+            }
+            // The list only has read-only consumers, so the cache can share one snapshot.
+            var result = List.copyOf(items);
+            cachedMarkers = result;
+            cachedMarkersAt = now;
+            return result;
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to query GTFS data", e);
+        }
     }
 
     /**
