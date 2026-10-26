@@ -60,6 +60,19 @@ quarkus:
     group: howruck
     name: gtfsynq-ui-app
 
+# ---- Session-lock diagnostics ---------------------------------------------
+# Every request and every ui.access() runs under the browser session's lock, and Vaadin does not
+# time out a lock wait. A holder that never releases it freezes the session; these thresholds make
+# that holder visible in the log instead of only the threads waiting for it.
+gtfsynq:
+  ui:
+    session-lock:
+      # A lock wait or hold longer than this is logged at WARN with the stack that took the lock.
+      warn-after: 10s
+      # A lock still held after this is logged at ERROR with the holder's current stack, once per
+      # wedge, so a frozen UI names the code path that froze it.
+      dump-after: 30s
+
 # Vaadin installs its own Node/pnpm toolchain for the frontend build.
 # pnpm-enable is a build-time property; the committed pnpm-lock.yaml keeps
 # installs reproducible and lets CI restore the pnpm store cache.

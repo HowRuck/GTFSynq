@@ -13,6 +13,8 @@ dependencies {
 
     implementation(libs.quarkus.config.yaml)
     implementation(libs.quarkus.grpc)
+    // Session-lock diagnostics run on a timer so a wedged lock is reported while it is still held.
+    implementation(libs.quarkus.scheduler)
     implementation(libs.quarkus.smallrye.health)
     implementation(libs.quarkus.opentelemetry)
     implementation(libs.quarkus.micrometer.opentelemetry)
