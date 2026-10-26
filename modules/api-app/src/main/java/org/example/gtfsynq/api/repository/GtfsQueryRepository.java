@@ -377,13 +377,14 @@ public class GtfsQueryRepository {
                 -- primary key and a primary-key lookup on static_stops, so it stays cheap per row.
                 LEFT JOIN LATERAL (
                     SELECT st.stop_name, st.stop_lat, st.stop_lon
-                    FROM rt_stop_time_updates_hot s
-                    JOIN static_stops st
-                      ON st.feed_id = h.feed_id
-                     AND st.stop_id = COALESCE(s.assigned_stop_id, s.stop_id)
-                    WHERE s.trip_update_id = h.trip_update_id
-                    ORDER BY s.stop_sequence DESC
-                    LIMIT 1
+                    FROM static_stops st
+                    WHERE st.feed_id = h.feed_id
+                      AND st.stop_id = (
+                          SELECT COALESCE(s.assigned_stop_id, s.stop_id)
+                          FROM rt_stop_time_updates_hot s
+                          WHERE s.trip_update_id = h.trip_update_id
+                          ORDER BY s.stop_sequence DESC
+                          LIMIT 1)
                 ) latest ON TRUE
                 """;
         // The agency condition reaches static_agency through the trip and route joins; only widen
