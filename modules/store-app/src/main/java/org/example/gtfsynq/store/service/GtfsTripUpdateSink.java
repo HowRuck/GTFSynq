@@ -3,7 +3,7 @@ package org.example.gtfsynq.store.service;
 import io.quarkus.scheduler.Scheduled;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
-import jakarta.transaction.Transactional;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -44,6 +44,9 @@ public class GtfsTripUpdateSink {
 
     /** Guards against queueing more than one background flush at a time. */
     private final AtomicBoolean backgroundFlushRequested = new AtomicBoolean();
+
+    /** Set while the buffer is above its limit, so the overflow is logged once per episode. */
+    private final AtomicBoolean limitExceededReported = new AtomicBoolean();
 
     private final DatabaseDeduplicationService deduplicationService;
     private final GtfsSinkMetrics metrics;
@@ -122,11 +125,13 @@ public class GtfsTripUpdateSink {
         // Backpressure: drain the buffer when it grows past the limit. The flush runs in the
         // background, never on the Kafka consumer thread: an 18-second flush there delayed the
         // batch acknowledgement past the connector's 60-second threshold and killed the channel.
-        // While that flush is running every further record would be "over the limit", so the request
-        // is coalesced and the log line belongs to the one request that actually starts a flush —
-        // otherwise a busy buffer writes one line per record.
-        if (overLimit && requestBackgroundFlush()) {
-            log.info("Buffer reached {} buffered updates, flushing early", bufferedSize);
+        // The log line reports the episode, not each record: while the buffer stays above the limit
+        // every record would otherwise write one line.
+        if (overLimit) {
+            if (limitExceededReported.compareAndSet(false, true)) {
+                log.info("Buffer reached {} buffered updates, flushing early", bufferedSize);
+            }
+            requestBackgroundFlush();
         }
     }
 
@@ -134,7 +139,6 @@ public class GtfsTripUpdateSink {
      * Flushes the current buffer on a schedule.
      */
     @Scheduled(every = "{gtfsynq.sink.flush-interval}")
-    @Transactional
     public void scheduledFlush() {
         if (!enabled) {
             return;
@@ -146,7 +150,6 @@ public class GtfsTripUpdateSink {
     /**
      * Flushes any buffered updates immediately.
      */
-    @Transactional
     public void flushNow() {
         if (!enabled) {
             return;
@@ -162,8 +165,8 @@ public class GtfsTripUpdateSink {
      * matching the previous behavior where the buffer was only cleared after
      * a successful write.
      *
-     * <p>The write in progress is abandoned on failure; because the caller runs in a single
-     * transaction, a failed flush commits as a rollback and the batch is retried next tick.
+     * <p>Each flush writes through its own pooled connection, so a failed batch leaves the rows it
+     * already wrote committed (the upserts are idempotent) and the remainder is retried next tick.
      *
      * <p>{@code flushLock} is taken before the drain so that a drain and its
      * write stay atomic with respect to other flushes. This preserves
@@ -184,8 +187,7 @@ public class GtfsTripUpdateSink {
             try {
                 flushBatch(batch);
             } catch (RuntimeException e) {
-                requeue(batch);
-                throw e;
+                handleFailure(batch, e);
             }
         } finally {
             flushLock.unlock();
@@ -193,14 +195,76 @@ public class GtfsTripUpdateSink {
     }
 
     /**
-     * Runs one flush off the consumer thread, coalescing concurrent requests.
+     * Handles a failed flush.
      *
-     * @return whether this call started a flush, so the caller logs once per flush instead of once
-     *     per buffered record
+     * <p>A data error is a property of one update, not of the batch: the database refuses a value
+     * the update carries, such as a feed id that is not in the feed enum. Requeueing the whole
+     * batch then wedges ingestion, because every later flush retries the same rejected update and
+     * no other update is ever written. Those failures are isolated one update at a time, so the
+     * rest of the batch is written and only the offending updates are dropped.
+     *
+     * <p>Every other failure (connection loss, deadlock, disk full) is not attributable to an
+     * update, so the batch is requeued and retried as a whole.
      */
-    private boolean requestBackgroundFlush() {
+    private void handleFailure(List<TripUpdateDto> batch, RuntimeException failure) {
+        if (!isRejectedByDatabase(failure)) {
+            requeue(batch);
+            throw failure;
+        }
+
+        var rejected = 0;
+        RuntimeException firstFailure = null;
+        for (var update : batch) {
+            try {
+                flushBatch(List.of(update));
+            } catch (RuntimeException e) {
+                rejected++;
+                if (firstFailure == null) {
+                    firstFailure = e;
+                }
+            }
+        }
+
+        metrics.recordDroppedRejected(rejected);
+        if (firstFailure != null) {
+            log.error(
+                    "Dropped {} of {} buffered updates the database rejected; the rest were written",
+                    rejected,
+                    batch.size(),
+                    firstFailure);
+        }
+    }
+
+    /** Whether the failure is the database refusing a value, as opposed to an infrastructure fault. */
+    private static boolean isRejectedByDatabase(Throwable failure) {
+        for (var cause = failure; cause != null; cause = cause.getCause()) {
+            if (cause instanceof SQLException sql) {
+                for (var current = sql; current != null; current = current.getNextException()) {
+                    if (isDataSqlState(current.getSQLState())) {
+                        return true;
+                    }
+                }
+            }
+            if (cause.getCause() == cause) {
+                break;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * SQL states that mean "this value is not acceptable": data exceptions (22xxx), integrity
+     * constraint violations (23xxx) and cardinality violations (21xxx).
+     */
+    private static boolean isDataSqlState(String sqlState) {
+        return sqlState != null
+                && (sqlState.startsWith("22") || sqlState.startsWith("23") || sqlState.startsWith("21"));
+    }
+
+    /** Runs one flush off the consumer thread, coalescing concurrent requests. */
+    private void requestBackgroundFlush() {
         if (!backgroundFlushRequested.compareAndSet(false, true)) {
-            return false;
+            return;
         }
         CompletableFuture.runAsync(() -> {
             try {
@@ -211,7 +275,6 @@ public class GtfsTripUpdateSink {
                 backgroundFlushRequested.set(false);
             }
         });
-        return true;
     }
 
     /**
@@ -226,6 +289,7 @@ public class GtfsTripUpdateSink {
             }
             var batch = new ArrayList<>(buffer);
             buffer.clear();
+            limitExceededReported.set(false);
             return batch;
         } finally {
             bufferLock.unlock();

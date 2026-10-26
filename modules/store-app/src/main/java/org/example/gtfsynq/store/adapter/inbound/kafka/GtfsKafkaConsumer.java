@@ -71,13 +71,13 @@ public class GtfsKafkaConsumer {
     /**
      * Consumes a polled batch of raw Kafka records.
      *
-     * <p>Records are acknowledged by the connector when the returned stage completes, and the sink
-     * only buffers them, so that stage is already complete on return. There is deliberately no
-     * deferred acknowledgement: a stuck acknowledgement previously killed the consumer channel via
-     * the throttled commit strategy.
+     * <p>Records are acknowledged as soon as they are buffered, so no database latency is in the ack
+     * window and the throttled-commit watchdog cannot close the channel. The batch has to be
+     * acknowledged explicitly: the connector does not do it for a batch message, and a batch left
+     * unacknowledged stalls every later offset until the watchdog fails the channel.
      *
      * <p>A batch is itself a message, so the framework accepts only an asynchronous return type
-     * here; the returned stage is what it acknowledges.
+     * here.
      *
      * @param batch records polled by the connector, keyed by feed identifier
      * @return a completed stage, acknowledging the batch
@@ -89,6 +89,18 @@ public class GtfsKafkaConsumer {
         for (var record : batch.getRecords()) {
             consumeRecord(record.getKey(), record.getPayload());
         }
+        // The connector does not acknowledge a batch by itself: without this call every record stays
+        // unacknowledged, no offset is ever committed, and the throttled-commit watchdog closes the
+        // channel about a minute later. The records are buffered at this point, so the ack is
+        // immediate.
+        batch.ack().whenComplete((ignored, failure) -> {
+            if (failure != null) {
+                log.error(
+                        "Could not acknowledge a batch of {} trip updates",
+                        batch.getRecords().size(),
+                        failure);
+            }
+        });
         return CompletableFuture.completedFuture(null);
     }
 

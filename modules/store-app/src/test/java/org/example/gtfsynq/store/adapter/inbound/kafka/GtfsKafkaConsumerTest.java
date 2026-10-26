@@ -1,12 +1,18 @@
 package org.example.gtfsynq.store.adapter.inbound.kafka;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.transit.realtime.GtfsRealtime.FeedEntity;
 import com.google.transit.realtime.GtfsRealtime.TripDescriptor;
 import com.google.transit.realtime.GtfsRealtime.TripUpdate;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.smallrye.reactive.messaging.kafka.KafkaRecord;
+import io.smallrye.reactive.messaging.kafka.KafkaRecordBatch;
 import io.smallrye.reactive.messaging.kafka.Record;
+import java.lang.reflect.Proxy;
+import java.util.List;
+import java.util.concurrent.CompletionStage;
 import org.example.gtfsynq.shared.model.dto.TripUpdateDto;
 import org.example.gtfsynq.shared.protocol.BinaryFeedEntityWithMetadata;
 import org.example.gtfsynq.store.adapter.outbound.database.TripUpdateBatchMapper;
@@ -45,6 +51,37 @@ class GtfsKafkaConsumerTest {
 
         sink.flushNow();
         assertEquals(0, repository.writtenUpdates);
+    }
+
+    @Test
+    void acknowledgesTheWholeBatchAsSoonAsItIsBuffered() {
+        List<KafkaRecord<String, byte[]>> records =
+                List.of(KafkaRecord.of("feed", payload(1)), KafkaRecord.of("feed", payload(2)));
+
+        CompletionStage<Void> acknowledgement = consumer.consume(batchOf(records));
+
+        assertTrue(
+                acknowledgement.toCompletableFuture().isDone(),
+                "the batch must be acknowledged on return, not after a database flush");
+        assertEquals(0, repository.writtenUpdates, "the records are buffered, not written yet");
+        sink.flushNow();
+        assertEquals(2, repository.writtenUpdates);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static KafkaRecordBatch<String, byte[]> batchOf(List<KafkaRecord<String, byte[]>> records) {
+        return (KafkaRecordBatch<String, byte[]>) Proxy.newProxyInstance(
+                GtfsKafkaConsumerTest.class.getClassLoader(),
+                new Class<?>[] {KafkaRecordBatch.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "getRecords" -> records;
+                    case "getPayload" ->
+                        records.stream().map(KafkaRecord::getPayload).toList();
+                    case "toString" -> "KafkaRecordBatch";
+                    case "hashCode" -> System.identityHashCode(proxy);
+                    case "equals" -> proxy == args[0];
+                    default -> null;
+                });
     }
 
     private static byte[] payload(long id) {

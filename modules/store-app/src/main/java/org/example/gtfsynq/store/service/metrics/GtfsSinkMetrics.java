@@ -24,6 +24,8 @@ public class GtfsSinkMetrics {
 
     private final Counter droppedDuplicatesCounter;
 
+    private final Counter droppedRejectedCounter;
+
     public GtfsSinkMetrics(MeterRegistry registry) {
         this.mapTimer = Timer.builder("gtfs.sink.map.duration")
                 .description("Time to shape a drained batch into per-table rows")
@@ -69,6 +71,11 @@ public class GtfsSinkMetrics {
                 .description("Fully-duplicate trip updates dropped before buffering")
                 .tag("reason", "duplicate")
                 .register(registry);
+
+        this.droppedRejectedCounter = Counter.builder("gtfs.sink.dropped")
+                .description("Trip updates dropped because the database rejected them as invalid")
+                .tag("reason", "rejected")
+                .register(registry);
     }
 
     public void recordMap(long nanos) {
@@ -102,5 +109,12 @@ public class GtfsSinkMetrics {
 
     public void recordDroppedDuplicate() {
         droppedDuplicatesCounter.increment();
+    }
+
+    /** Records updates dropped because the database rejected them as invalid. */
+    public void recordDroppedRejected(long count) {
+        if (count > 0) {
+            droppedRejectedCounter.increment(count);
+        }
     }
 }
