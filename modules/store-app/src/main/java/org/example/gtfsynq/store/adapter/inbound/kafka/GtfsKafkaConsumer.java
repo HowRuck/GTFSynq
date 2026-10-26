@@ -7,7 +7,6 @@ import io.smallrye.reactive.messaging.kafka.KafkaRecordBatch;
 import io.smallrye.reactive.messaging.kafka.Record;
 import jakarta.inject.Singleton;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import lombok.RequiredArgsConstructor;
@@ -75,46 +74,38 @@ public class GtfsKafkaConsumer {
     /**
      * Consumes a polled batch of raw Kafka records.
      *
-     * <p>Records are consumed in batches rather than one at a time. With per-record deferred
-     * acknowledgement, ordered processing waits for each record's stage before fetching the next
-     * one - one record per flush. A batch's stage completes only when every record in it is durable,
-     * so the connector can keep fetching while the whole batch stays unacknowledged.
+     * <p>Records are acknowledged as soon as they are buffered. Deferring the acknowledgement until
+     * the flush committed proved unsafe in practice: a batch whose acks never completed made the
+     * throttled commit strategy kill the channel after 60 seconds, stopping ingestion entirely.
+     * With immediate acknowledgement the consumer cannot wedge; the trade-off is that a crash
+     * loses at most the in-flight buffer, which the next feed poll repopulates.
      *
      * @param batch records polled by the connector, keyed by feed identifier
-     * @return stage completed when every record in the batch may be acknowledged
+     * @return a completed stage, releasing the batch immediately
      */
     @Incoming("gtfs-trip-updates")
     @Blocking
     public CompletionStage<Void> consume(KafkaRecordBatch<String, byte[]> batch) {
-        var acknowledged =
-                new ArrayList<CompletionStage<Void>>(batch.getRecords().size());
+        log.debug("Polled {} gtfs-trip-updates records", batch.getRecords().size());
         for (var record : batch.getRecords()) {
-            acknowledged.add(consumeRecord(record.getKey(), record.getPayload()));
+            consumeRecord(record.getKey(), record.getPayload());
         }
-        return CompletableFuture.allOf(
-                acknowledged.stream().map(CompletionStage::toCompletableFuture).toArray(CompletableFuture[]::new));
+        return CompletableFuture.completedFuture(null);
     }
 
     /**
-     * Buffers one record and returns its acknowledgement stage.
-     *
-     * <p>The stage completes only once the sink has written and committed the batch holding this
-     * update, so a crash before the flush replays the record instead of losing it.
+     * Buffers one record; the caller acknowledges it immediately.
      *
      * @param record raw Kafka record, keyed by feed identifier
-     * @return stage completed when the record may be acknowledged
      */
-    CompletionStage<Void> consumeRecord(Record<String, byte[]> record) {
-        return consumeRecord(record.key(), record.value());
+    void consumeRecord(Record<String, byte[]> record) {
+        consumeRecord(record.key(), record.value());
     }
 
-    private CompletionStage<Void> consumeRecord(String key, byte[] value) {
+    private void consumeRecord(String key, byte[] value) {
         if (value == null) {
-            return CompletableFuture.completedFuture(null);
+            return;
         }
-
-        var acknowledged = new CompletableFuture<Void>();
-        routeToSink(key, parseFeedEntity(value), () -> acknowledged.complete(null));
-        return acknowledged;
+        routeToSink(key, parseFeedEntity(value), () -> {});
     }
 }

@@ -1,15 +1,12 @@
 package org.example.gtfsynq.store.adapter.inbound.kafka;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.transit.realtime.GtfsRealtime.FeedEntity;
 import com.google.transit.realtime.GtfsRealtime.TripDescriptor;
 import com.google.transit.realtime.GtfsRealtime.TripUpdate;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.smallrye.reactive.messaging.kafka.Record;
-import java.util.concurrent.CompletionStage;
 import org.example.gtfsynq.shared.model.dto.TripUpdateDto;
 import org.example.gtfsynq.shared.protocol.BinaryFeedEntityWithMetadata;
 import org.example.gtfsynq.store.adapter.outbound.database.TripUpdateBatchMapper;
@@ -35,24 +32,20 @@ class GtfsKafkaConsumerTest {
     private final GtfsKafkaConsumer consumer = new GtfsKafkaConsumer(sink);
 
     @Test
-    void defersAcknowledgementUntilTheBatchIsFlushed() {
-        CompletionStage<Void> stage = consumer.consumeRecord(Record.of("feed", payload(1)));
+    void acknowledgesImmediatelyButStillBuffersForTheNextFlush() {
+        consumer.consumeRecord(Record.of("feed", payload(1)));
 
-        assertFalse(
-                stage.toCompletableFuture().isDone(),
-                "a buffered record must not be acknowledged before its batch is durable");
-
+        assertEquals(0, repository.writtenUpdates, "the record is buffered, not written yet");
         sink.flushNow();
-
-        assertTrue(stage.toCompletableFuture().isDone());
         assertEquals(1, repository.writtenUpdates);
     }
 
     @Test
-    void acknowledgesAnUnparseablePayloadImmediately() {
-        CompletionStage<Void> stage = consumer.consumeRecord(Record.of("feed", new byte[] {1, 2, 3}));
+    void dropsAnUnparseablePayloadWithoutBuffering() {
+        consumer.consumeRecord(Record.of("feed", new byte[] {1, 2, 3}));
 
-        assertTrue(stage.toCompletableFuture().isDone(), "a poison record must not stall the partition");
+        sink.flushNow();
+        assertEquals(0, repository.writtenUpdates);
     }
 
     private static byte[] payload(long id) {
