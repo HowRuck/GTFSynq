@@ -7,18 +7,23 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
- * The marker JSON is written by hand to keep a serialiser out of the UI module, so its escaping and
- * the dropping of unusable coordinates are worth pinning down.
+ * The marker JSON is written by hand to keep a serialiser out of the UI module, so its escaping, its
+ * compact tuple shape and the dropping of unusable coordinates are worth pinning down.
  */
 class LiveMapTest {
 
     @Test
-    void writesOneObjectPerMarker() {
+    void writesOneTuplePerMarker() {
         var json = LiveMap.json(List.of(new LiveMap.Marker(52.5, 13.4, "10 · Trip 1", "Central", 120)));
 
-        assertEquals(
-                "[{\"lat\":52.5,\"lon\":13.4,\"label\":\"10 · Trip 1\",\"detail\":\"Central\",\"delaySeconds\":120}]",
-                json);
+        assertEquals("[[52.5,13.4,\"10 · Trip 1\",\"Central\",120]]", json);
+    }
+
+    @Test
+    void roundsCoordinatesWithoutLosingMapPrecision() {
+        var json = LiveMap.json(List.of(new LiveMap.Marker(52.12345678, 13.98765432, "10 · Trip 1", "Central", null)));
+
+        assertEquals("[[52.123457,13.987654,\"10 · Trip 1\",\"Central\",null]]", json);
     }
 
     @Test
@@ -26,9 +31,7 @@ class LiveMapTest {
         var json = LiveMap.json(List.of(new LiveMap.Marker(1, 2, "a\"b", "line\nbreak", null)));
 
         assertFalse(json.contains("\"a\"b\""), "an unescaped quote would break the JSON array");
-        assertEquals(
-                "[{\"lat\":1.0,\"lon\":2.0,\"label\":\"a\\\"b\",\"detail\":\"line\\nbreak\",\"delaySeconds\":null}]",
-                json);
+        assertEquals("[[1.0,2.0,\"a\\\"b\",\"line\\nbreak\",null]]", json);
     }
 
     @Test

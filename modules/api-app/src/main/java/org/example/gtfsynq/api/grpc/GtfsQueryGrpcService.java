@@ -5,6 +5,7 @@ import io.grpc.stub.StreamObserver;
 import io.quarkus.grpc.GrpcService;
 import io.smallrye.common.annotation.Blocking;
 import jakarta.inject.Inject;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.example.gtfsynq.api.repository.GtfsQueryRepository;
 import org.example.gtfsynq.shared.protocol.query.AgencyNamesReply;
@@ -39,7 +40,18 @@ import org.example.gtfsynq.shared.protocol.query.TripsRequest;
 @Blocking
 public class GtfsQueryGrpcService extends GtfsQueryServiceGrpc.GtfsQueryServiceImplBase {
 
+    /**
+     * The map polls on a minute cadence but several sessions may poll together, and the marker reply
+     * is large. A short cache keeps them from repeating the query and the mapping; staleness is
+     * bounded by ten seconds.
+     */
+    private static final long MARKER_CACHE_NANOS = TimeUnit.SECONDS.toNanos(10);
+
     private final GtfsQueryRepository repository;
+
+    private volatile TripMarkersReply cachedMarkers;
+
+    private volatile long cachedMarkersAt;
 
     @Inject
     public GtfsQueryGrpcService(GtfsQueryRepository repository) {
@@ -137,7 +149,20 @@ public class GtfsQueryGrpcService extends GtfsQueryServiceGrpc.GtfsQueryServiceI
 
     @Override
     public void listTripMarkers(TripMarkersRequest request, StreamObserver<TripMarkersReply> observer) {
-        unary(observer, () -> GtfsQueryMapper.tripMarkersReply(repository.liveTripMarkers()));
+        unary(observer, this::tripMarkers);
+    }
+
+    /** Returns the cached marker snapshot when it is still fresh; the reply is immutable. */
+    private TripMarkersReply tripMarkers() {
+        var now = System.nanoTime();
+        var cached = cachedMarkers;
+        if (cached != null && now - cachedMarkersAt < MARKER_CACHE_NANOS) {
+            return cached;
+        }
+        var reply = GtfsQueryMapper.tripMarkersReply(repository.liveTripMarkers());
+        cachedMarkers = reply;
+        cachedMarkersAt = now;
+        return reply;
     }
 
     @Override

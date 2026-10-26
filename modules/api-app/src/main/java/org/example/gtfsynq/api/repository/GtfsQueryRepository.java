@@ -48,13 +48,6 @@ public class GtfsQueryRepository {
 
     private static final long OVERVIEW_CACHE_NANOS = TimeUnit.SECONDS.toNanos(10);
 
-    /**
-     * The map polls on the same minute cadence as the table, so a short cache mostly collapses the
-     * queries of several open sessions into one. Staleness is bounded by the same ten seconds as the
-     * overview.
-     */
-    private static final long MARKER_CACHE_NANOS = TimeUnit.SECONDS.toNanos(10);
-
     private static final Map<String, String> ROUTE_SORTS = Map.of(
             "routeId", "route_id",
             "shortName", "route_short_name",
@@ -77,10 +70,6 @@ public class GtfsQueryRepository {
     private volatile OverviewDto cachedOverview;
 
     private volatile long cachedOverviewAt;
-
-    private volatile List<TripMarkerDto> cachedMarkers;
-
-    private volatile long cachedMarkersAt;
 
     @Inject
     public GtfsQueryRepository(DataSource dataSource) {
@@ -459,12 +448,6 @@ public class GtfsQueryRepository {
      * on a typical feed.
      */
     public List<TripMarkerDto> liveTripMarkers() {
-        var now = System.nanoTime();
-        var cached = cachedMarkers;
-        if (cached != null && now - cachedMarkersAt < MARKER_CACHE_NANOS) {
-            return cached;
-        }
-
         String sql = """
                 SELECT latest.stop_lat, latest.stop_lon, latest.stop_name,
                        r.route_short_name, r.route_type, t.trip_short_name,
@@ -512,11 +495,7 @@ public class GtfsQueryRepository {
                         rs.getString("stop_name"),
                         nullableInt(rs, "current_delay")));
             }
-            // The list only has read-only consumers, so the cache can share one snapshot.
-            var result = List.copyOf(items);
-            cachedMarkers = result;
-            cachedMarkersAt = now;
-            return result;
+            return items;
         } catch (SQLException e) {
             throw new IllegalStateException("Failed to query GTFS data", e);
         }

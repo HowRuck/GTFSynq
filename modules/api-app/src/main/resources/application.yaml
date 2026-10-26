@@ -7,6 +7,12 @@ quarkus:
 
   # Quarkus 4 serves gRPC from the HTTP server, so the console's
   # GtfsQueryService shares port 8080 with REST. There is no separate gRPC port.
+  grpc:
+    server:
+      # The live map's unpaged marker reply is several megabytes once the hot table holds
+      # millions of stop updates. gzip is negotiated: clients that do not accept it still
+      # receive uncompressed frames.
+      compression: gzip
 
   # External infrastructure (TimescaleDB, Kafka, S3) is provided by Compose; never
   # start throwaway Dev Services containers for it.

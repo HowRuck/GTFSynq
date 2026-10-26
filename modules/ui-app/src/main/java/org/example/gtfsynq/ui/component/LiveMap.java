@@ -16,10 +16,12 @@ import java.util.List;
  * live set. The element clusters the markers, so a whole city stays one readable bubble until the
  * user zooms in.
  *
- * <p>The element is a plain custom element ({@code live-map.ts}); markers are passed as a JSON
- * string property, so a poll only sends the marker list and never re-creates the map. Clustering and
- * the basemap live in the element: it uses OpenFreeMap vector styles and falls back to raster tiles
- * when that CDN cannot be reached, so an offline deployment shows markers instead of a blank map.
+ * <p>The element is a plain custom element ({@code live-map.ts}); markers are passed as a compact
+ * JSON property (one {@code [lat, lon, label, detail, delay]} tuple per trip), so a poll only sends
+ * the marker list and never re-creates the map, and an unchanged snapshot is not sent at all.
+ * Clustering and the basemap live in the element: it uses OpenFreeMap vector styles and falls back
+ * to raster tiles when that CDN cannot be reached, so an offline deployment shows markers instead of
+ * a blank map.
  */
 @Tag("live-map")
 @NpmPackage(value = "maplibre-gl", version = "6.16.0")
@@ -28,6 +30,11 @@ public class LiveMap extends Component {
 
     /** One trip's latest reported position. */
     public record Marker(double lat, double lon, String label, String detail, Integer delaySeconds) {}
+
+    /** Fingerprint and length of the last snapshot, so an unchanged poll is not pushed again. */
+    private int lastMarkersLength = -1;
+
+    private int lastMarkersHash;
 
     public LiveMap() {
         getElement()
@@ -59,14 +66,30 @@ public class LiveMap extends Component {
      * Replaces the markers shown on the map.
      *
      * <p>Markers without finite coordinates are dropped: MapLibre cannot render them, and a JSON
-     * number cannot represent them either.
+     * number cannot represent them either. A snapshot identical to the previous one is not pushed
+     * at all, so a quiet minute costs the browser nothing.
      *
      * @param markers one marker per trip, an empty list clears the map
      */
     public void setMarkers(List<Marker> markers) {
-        getElement().setProperty("markers", json(markers));
+        var json = json(markers);
+        // Keep only a fingerprint: the serialised snapshot is several megabytes at scale, and the
+        // browser already holds the last copy. A hash collision with an identical length could at
+        // worst skip one poll, after which the next snapshot is compared again.
+        if (json.length() == lastMarkersLength && json.hashCode() == lastMarkersHash) {
+            return;
+        }
+        lastMarkersLength = json.length();
+        lastMarkersHash = json.hashCode();
+        getElement().setProperty("markers", json);
     }
 
+    /**
+     * Serialises the markers as one {@code [lat, lon, label, detail, delaySeconds]} array per trip.
+     *
+     * <p>The tuple form keeps the pushed JSON small: at tens of thousands of markers, repeating the
+     * five keys of an object costs more than the values themselves.
+     */
     static String json(List<Marker> markers) {
         var json = new StringBuilder("[");
         for (var marker : markers) {
@@ -76,19 +99,28 @@ public class LiveMap extends Component {
             if (json.length() > 1) {
                 json.append(',');
             }
-            json.append("{\"lat\":")
-                    .append(marker.lat())
-                    .append(",\"lon\":")
-                    .append(marker.lon())
-                    .append(",\"label\":")
+            json.append('[')
+                    .append(coordinate(marker.lat()))
+                    .append(',')
+                    .append(coordinate(marker.lon()))
+                    .append(',')
                     .append(quote(marker.label()))
-                    .append(",\"detail\":")
+                    .append(',')
                     .append(quote(marker.detail()))
-                    .append(",\"delaySeconds\":")
+                    .append(',')
                     .append(marker.delaySeconds() == null ? "null" : marker.delaySeconds())
-                    .append('}');
+                    .append(']');
         }
         return json.append(']').toString();
+    }
+
+    /**
+     * Six decimals are about 0.1 m, far below what a basemap can show, and noticeably shorter in the
+     * JSON than the full double representation.
+     */
+    private static String coordinate(double value) {
+        var rounded = Math.round(value * 1_000_000) / 1_000_000.0;
+        return Double.toString(rounded);
     }
 
     /** Quotes a string for JSON without pulling a serialiser into the UI module. */

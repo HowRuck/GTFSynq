@@ -15,16 +15,12 @@ setWorkerUrl(maplibreWorkerUrl);
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 /**
- * One trip position. The coordinates are the most advanced stop the trip is predicted to reach,
- * because a GTFS-RT trip update carries predictions rather than a vehicle position.
+ * One trip position as a compact tuple: [lat, lon, label, detail, delaySeconds].
+ *
+ * <p>The tuple form replaces a keyed object because the marker array is pushed to the browser on
+ * every poll; repeating five keys per marker costs more than the values themselves at scale.
  */
-interface LiveMapMarker {
-  lat: number;
-  lon: number;
-  label: string;
-  detail: string;
-  delaySeconds: number | null;
-}
+type LiveMapMarker = [number, number, string, string, number | null];
 
 interface MarkerProperties {
   label: string;
@@ -119,10 +115,12 @@ function delayClass(delay: number | null): MarkerProperties['delayClass'] {
 /**
  * MapLibre wrapper for the live updates view.
  *
- * <p>Flow sets the {@code markers} property with a JSON array on every poll. The trips are held in
- * a clustered GeoJSON source rather than as DOM markers, so a city full of trips stays one readable
- * cluster instead of overlapping pins; the map itself is created once and a poll only replaces the
- * source data.
+ * <p>Flow sets the {@code markers} property with a compact JSON array — one
+ * {@code [lat, lon, label, detail, delay]} tuple per trip — on every poll. The array form keeps the
+ * pushed payload small for a feed with tens of thousands of live trips, and Flow skips the push when
+ * the snapshot did not change. The trips are held in a clustered GeoJSON source rather than as DOM
+ * markers, so a city full of trips stays one readable cluster instead of overlapping pins; the map
+ * itself is created once and a poll only replaces the source data.
  */
 class LiveMap extends HTMLElement {
   private map?: MapLibreMap;
@@ -345,14 +343,14 @@ class LiveMap extends HTMLElement {
     return {
       type: 'FeatureCollection',
       features: this.markerData
-        .filter((marker) => Number.isFinite(marker.lat) && Number.isFinite(marker.lon))
+        .filter((marker) => Number.isFinite(marker[0]) && Number.isFinite(marker[1]))
         .map((marker) => ({
           type: 'Feature',
-          geometry: { type: 'Point', coordinates: [marker.lon, marker.lat] },
+          geometry: { type: 'Point', coordinates: [marker[1], marker[0]] },
           properties: {
-            label: marker.label,
-            detail: marker.detail,
-            delayClass: delayClass(marker.delaySeconds),
+            label: marker[2],
+            detail: marker[3],
+            delayClass: delayClass(marker[4]),
           },
         })),
     };
@@ -430,7 +428,7 @@ class LiveMap extends HTMLElement {
       return;
     }
     const positioned = this.markerData.filter(
-      (marker) => Number.isFinite(marker.lat) && Number.isFinite(marker.lon),
+      (marker) => Number.isFinite(marker[0]) && Number.isFinite(marker[1]),
     );
     if (positioned.length === 0) {
       return;
@@ -441,11 +439,11 @@ class LiveMap extends HTMLElement {
       return;
     }
     if (positioned.length === 1) {
-      map.jumpTo({ center: [positioned[0].lon, positioned[0].lat], zoom: 12 });
+      map.jumpTo({ center: [positioned[0][1], positioned[0][0]], zoom: 12 });
       return;
     }
     const bounds = new LngLatBounds();
-    positioned.forEach((marker) => bounds.extend([marker.lon, marker.lat]));
+    positioned.forEach((marker) => bounds.extend([marker[1], marker[0]]));
     map.fitBounds(bounds, { padding: 48, maxZoom: 12, duration: 0 });
   }
 }
