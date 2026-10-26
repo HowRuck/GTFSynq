@@ -101,7 +101,7 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
         });
     }
 
-    /** One marker per trip that has coordinates for its most advanced stop. */
+    /** One marker per trip that has coordinates for the most advanced stop it has reached. */
     private List<LiveMap.Marker> markers(List<TripMarker> markers) {
         return markers.stream().map(this::marker).flatMap(Optional::stream).toList();
     }

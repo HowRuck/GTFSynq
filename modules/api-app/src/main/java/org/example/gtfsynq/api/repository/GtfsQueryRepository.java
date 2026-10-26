@@ -13,6 +13,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -436,20 +437,30 @@ public class GtfsQueryRepository {
     }
 
     /**
-     * One marker per live trip that has static coordinates for its most advanced stop.
+     * One marker per live trip that has static coordinates for the most advanced stop it has already
+     * reached.
      *
      * <p>Unpaged on purpose: the map shows the whole live set, while the table pages. The projection
      * leaves out the stop count and the agency join the table query adds, so plotting every trip
      * stays cheap.
      *
+     * <p>Some operators publish predictions for the whole route, including stops the trip has not
+     * reached yet. The position therefore comes from the highest stop sequence whose predicted time
+     * is not in the future; a stop without any time information cannot be classified, so it is kept
+     * rather than hiding a delay-only feed.
+     *
      * <p>The position and the delay come from one backward primary-key scan per trip. The delay
-     * lookup the table uses only runs as a fallback for trips whose most advanced stop reports no
-     * delay, which keeps the marker identical to the table's current delay while halving the scans
-     * on a typical feed.
+     * lookup the table uses only runs as a fallback for trips whose reached stop reports no delay,
+     * which keeps the marker identical to the table's current delay while halving the scans on a
+     * typical feed. Duplicate hot rows for the same trip (different entities or service dates) are
+     * reduced to the one whose reached stop has the latest actual time, so a cluster counts trips,
+     * not updates.
      */
     public List<TripMarkerDto> liveTripMarkers() {
         String sql = """
-                SELECT latest.stop_lat, latest.stop_lon, latest.stop_name,
+                SELECT h.feed_id::text AS feed_id,
+                       latest_stop.stop_time, latest_stop.stop_sequence,
+                       latest.stop_lat, latest.stop_lon, latest.stop_name,
                        r.route_short_name, r.route_type, t.trip_short_name,
                        m.route_id, m.trip_id,
                        COALESCE(
@@ -458,6 +469,20 @@ public class GtfsQueryRepository {
                             FROM rt_stop_time_updates_hot s
                             WHERE s.trip_update_id = h.trip_update_id
                               AND COALESCE(s.arrival_delay, s.departure_delay) IS NOT NULL
+                              AND (COALESCE(
+                                       s.arrival_time,
+                                       s.departure_time,
+                                       s.scheduled_arrival_time + make_interval(secs => s.arrival_delay),
+                                       s.scheduled_departure_time + make_interval(secs => s.departure_delay),
+                                       s.scheduled_arrival_time,
+                                       s.scheduled_departure_time) IS NULL
+                                   OR COALESCE(
+                                       s.arrival_time,
+                                       s.departure_time,
+                                       s.scheduled_arrival_time + make_interval(secs => s.arrival_delay),
+                                       s.scheduled_departure_time + make_interval(secs => s.departure_delay),
+                                       s.scheduled_arrival_time,
+                                       s.scheduled_departure_time) <= now())
                             ORDER BY s.stop_sequence DESC
                             LIMIT 1)) AS current_delay
                 FROM rt_trip_updates_hot h
@@ -467,9 +492,31 @@ public class GtfsQueryRepository {
                        ON r.feed_id = h.feed_id AND r.route_id = COALESCE(t.route_id, m.route_id)
                 LEFT JOIN LATERAL (
                     SELECT COALESCE(s.assigned_stop_id, s.stop_id) AS stop_id,
-                           COALESCE(s.arrival_delay, s.departure_delay) AS stop_delay
+                           COALESCE(s.arrival_delay, s.departure_delay) AS stop_delay,
+                           COALESCE(
+                               s.arrival_time,
+                               s.departure_time,
+                               s.scheduled_arrival_time + make_interval(secs => s.arrival_delay),
+                               s.scheduled_departure_time + make_interval(secs => s.departure_delay),
+                               s.scheduled_arrival_time,
+                               s.scheduled_departure_time) AS stop_time,
+                           s.stop_sequence
                     FROM rt_stop_time_updates_hot s
                     WHERE s.trip_update_id = h.trip_update_id
+                      AND (COALESCE(
+                               s.arrival_time,
+                               s.departure_time,
+                               s.scheduled_arrival_time + make_interval(secs => s.arrival_delay),
+                               s.scheduled_departure_time + make_interval(secs => s.departure_delay),
+                               s.scheduled_arrival_time,
+                               s.scheduled_departure_time) IS NULL
+                           OR COALESCE(
+                               s.arrival_time,
+                               s.departure_time,
+                               s.scheduled_arrival_time + make_interval(secs => s.arrival_delay),
+                               s.scheduled_departure_time + make_interval(secs => s.departure_delay),
+                               s.scheduled_arrival_time,
+                               s.scheduled_departure_time) <= now())
                     ORDER BY s.stop_sequence DESC
                     LIMIT 1
                 ) latest_stop ON TRUE
@@ -482,9 +529,13 @@ public class GtfsQueryRepository {
         try (Connection connection = dataSource.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql);
                 ResultSet rs = statement.executeQuery()) {
-            List<TripMarkerDto> items = new ArrayList<>();
+            // One marker per trip: a feed can publish several hot rows for the same trip (another
+            // entity or service date), and the row whose reached stop is latest in time is the
+            // current prediction.
+            var byTrip = new HashMap<TripKey, MarkerRow>();
+            List<TripMarkerDto> unkeyed = new ArrayList<>();
             while (rs.next()) {
-                items.add(new TripMarkerDto(
+                var marker = new TripMarkerDto(
                         rs.getDouble("stop_lat"),
                         rs.getDouble("stop_lon"),
                         rs.getString("route_short_name"),
@@ -493,13 +544,50 @@ public class GtfsQueryRepository {
                         rs.getString("trip_id"),
                         nullableInt(rs, "route_type"),
                         rs.getString("stop_name"),
-                        nullableInt(rs, "current_delay")));
+                        nullableInt(rs, "current_delay"));
+                var tripId = rs.getString("trip_id");
+                if (tripId == null || tripId.isBlank()) {
+                    // Without a trip id there is nothing to deduplicate on.
+                    unkeyed.add(marker);
+                    continue;
+                }
+                var stopTime = offsetDateTime(rs, "stop_time");
+                var stopSequence = rs.getInt("stop_sequence");
+                var key = new TripKey(rs.getString("feed_id"), tripId);
+                var existing = byTrip.get(key);
+                if (existing == null || isLater(stopTime, stopSequence, existing.stopTime(), existing.stopSequence())) {
+                    byTrip.put(key, new MarkerRow(marker, stopTime, stopSequence));
+                }
             }
+            var items = new ArrayList<TripMarkerDto>(byTrip.size() + unkeyed.size());
+            byTrip.values().forEach(row -> items.add(row.marker()));
+            items.addAll(unkeyed);
             return items;
         } catch (SQLException e) {
             throw new IllegalStateException("Failed to query GTFS data", e);
         }
     }
+
+    /** Whether a marker's reached stop is later than the one kept so far for the same trip. */
+    private static boolean isLater(
+            OffsetDateTime candidateTime, int candidateSequence, OffsetDateTime existingTime, int existingSequence) {
+        if (candidateTime != null && existingTime != null) {
+            var comparison = candidateTime.compareTo(existingTime);
+            if (comparison != 0) {
+                return comparison > 0;
+            }
+        } else if (candidateTime != null) {
+            return true;
+        } else if (existingTime != null) {
+            return false;
+        }
+        return candidateSequence > existingSequence;
+    }
+
+    /** Trip identity for marker deduplication; trip ids are only unique within a feed. */
+    private record TripKey(String feedId, String tripId) {}
+
+    private record MarkerRow(TripMarkerDto marker, OffsetDateTime stopTime, int stopSequence) {}
 
     /**
      * Stops of one live trip: the whole static schedule with the live stop time updates layered on

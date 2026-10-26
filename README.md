@@ -209,12 +209,13 @@ Behaviour shared by the tables:
   characters, matching the API).
 - The live view polls every minute through server push, keeps expanded trips
   open across refreshes, and has a manual refresh button. The map above the table
-  plots every live trip that has a static position, independently of the table's
-  filters and paging: it loads its own unpaged `ListTripMarkers` result (cached for
-  ten seconds so open sessions share one query), clusters markers client-side and
-  falls back to raster tiles when the vector basemap is unreachable. Marker snapshots
-  travel as compact `[lat, lon, label, detail, delay]` tuples and are only pushed when
-  they change. Trip, route and stop
+  plots one marker per live trip at the most advanced stop the trip has actually
+  reached (a stop whose predicted time is not in the future), independently of the
+  table's filters and paging: it loads its own unpaged `ListTripMarkers` result
+  (cached for ten seconds so open sessions share one query), clusters markers
+  client-side and falls back to raster tiles when the vector basemap is unreachable.
+  Marker snapshots travel as compact `[lat, lon, label, detail, delay]` tuples and
+  are only pushed when they change. Trip, route and stop
   labels prefer their static names and fall back to ids when no matching static
   name is available; long labels are shortened to 32 characters with the full
   value in a tooltip. Each trip row also shows the agency of its route and its

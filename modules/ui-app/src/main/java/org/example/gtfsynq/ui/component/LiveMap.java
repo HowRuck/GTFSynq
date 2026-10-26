@@ -10,7 +10,7 @@ import java.util.List;
  * A MapLibre GL map showing where the live trips currently are.
  *
  * <p>A GTFS-RT trip update carries predictions, not a vehicle position, so the most useful
- * "location" is the most advanced stop the trip is predicted to reach. The API resolves that stop's
+ * "location" is the most advanced stop the trip has already reached. The API resolves that stop's
  * static coordinates for every live trip, and this component plots one marker per trip. The markers
  * are loaded independently of the live table's paging, so the map is always an overview of the whole
  * live set. The element clusters the markers, so a whole city stays one readable bubble until the

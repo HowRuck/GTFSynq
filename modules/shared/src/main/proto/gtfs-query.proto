@@ -245,7 +245,8 @@ message TripUpdatesReply {
 message TripMarkersRequest {}
 
 message TripMarker {
-  // Coordinates of the most advanced stop the trip is predicted to reach.
+  // Coordinates of the most advanced stop the trip has already reached, so a marker never sits at a
+  // stop the operator only predicted for the future.
   double lat = 1;
   double lon = 2;
   // Route and trip names for the label; the ids are the fallback when a feed
