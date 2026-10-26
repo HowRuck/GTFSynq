@@ -12,7 +12,7 @@ services:
     restart: unless-stopped
 
   kafka-exporter:
-    image: docker.io/danielqsj/kafka-exporter:v1.10.0
+    image: docker.io/danielqsj/kafka-exporter:v1.11.0
     container_name: kafka-exporter
     depends_on:
       kafka:
@@ -41,7 +41,7 @@ services:
   # metrics (via the micrometer->opentelemetry bridge), logs and traces as OTLP
   # here; the collector batches and fans each signal out to its Victoria* store.
   otel-collector:
-    image: docker.io/otel/opentelemetry-collector:0.163.1-386
+    image: docker.io/otel/opentelemetry-collector:0.163.2
     container_name: otel-collector
     depends_on:
       victoriametrics:
@@ -63,7 +63,7 @@ services:
   # Trace storage. Ingests OTLP traces from the collector and serves the Jaeger
   # query API consumed by Grafana's Jaeger datasource (and a Jaeger UI on :10428).
   victoriatraces:
-    image: docker.io/victoriametrics/victoria-traces:v0.12.0
+    image: docker.io/victoriametrics/victoria-traces:v0.12.1
     container_name: victoriatraces
     command:
       - -storageDataPath=/victoria-traces-data
