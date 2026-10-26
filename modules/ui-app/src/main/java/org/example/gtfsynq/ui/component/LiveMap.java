@@ -46,7 +46,7 @@ public class LiveMap extends Component {
         getElement().setProperty("markers", json(markers));
     }
 
-    private static String json(List<Marker> markers) {
+    static String json(List<Marker> markers) {
         var json = new StringBuilder("[");
         for (var marker : markers) {
             if (!Double.isFinite(marker.lat()) || !Double.isFinite(marker.lon())) {

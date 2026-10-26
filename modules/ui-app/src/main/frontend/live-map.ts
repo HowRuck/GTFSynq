@@ -165,6 +165,11 @@ class LiveMap extends HTMLElement {
     if (!map || !this.followMarkers || visible.length === 0) {
       return;
     }
+    if (!map.loaded()) {
+      // The container has no usable size before the first style load, so fit once it does.
+      map.once('load', () => this.fitMarkers(visible));
+      return;
+    }
     if (visible.length === 1) {
       map.jumpTo({ center: [visible[0].lon, visible[0].lat], zoom: 12 });
       return;
