@@ -371,6 +371,9 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
 
     private static final long COPY_PROGRESS_INTERVAL = 500_000;
 
+    /** Rows between progress lines for the tables written with batched statements. */
+    private static final long BATCH_PROGRESS_INTERVAL = 500_000;
+
     /** A lock wait longer than this aborts one swap attempt so it can be retried. */
     private static final String SWAP_LOCK_TIMEOUT = "30s";
 
@@ -699,12 +702,20 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
             // handed to this writer anyway is dropped rather than rewritten.
             return;
         }
+        var before = rowsByTable.getOrDefault(table, 0L);
         rowsByTable.merge(table, (long) rows.size(), Long::sum);
 
         if (STOP_TIMES.equals(table)) {
             copyStopTimes(rows);
             return;
         }
+
+        // A COPY stream and a plain statement cannot share a connection: PgJDBC sends the statement
+        // into the open copy and then waits for a reply that never comes, so the load hangs without
+        // an error. stop_times.txt is read before calendar.txt and calendar_dates.txt, so the copy
+        // has to be finished before the first of those batches. A later stop-times batch simply
+        // opens a new copy in the same transaction.
+        finishStopTimesCopyBefore(table);
 
         var start = System.nanoTime();
         var failed = true;
@@ -718,12 +729,44 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
             statement.executeBatch();
             statement.clearBatch();
             failed = false;
+            var after = before + rows.size();
+            if (before / BATCH_PROGRESS_INTERVAL != after / BATCH_PROGRESS_INTERVAL) {
+                log.info(
+                        "Static feed {}: wrote {} rows to {} so far ({} chunks)",
+                        feedId,
+                        after,
+                        table,
+                        tableChunks.get(table));
+            }
         } catch (SQLException e) {
             throw new WriteFailed("could not write " + rows.size() + " rows to " + table, SqlLogSanitizer.sanitize(e));
         } finally {
             var elapsed = System.nanoTime() - start;
             tableNanos.merge(table, elapsed, Long::sum);
             metrics.recordBatch(table, rows.size(), elapsed, failed);
+        }
+    }
+
+    /**
+     * Ends an open stop-times COPY before another table is written.
+     *
+     * <p>The writer keeps one COPY open for the whole stop-times file, which only works as long as
+     * that file is the last one written. The reader visits {@code stop_times.txt} before {@code
+     * calendar.txt} and {@code calendar_dates.txt}, so those batches would otherwise be sent into
+     * the open COPY and block the load forever.
+     *
+     * @param table the table about to be written, for the log line
+     */
+    private void finishStopTimesCopyBefore(String table) {
+        if (stopTimesCopy == null) {
+            return;
+        }
+        log.info("Static feed {}: finishing the stop-times COPY before writing {}", feedId, table);
+        try {
+            endStopTimesCopy();
+        } catch (SQLException e) {
+            throw new WriteFailed(
+                    "could not finish the stop-times COPY before writing " + table, SqlLogSanitizer.sanitize(e));
         }
     }
 

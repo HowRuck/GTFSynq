@@ -132,10 +132,13 @@ mp:
           deserializer: org.apache.kafka.common.serialization.StringDeserializer
         value:
           deserializer: org.apache.kafka.common.serialization.ByteArrayDeserializer
-        # Static archive fetch, validation, and persistence can take several minutes.
+        # One static event is a whole feed: fetch, validate, and a multi-minute COPY of the archive's
+        # stop times before the row is acknowledged. The watchdog is a stall detector, not a latency
+        # budget, so it sits well above the worst-case load (tens of millions of rows) and still
+        # fails a genuinely stuck record.
         throttled:
           unprocessed-record-max-age:
-            ms: 600000
+            ms: 1800000
 
 gtfsynq:
   # ---- Static archive storage (read path) ----------------------------------
