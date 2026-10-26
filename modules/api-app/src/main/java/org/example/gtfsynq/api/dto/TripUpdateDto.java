@@ -21,4 +21,7 @@ public record TripUpdateDto(
         String routeShortName,
         String routeLongName,
         String agencyName,
-        Integer routeType) {}
+        Integer routeType,
+        Double latestStopLat,
+        Double latestStopLon,
+        String latestStopName) {}

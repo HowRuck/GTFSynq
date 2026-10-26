@@ -140,7 +140,10 @@ class GtfsQueryMapperTest {
                 routeShortName,
                 routeLongName,
                 agencyName,
-                routeType);
+                routeType,
+                null,
+                null,
+                null);
     }
 
     @Test

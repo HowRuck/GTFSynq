@@ -136,6 +136,13 @@ final class GtfsQueryMapper {
             setIfPresent(update.routeLongName(), item::setRouteLongName);
             setIfPresent(update.agencyName(), item::setAgencyName);
             setIfPresent(update.routeType(), item::setRouteType);
+            if (update.latestStopLat() != null) {
+                item.setLatestStopLat(update.latestStopLat());
+            }
+            if (update.latestStopLon() != null) {
+                item.setLatestStopLon(update.latestStopLon());
+            }
+            setIfPresent(update.latestStopName(), item::setLatestStopName);
             reply.addItems(item);
         }
         return reply.build();

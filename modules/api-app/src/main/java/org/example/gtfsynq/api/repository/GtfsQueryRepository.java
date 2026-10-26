@@ -361,7 +361,10 @@ public class GtfsQueryRepository {
                         -- The last stop that reports a delay, not the first: the lowest stop
                         -- sequence is often a stale value for a stop the trip has already passed.
                         ORDER BY s.stop_sequence DESC
-                        LIMIT 1) AS current_delay
+                        LIMIT 1) AS current_delay,
+                       latest.stop_lat AS latest_stop_lat,
+                       latest.stop_lon AS latest_stop_lon,
+                       latest.stop_name AS latest_stop_name
                 FROM rt_trip_updates_hot h
                 LEFT JOIN rt_trip_updates_meta m ON m.id = h.trip_update_id
                 LEFT JOIN static_trips t ON t.feed_id = h.feed_id AND t.trip_id = m.trip_id
@@ -369,6 +372,19 @@ public class GtfsQueryRepository {
                        ON r.feed_id = h.feed_id AND r.route_id = COALESCE(t.route_id, m.route_id)
                 LEFT JOIN static_agency a
                        ON a.feed_id = h.feed_id AND a.agency_id = COALESCE(r.agency_id, '')
+                -- The most advanced stop with static coordinates: the best available position for
+                -- a trip that only publishes stop time predictions. Index-only on the hot table's
+                -- primary key and a primary-key lookup on static_stops, so it stays cheap per row.
+                LEFT JOIN LATERAL (
+                    SELECT st.stop_name, st.stop_lat, st.stop_lon
+                    FROM rt_stop_time_updates_hot s
+                    JOIN static_stops st
+                      ON st.feed_id = h.feed_id
+                     AND st.stop_id = COALESCE(s.assigned_stop_id, s.stop_id)
+                    WHERE s.trip_update_id = h.trip_update_id
+                    ORDER BY s.stop_sequence DESC
+                    LIMIT 1
+                ) latest ON TRUE
                 """;
         // The agency condition reaches static_agency through the trip and route joins; only widen
         // the count query when that filter is actually in use.
@@ -410,7 +426,10 @@ public class GtfsQueryRepository {
                         rs.getString("route_short_name"),
                         rs.getString("route_long_name"),
                         rs.getString("agency_name"),
-                        nullableInt(rs, "route_type")),
+                        nullableInt(rs, "route_type"),
+                        rs.getObject("latest_stop_lat", Double.class),
+                        rs.getObject("latest_stop_lon", Double.class),
+                        rs.getString("latest_stop_name")),
                 includeTotal);
     }
 

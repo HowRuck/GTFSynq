@@ -205,6 +205,13 @@ message TripUpdate {
   optional string agency_name = 15;
   // GTFS route type resolved from static_routes (3 = bus, 2 = rail, ...).
   optional int32 route_type = 16;
+  // Coordinates of the most advanced stop the trip is predicted to reach, resolved from
+  // static_stops. Absent when no stop of the trip matches the loaded static schedule, so a map can
+  // plot the trip without loading its stop time updates.
+  optional double latest_stop_lat = 17;
+  optional double latest_stop_lon = 18;
+  // Name of that stop, so a map popup needs no second lookup.
+  optional string latest_stop_name = 19;
 }
 
 message TripUpdatesRequest {
