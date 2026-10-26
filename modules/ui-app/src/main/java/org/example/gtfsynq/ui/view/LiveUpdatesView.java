@@ -18,6 +18,8 @@ import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.shared.Registration;
 import jakarta.inject.Inject;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -63,6 +65,7 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
         refresh.setIcon(VaadinIcon.REFRESH.create());
 
         map.getElement().setAttribute("aria-label", getTranslation("live.map.aria"));
+        map.setReachedTexts(getTranslation("live.map.reached.justNow"), getTranslation("live.map.reached.minutes"));
 
         var progress = new ProgressBar();
         progress.setIndeterminate(true);
@@ -97,9 +100,10 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
         split.setSplitterPosition(50);
 
         setSizeFull();
-        add(
-                PageHeader.create(getTranslation("page.live.title"), getTranslation("page.live.subtitle"), refresh),
-                split);
+        var header =
+                PageHeader.create(getTranslation("page.live.title"), getTranslation("page.live.subtitle"), refresh);
+        setFlexShrink(0, header);
+        add(header, split);
         setFlexGrow(1, split);
     }
 
@@ -175,13 +179,14 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
         }
 
         var result = new ArrayList<LiveMap.Marker>(markers.size());
+        var now = Instant.now();
         for (var group : byPosition.values()) {
             // A stable order keeps each trip in the same slot from one poll to the next.
             group.sort(Comparator.comparing(this::tripKey));
             for (var index = 0; index < group.size(); index++) {
                 var update = group.get(index);
                 var offset = group.size() == 1 ? Spread.NONE : spread(index, group.size(), update.getLat());
-                marker(update, update.getLat() + offset.lat(), update.getLon() + offset.lon())
+                marker(update, update.getLat() + offset.lat(), update.getLon() + offset.lon(), now)
                         .ifPresent(result::add);
             }
         }
@@ -212,10 +217,10 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
     }
 
     Optional<LiveMap.Marker> marker(TripMarker update) {
-        return marker(update, update.getLat(), update.getLon());
+        return marker(update, update.getLat(), update.getLon(), Instant.now());
     }
 
-    private Optional<LiveMap.Marker> marker(TripMarker update, double lat, double lon) {
+    private Optional<LiveMap.Marker> marker(TripMarker update, double lat, double lon, Instant now) {
         if (!Double.isFinite(lat) || !Double.isFinite(lon)) {
             return Optional.empty();
         }
@@ -223,8 +228,20 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
         var detail = join(
                 update.hasStopName() ? update.getStopName() : null,
                 update.hasDelaySeconds() ? getTranslation("live.map.delay", delay(update.getDelaySeconds())) : null);
+        Integer reachedMinutesAgo = null;
+        if (update.hasReachedAt()) {
+            var reachedAt = Instant.ofEpochSecond(
+                    update.getReachedAt().getSeconds(), update.getReachedAt().getNanos());
+            reachedMinutesAgo =
+                    (int) Math.max(0, Duration.between(reachedAt, now).toMinutes());
+        }
         return Optional.of(new LiveMap.Marker(
-                lat, lon, label, detail, update.hasDelaySeconds() ? update.getDelaySeconds() : null));
+                lat,
+                lon,
+                label,
+                detail,
+                update.hasDelaySeconds() ? update.getDelaySeconds() : null,
+                reachedMinutesAgo));
     }
 
     /** Route part of the label: the route type names the mode, then the short name or id. */

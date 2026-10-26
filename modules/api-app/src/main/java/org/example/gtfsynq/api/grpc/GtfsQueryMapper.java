@@ -162,6 +162,7 @@ final class GtfsQueryMapper {
             setIfPresent(marker.routeType(), item::setRouteType);
             setIfPresent(marker.stopName(), item::setStopName);
             setIfPresent(marker.delaySeconds(), item::setDelaySeconds);
+            setIfPresent(marker.reachedAt(), reached -> item.setReachedAt(timestamp(reached)));
             reply.addItems(item);
         }
         return reply.build();

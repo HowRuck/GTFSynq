@@ -4,7 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.protobuf.Timestamp;
 import com.vaadin.flow.component.UI;
+import java.time.Instant;
 import java.util.List;
 import org.example.gtfsynq.shared.protocol.query.TripMarker;
 import org.example.gtfsynq.ui.client.GtfsQueryClient;
@@ -48,15 +50,18 @@ class LiveUpdatesViewTest {
     @Test
     void showsTheStopAndDelayInThePopup() {
         withView(view -> {
+            var reachedAt = Instant.now().minusSeconds(5 * 60 + 10);
             var update = marker(3, "10", "Trip 1").toBuilder()
                     .setStopName("Central Station")
                     .setDelaySeconds(120)
+                    .setReachedAt(Timestamp.newBuilder().setSeconds(reachedAt.getEpochSecond()))
                     .build();
 
             var marker = view.marker(update).orElseThrow();
 
             assertEquals("Central Station \u00b7 " + view.getTranslation("live.map.delay", "+120"), marker.detail());
             assertEquals(120, marker.delaySeconds());
+            assertEquals(5, marker.reachedMinutesAgo());
         });
     }
 

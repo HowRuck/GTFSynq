@@ -103,6 +103,12 @@ vaadin-grid-tree-toggle {
     font-weight: var(--aura-font-weight-semibold);
 }
 
+.live-map-popup-reached {
+    margin-top: 0.2rem;
+    color: var(--vaadin-text-color-secondary);
+    font-size: 0.9em;
+}
+
 /*
  * Live map loading state: a Vaadin ProgressBar in a centered card, overlaid on the map so the
  * basemap keeps painting underneath. LiveUpdatesView toggles the overlay's visibility around the

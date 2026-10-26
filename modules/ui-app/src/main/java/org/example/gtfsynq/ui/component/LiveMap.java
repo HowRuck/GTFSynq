@@ -28,8 +28,9 @@ import java.util.List;
 @JsModule("./live-map.ts")
 public class LiveMap extends Component {
 
-    /** One trip's latest reported position. */
-    public record Marker(double lat, double lon, String label, String detail, Integer delaySeconds) {}
+    /** One trip's latest reported position and how long ago it reached that stop. */
+    public record Marker(
+            double lat, double lon, String label, String detail, Integer delaySeconds, Integer reachedMinutesAgo) {}
 
     public LiveMap() {
         getElement()
@@ -58,6 +59,17 @@ public class LiveMap extends Component {
     }
 
     /**
+     * Sets the popup texts used to show how long ago the trip reached its stop.
+     *
+     * @param justNow text for a stop reached less than a minute ago
+     * @param minutes MessageFormat-style text with {@code {0}} for the elapsed minutes
+     */
+    public void setReachedTexts(String justNow, String minutes) {
+        getElement().setProperty("reachedJustNow", justNow == null ? "" : justNow);
+        getElement().setProperty("reachedMinutes", minutes == null ? "" : minutes);
+    }
+
+    /**
      * Replaces the markers shown on the map.
      *
      * <p>Markers without finite coordinates are dropped: MapLibre cannot render them, and a JSON
@@ -71,10 +83,11 @@ public class LiveMap extends Component {
     }
 
     /**
-     * Serialises the markers as one {@code [lat, lon, label, detail, delaySeconds]} array per trip.
+     * Serialises the markers as one
+     * {@code [lat, lon, label, detail, delaySeconds, reachedMinutesAgo]} array per trip.
      *
      * <p>The tuple form keeps the pushed JSON small: at tens of thousands of markers, repeating the
-     * five keys of an object costs more than the values themselves.
+     * keys of an object costs more than the values themselves.
      */
     static String json(List<Marker> markers) {
         var json = new StringBuilder("[");
@@ -95,6 +108,8 @@ public class LiveMap extends Component {
                     .append(quote(marker.detail()))
                     .append(',')
                     .append(marker.delaySeconds() == null ? "null" : marker.delaySeconds())
+                    .append(',')
+                    .append(marker.reachedMinutesAgo() == null ? "null" : marker.reachedMinutesAgo())
                     .append(']');
         }
         return json.append(']').toString();

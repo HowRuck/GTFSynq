@@ -1,5 +1,7 @@
 package org.example.gtfsynq.api.dto;
 
+import java.time.OffsetDateTime;
+
 /**
  * One live trip's position on the map.
  *
@@ -15,4 +17,5 @@ public record TripMarkerDto(
         String tripId,
         Integer routeType,
         String stopName,
-        Integer delaySeconds) {}
+        Integer delaySeconds,
+        OffsetDateTime reachedAt) {}

@@ -64,8 +64,9 @@ class GtfsQueryMapperTest {
 
     @Test
     void mapsTripMarkersForTheMap() {
+        var reached = OffsetDateTime.parse("2026-10-26T10:05:00Z");
         var marker = GtfsQueryMapper.tripMarkersReply(List.of(new TripMarkerDto(
-                        52.52, 13.405, "10", "Trip 1", "route-id", "trip-id", 3, "Central Station", 120)))
+                        52.52, 13.405, "10", "Trip 1", "route-id", "trip-id", 3, "Central Station", 120, reached)))
                 .getItems(0);
 
         assertEquals(52.52, marker.getLat());
@@ -77,12 +78,14 @@ class GtfsQueryMapperTest {
         assertEquals(3, marker.getRouteType());
         assertEquals("Central Station", marker.getStopName());
         assertEquals(120, marker.getDelaySeconds());
+        assertTrue(marker.hasReachedAt());
+        assertEquals(reached.toEpochSecond(), marker.getReachedAt().getSeconds());
     }
 
     @Test
     void leavesOptionalTripMarkerFieldsAbsentWithoutAStaticMatch() {
         var marker = GtfsQueryMapper.tripMarkersReply(
-                        List.of(new TripMarkerDto(52.52, 13.405, null, null, null, null, null, null, null)))
+                        List.of(new TripMarkerDto(52.52, 13.405, null, null, null, null, null, null, null, null)))
                 .getItems(0);
 
         assertFalse(marker.hasRouteShortName());
@@ -92,6 +95,7 @@ class GtfsQueryMapperTest {
         assertFalse(marker.hasRouteType());
         assertFalse(marker.hasStopName());
         assertFalse(marker.hasDelaySeconds());
+        assertFalse(marker.hasReachedAt());
     }
 
     @Test

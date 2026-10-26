@@ -57,7 +57,8 @@ class GtfsQueryGrpcServiceTest {
         @Override
         public List<TripMarkerDto> liveTripMarkers() {
             calls++;
-            return List.of(new TripMarkerDto(52.5, 13.4, "10", "Trip 1", "route-id", "trip-id", 3, "Central", 120));
+            return List.of(
+                    new TripMarkerDto(52.5, 13.4, "10", "Trip 1", "route-id", "trip-id", 3, "Central", 120, null));
         }
     }
 }

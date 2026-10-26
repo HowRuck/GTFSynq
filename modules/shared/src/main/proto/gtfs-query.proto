@@ -261,6 +261,9 @@ message TripMarker {
   optional string stop_name = 8;
   // The trip's current delay in seconds, for the popup and the marker colour.
   optional int32 delay_seconds = 9;
+  // Predicted arrival/departure time of that stop, so a popup can say how long ago the trip
+  // reached it. Unset when the feed supplies no time information.
+  google.protobuf.Timestamp reached_at = 10;
 }
 
 message TripMarkersReply {

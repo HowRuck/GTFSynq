@@ -544,7 +544,8 @@ public class GtfsQueryRepository {
                         rs.getString("trip_id"),
                         nullableInt(rs, "route_type"),
                         rs.getString("stop_name"),
-                        nullableInt(rs, "current_delay"));
+                        nullableInt(rs, "current_delay"),
+                        offsetDateTime(rs, "stop_time"));
                 var tripId = rs.getString("trip_id");
                 var keyId = tripId;
                 if (keyId == null || keyId.isBlank()) {

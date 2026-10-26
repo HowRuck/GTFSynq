@@ -14,31 +14,32 @@ class LiveMapTest {
 
     @Test
     void writesOneTuplePerMarker() {
-        var json = LiveMap.json(List.of(new LiveMap.Marker(52.5, 13.4, "10 · Trip 1", "Central", 120)));
+        var json = LiveMap.json(List.of(new LiveMap.Marker(52.5, 13.4, "10 · Trip 1", "Central", 120, 5)));
 
-        assertEquals("[[52.5,13.4,\"10 · Trip 1\",\"Central\",120]]", json);
+        assertEquals("[[52.5,13.4,\"10 · Trip 1\",\"Central\",120,5]]", json);
     }
 
     @Test
     void roundsCoordinatesWithoutLosingMapPrecision() {
-        var json = LiveMap.json(List.of(new LiveMap.Marker(52.12345678, 13.98765432, "10 · Trip 1", "Central", null)));
+        var json = LiveMap.json(
+                List.of(new LiveMap.Marker(52.12345678, 13.98765432, "10 · Trip 1", "Central", null, null)));
 
-        assertEquals("[[52.123457,13.987654,\"10 · Trip 1\",\"Central\",null]]", json);
+        assertEquals("[[52.123457,13.987654,\"10 · Trip 1\",\"Central\",null,null]]", json);
     }
 
     @Test
     void escapesQuotesAndControlCharacters() {
-        var json = LiveMap.json(List.of(new LiveMap.Marker(1, 2, "a\"b", "line\nbreak", null)));
+        var json = LiveMap.json(List.of(new LiveMap.Marker(1, 2, "a\"b", "line\nbreak", null, null)));
 
         assertFalse(json.contains("\"a\"b\""), "an unescaped quote would break the JSON array");
-        assertEquals("[[1.0,2.0,\"a\\\"b\",\"line\\nbreak\",null]]", json);
+        assertEquals("[[1.0,2.0,\"a\\\"b\",\"line\\nbreak\",null,null]]", json);
     }
 
     @Test
     void dropsMarkersWithoutFiniteCoordinates() {
         var json = LiveMap.json(List.of(
-                new LiveMap.Marker(Double.NaN, 13.4, "nan", "detail", null),
-                new LiveMap.Marker(52.5, Double.POSITIVE_INFINITY, "infinite", "detail", null)));
+                new LiveMap.Marker(Double.NaN, 13.4, "nan", "detail", null, null),
+                new LiveMap.Marker(52.5, Double.POSITIVE_INFINITY, "infinite", "detail", null, null)));
 
         assertEquals("[]", json, "MapLibre cannot render, and JSON cannot express, non-finite coordinates");
     }

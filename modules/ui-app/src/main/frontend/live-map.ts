@@ -15,17 +15,18 @@ setWorkerUrl(maplibreWorkerUrl);
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 /**
- * One trip position as a compact tuple: [lat, lon, label, detail, delaySeconds].
+ * One trip position as a compact tuple: [lat, lon, label, detail, delaySeconds, reachedMinutesAgo].
  *
  * <p>The tuple form replaces a keyed object because the marker array is pushed to the browser on
- * every poll; repeating five keys per marker costs more than the values themselves at scale.
+ * every poll; repeating the keys per marker costs more than the values themselves at scale.
  */
-type LiveMapMarker = [number, number, string, string, number | null];
+type LiveMapMarker = [number, number, string, string, number | null, number | null];
 
 interface MarkerProperties {
   label: string;
   detail: string;
   delayClass: 'early' | 'on-time' | 'late' | 'severe' | 'unknown';
+  reachedMinutesAgo: number | null;
 }
 
 /**
@@ -137,6 +138,9 @@ class LiveMap extends HTMLElement {
   private usingFallback = false;
   private styleLoaded = false;
   private fallbackTimer?: number;
+  private markersAt = Date.now();
+  private reachedJustNowText = 'Reached just now';
+  private reachedMinutesFormat = 'Reached {0} min ago';
 
   connectedCallback(): void {
     if (this.map) {
@@ -221,7 +225,19 @@ class LiveMap extends HTMLElement {
     } catch {
       this.markerData = [];
     }
+    // The popup ages the "reached N min ago" text from the moment this snapshot arrived.
+    this.markersAt = Date.now();
     this.updateSource();
+  }
+
+  /** Localized text for a stop reached less than a minute ago. */
+  set reachedJustNow(value: string) {
+    this.reachedJustNowText = value || 'Reached just now';
+  }
+
+  /** Localized text with a {0} placeholder for the elapsed minutes. */
+  set reachedMinutes(value: string) {
+    this.reachedMinutesFormat = value || 'Reached {0} min ago';
   }
 
   private currentStyle(): string {
@@ -355,6 +371,7 @@ class LiveMap extends HTMLElement {
             label: marker[2],
             detail: marker[3],
             delayClass: delayClass(marker[4]),
+            reachedMinutesAgo: marker[5],
           },
         })),
     };
@@ -421,6 +438,17 @@ class LiveMap extends HTMLElement {
       const detail = document.createElement('div');
       detail.textContent = properties.detail;
       wrapper.appendChild(detail);
+    }
+    if (typeof properties.reachedMinutesAgo === 'number') {
+      const minutes =
+        properties.reachedMinutesAgo + Math.floor((Date.now() - this.markersAt) / 60_000);
+      const reached = document.createElement('div');
+      reached.className = 'live-map-popup-reached';
+      reached.textContent =
+        minutes <= 0
+          ? this.reachedJustNowText
+          : this.reachedMinutesFormat.replace('{0}', String(minutes));
+      wrapper.appendChild(reached);
     }
     return wrapper;
   }
