@@ -27,6 +27,11 @@ interface MarkerProperties {
 const STYLE_LIGHT = 'https://tiles.openfreemap.org/styles/positron';
 const STYLE_DARK = 'https://tiles.openfreemap.org/styles/dark';
 
+/** Basemap sources of the OpenFreeMap styles; their failures trigger the raster fallback. */
+const BASEMAP_SOURCE_IDS = ['openmaptiles', 'ne2_shaded'];
+const FALLBACK_AFTER_ERRORS = 5;
+const STYLE_LOAD_TIMEOUT_MS = 8000;
+
 const SOURCE_ID = 'live-trips';
 const CLUSTER_LAYER = 'live-trips-clusters';
 const CLUSTER_COUNT_LAYER = 'live-trips-cluster-count';
@@ -52,9 +57,29 @@ const COLOUR_HALO = 'rgba(255, 255, 255, 0.9)';
 const DEFAULT_CENTER: [number, number] = [10.45, 51.16];
 const DEFAULT_ZOOM = 5;
 
-function activeStyle(): string {
-  const theme = document.documentElement.getAttribute('theme') ?? '';
-  return theme.split(' ').includes('dark') ? STYLE_DARK : STYLE_LIGHT;
+/**
+ * The raster fallback used when the vector basemap cannot be loaded: one source, no glyphs, no
+ * sprite, so it renders even where the OpenFreeMap CDN is unreachable. OpenStreetMap's tile usage
+ * policy allows this light use, and the attribution is embedded in the style.
+ */
+function rasterFallbackStyle(): Record<string, unknown> {
+  return {
+    version: 8,
+    sources: {
+      osm: {
+        type: 'raster',
+        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+        tileSize: 256,
+        maxzoom: 19,
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      },
+    },
+    layers: [
+      { id: 'background', type: 'background', paint: { 'background-color': '#e8e6e1' } },
+      { id: 'osm', type: 'raster', source: 'osm' },
+    ],
+  };
 }
 
 /** Popup offset in the map's pixel space, derived from the root font size rather than hard-coded. */
@@ -93,6 +118,11 @@ class LiveMap extends HTMLElement {
   private resizeObserver?: ResizeObserver;
   private themeObserver?: MutationObserver;
   private followMarkers = true;
+  private styleUrl?: string;
+  private basemapFailures = 0;
+  private usingFallback = false;
+  private styleLoaded = false;
+  private fallbackTimer?: number;
 
   connectedCallback(): void {
     if (this.map) {
@@ -100,7 +130,7 @@ class LiveMap extends HTMLElement {
     }
     const map = new MapLibreMap({
       container: this,
-      style: activeStyle(),
+      style: this.currentStyle(),
       center: DEFAULT_CENTER,
       zoom: DEFAULT_ZOOM,
       attributionControl: { compact: true },
@@ -121,9 +151,19 @@ class LiveMap extends HTMLElement {
     // Fires on the first load and again after every setStyle, so the source and layers survive a
     // light/dark switch.
     map.on('style.load', () => {
+      this.styleLoaded = true;
+      window.clearTimeout(this.fallbackTimer);
       this.installLayers();
       this.updateSource();
     });
+    // A basemap that cannot be fetched leaves an empty map with no explanation; log the failure and
+    // switch to raster tiles instead of staying blank.
+    map.on('error', (event) => this.onMapError(event));
+    this.fallbackTimer = window.setTimeout(() => {
+      if (!this.styleLoaded) {
+        this.useFallback('the basemap style did not load in time');
+      }
+    }, STYLE_LOAD_TIMEOUT_MS);
     this.onClick();
     this.onHover();
 
@@ -131,7 +171,11 @@ class LiveMap extends HTMLElement {
     this.resizeObserver.observe(this);
 
     // Vaadin flips the `theme` attribute on <html> when the user switches colour scheme.
-    this.themeObserver = new MutationObserver(() => map.setStyle(activeStyle()));
+    this.themeObserver = new MutationObserver(() => {
+      if (!this.usingFallback) {
+        map.setStyle(this.currentStyle());
+      }
+    });
     this.themeObserver.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ['theme'],
@@ -139,12 +183,21 @@ class LiveMap extends HTMLElement {
   }
 
   disconnectedCallback(): void {
+    window.clearTimeout(this.fallbackTimer);
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
     this.themeObserver?.disconnect();
     this.themeObserver = undefined;
     this.map?.remove();
     this.map = undefined;
+  }
+
+  /** Overrides the basemap style, for example to point at a self-hosted tile server. */
+  set styleUrl(url: string) {
+    this.styleUrl = url || undefined;
+    if (this.map && !this.usingFallback) {
+      this.map.setStyle(this.currentStyle());
+    }
   }
 
   /** Replaces the markers; assigned by Flow as a JSON string. */
@@ -155,6 +208,34 @@ class LiveMap extends HTMLElement {
       this.markerData = [];
     }
     this.updateSource();
+  }
+
+  private currentStyle(): string {
+    if (this.styleUrl) {
+      return this.styleUrl;
+    }
+    const theme = document.documentElement.getAttribute('theme') ?? '';
+    return theme.split(' ').includes('dark') ? STYLE_DARK : STYLE_LIGHT;
+  }
+
+  private onMapError(event: { error?: Error; sourceId?: string }): void {
+    console.warn('[live-map]', event.error ?? event);
+    if (event.sourceId && BASEMAP_SOURCE_IDS.includes(event.sourceId)) {
+      this.basemapFailures += 1;
+      if (this.basemapFailures >= FALLBACK_AFTER_ERRORS) {
+        this.useFallback('the basemap tiles failed to load');
+      }
+    }
+  }
+
+  private useFallback(reason: string): void {
+    const map = this.map;
+    if (!map || this.usingFallback) {
+      return;
+    }
+    this.usingFallback = true;
+    console.warn(`[live-map] ${reason}; switching to raster OpenStreetMap tiles`);
+    map.setStyle(rasterFallbackStyle() as never);
   }
 
   private installLayers(): void {
