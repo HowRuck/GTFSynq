@@ -87,3 +87,46 @@ vaadin-grid::part(scheduled-value) {
 vaadin-grid-tree-toggle {
     --vaadin-grid-tree-toggle-level-offset: 0.5rem;
 }
+
+/*
+ * Live map: one marker per trip at the most advanced stop it is predicted to reach. The colours
+ * mirror the delay cells in the grid, and the white ring keeps a marker visible on both dark and
+ * light basemap areas.
+ */
+.live-map-dot {
+    box-sizing: border-box;
+    width: 1rem;
+    height: 1rem;
+    border: 0.15rem solid #fff;
+    border-radius: 50%;
+    background: var(--aura-neutral);
+    box-shadow: 0 0.08rem 0.3rem rgb(0 0 0 / 0.45);
+    cursor: pointer;
+}
+
+.live-map-dot.early {
+    background: var(--aura-blue-text);
+}
+
+.live-map-dot.on-time {
+    background: var(--aura-green-text);
+}
+
+.live-map-dot.late {
+    background: var(--aura-orange-text);
+}
+
+.live-map-dot.severe {
+    background: var(--aura-red-text);
+}
+
+.live-map-popup {
+    max-width: 16rem;
+    font-size: 0.95em;
+    line-height: 1.35;
+}
+
+.live-map-popup strong {
+    display: block;
+    font-weight: var(--aura-font-weight-semibold);
+}
