@@ -4,9 +4,14 @@ import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.progressbar.ProgressBar;
 import com.vaadin.flow.data.provider.SortDirection;
 import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
@@ -33,9 +38,11 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
     private final GtfsQueryClient client;
     private final LiveUpdatesGrid table;
     private final LiveMap map = new LiveMap();
+    private final Div loadingOverlay;
     private Registration pollRegistration;
     private boolean attached;
     private boolean markersLoading;
+    private boolean markersLoaded;
     private String lastMapError;
 
     @Inject
@@ -46,18 +53,37 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
         // Feed, agency, route and route type are inline header filters inside the grid.
         var refresh = new Button(getTranslation("live.refresh"), event -> {
             table.refresh();
-            getUI().ifPresent(this::loadMarkers);
+            getUI().ifPresent(ui -> loadMarkers(ui, true));
         });
         refresh.setIcon(VaadinIcon.REFRESH.create());
 
         map.getElement().setAttribute("aria-label", getTranslation("live.map.aria"));
 
+        var progress = new ProgressBar();
+        progress.setIndeterminate(true);
+        progress.setWidth("5rem");
+
+        var loadingCard = new HorizontalLayout(progress, new Span(getTranslation("live.map.loading")));
+        loadingCard.setPadding(false);
+        loadingCard.setSpacing(false);
+        loadingCard.setAlignItems(Alignment.CENTER);
+        loadingCard.addClassName("live-map-loading-card");
+
+        loadingOverlay = new Div(loadingCard);
+        loadingOverlay.addClassName("live-map-loading");
+        loadingOverlay.setVisible(false);
+
+        // The overlay is a sibling of the map, so the map keeps ownership of its canvas and the
+        // loading card uses regular Vaadin components and theme colours.
+        var mapArea = new Div(map, loadingOverlay);
+        mapArea.getStyle().set("position", "relative").set("width", "100%");
+
         setSizeFull();
         add(
                 PageHeader.create(getTranslation("page.live.title"), getTranslation("page.live.subtitle"), refresh),
-                map,
+                mapArea,
                 table);
-        setFlexGrow(0, map);
+        setFlexGrow(0, mapArea);
         setFlexGrow(1, table);
     }
 
@@ -67,12 +93,18 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
      * <p>The map has its own query rather than following the table: the table shows one page at a
      * time, but the map is an overview of every live trip. A poll that arrives while the previous
      * load is still running is dropped instead of stacking requests.
+     *
+     * @param showLoading whether to show the map's loading state even after the first snapshot
      */
-    private void loadMarkers(UI ui) {
+    private void loadMarkers(UI ui, boolean showLoading) {
         if (markersLoading) {
             return;
         }
         markersLoading = true;
+        // Polls must not flicker the overlay; it stays for the initial load and manual refreshes.
+        if (showLoading || !markersLoaded) {
+            loadingOverlay.setVisible(true);
+        }
         CompletableFuture.runAsync(() -> {
             List<TripMarker> markers;
             DataAccessException failure = null;
@@ -87,6 +119,7 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
             var error = failure;
             ui.access(() -> {
                 markersLoading = false;
+                loadingOverlay.setVisible(false);
                 if (!attached) {
                     return;
                 }
@@ -95,6 +128,7 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
                     report(error);
                     return;
                 }
+                markersLoaded = true;
                 lastMapError = null;
                 map.setMarkers(markers(loaded));
             });
@@ -175,9 +209,9 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
         ui.setPollInterval(POLL_INTERVAL_MS);
         pollRegistration = ui.addPollListener(event -> {
             table.refresh();
-            loadMarkers(ui);
+            loadMarkers(ui, false);
         });
-        loadMarkers(ui);
+        loadMarkers(ui, true);
     }
 
     @Override

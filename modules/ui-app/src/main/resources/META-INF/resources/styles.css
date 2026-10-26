@@ -102,3 +102,31 @@ vaadin-grid-tree-toggle {
     display: block;
     font-weight: var(--aura-font-weight-semibold);
 }
+
+/*
+ * Live map loading state: a Vaadin ProgressBar in a centered card, overlaid on the map so the
+ * basemap keeps painting underneath. LiveUpdatesView toggles the overlay's visibility around the
+ * marker fetch.
+ */
+.live-map-loading {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.live-map-loading-card {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.55rem 0.85rem;
+    border: 1px solid var(--vaadin-border-color, rgb(128 128 128 / 0.25));
+    border-radius: var(--vaadin-radius-m);
+    background: var(--vaadin-background-color);
+    color: var(--vaadin-text-color);
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.15);
+    font-size: 0.9rem;
+}
