@@ -41,7 +41,7 @@ services:
   # metrics (via the micrometer->opentelemetry bridge), logs and traces as OTLP
   # here; the collector batches and fans each signal out to its Victoria* store.
   otel-collector:
-    image: docker.io/otel/opentelemetry-collector:0.163.1-386
+    image: docker.io/otel/opentelemetry-collector:0.163.2
     container_name: otel-collector
     depends_on:
       victoriametrics:
