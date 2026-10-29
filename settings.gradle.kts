@@ -8,6 +8,15 @@ pluginManagement {
     repositories {
         gradlePluginPortal()
         mavenCentral()
+        // The Vaadin Gradle plugin is published to the prerelease repository
+        // alongside the platform it builds (25.4 is an alpha).
+        maven {
+            name = "vaadinPrereleases"
+            url = uri("https://maven.vaadin.com/vaadin-prereleases")
+            content {
+                includeGroupByRegex("com\\.vaadin.*")
+            }
+        }
     }
 }
 

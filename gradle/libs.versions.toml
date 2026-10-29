@@ -107,3 +107,4 @@ lombok = ["lombok"]
 protobuf = { id = "com.google.protobuf", version.ref = "protobufPlugin" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 quarkus = { id = "io.quarkus", version.ref = "quarkus" }
+vaadin = { id = "com.vaadin", version.ref = "vaadin" }

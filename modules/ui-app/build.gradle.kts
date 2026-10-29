@@ -1,6 +1,15 @@
 plugins {
     alias(libs.plugins.quarkus)
+    alias(libs.plugins.vaadin)
     id("gtfsynq.java-conventions")
+}
+
+// The Quarkus extension still owns the production frontend build; the Vaadin
+// plugin exposes `vaadinPrepareFrontend` and `vaadinBuildFrontend` for running
+// the frontend toolchain directly. Keep it on pnpm, matching the committed
+// lockfile and .npmrc.
+vaadin {
+    pnpmEnable = true
 }
 
 dependencies {
