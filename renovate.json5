@@ -68,10 +68,13 @@
     // --- Labels -------------------------------------------------------------
     // Manager-wide tags, so they apply to majors too (the group rules further
     // down only match minor/patch). `addLabels` is mergeable, so a Vaadin bump
-    // ends up with `dependencies`, `java`, `gradle` and `vaadin`.
+    // ends up with `dependencies`, `java` and `vaadin`.
+    //
+    // `gradle` marks the build tooling itself (the wrapper), not every
+    // dependency that happens to be declared in a Gradle file.
     {
       matchManagers: ["gradle"],
-      addLabels: ["java", "gradle"],
+      addLabels: ["java"],
     },
     {
       matchManagers: ["gradle-wrapper"],
