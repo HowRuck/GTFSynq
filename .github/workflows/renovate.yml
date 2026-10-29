@@ -6,9 +6,10 @@ name: renovate
 # cannot do that: its allowedCommands only lets a repository run `git add`,
 # `git reset` and `pwd`.
 #
-# Install the token as the RENOVATE_TOKEN secret (a PAT with repo scope, plus
-# workflow scope so Renovate can update .github/workflows) and disable the
-# hosted Renovate app for this repository, or both will run.
+# Renovate authenticates as a GitHub App: RENOVATE_APP_CLIENT_ID (repository
+# variable) and RENOVATE_APP_PRIVATE_KEY (repository secret) are exchanged for a
+# one-hour installation token. Disable the hosted Renovate app for this
+# repository, or both will run.
 on:
   schedule:
     # Inside the 0-5 UTC window that renovate.json5 allows updates in.
@@ -71,17 +72,26 @@ jobs:
           restore-keys: |
             renovate-${{ runner.os }}-
 
-      - name: check-renovate-token
-        # An unset secret expands to an empty string, which Renovate reports as
-        # "You must configure a GitHub token" after the tool download.
-        # Fail fast and name the secret instead.
+      - name: create-app-token
+        id: app-token
+        # A one-hour installation token, revoked in this action's post step.
+        # It inherits the installation's permissions, which must include
+        # Contents, Pull requests, Issues and Workflows write access.
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.RENOVATE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
+
+      - name: resolve-bot-identity
+        # The committer email needs the bot user's numeric id, which is not the
+        # app id: /users/<slug>[bot].
+        id: bot
         env:
-          RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          if [ -z "${RENOVATE_TOKEN}" ]; then
-            echo "::error::RENOVATE_TOKEN is empty. Add it as a repository secret (PAT with repo and workflow scopes), or share the organization secret with this repository."
-            exit 1
-          fi
+          slug="${{ steps.app-token.outputs.app-slug }}"
+          bot_id=$(gh api "/users/${slug}[bot]" --jq .id)
+          echo "git-author=${slug}[bot] <${bot_id}+${slug}[bot]@users.noreply.github.com>" >> "$GITHUB_OUTPUT"
 
       - name: run-renovate
         # pnpm blocks lifecycle scripts by default. re2 fetches a prebuilt
@@ -97,13 +107,11 @@ jobs:
           --allow-build dtrace-provider
           renovate@44
         env:
-          RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
+          RENOVATE_TOKEN: ${{ steps.app-token.outputs.token }}
           RENOVATE_REPOSITORIES: ${{ github.repository }}
-          # Renovate cannot sign commits as its Mend-owned default author, so
-          # attribute them to the Actions bot instead. The pull requests are
-          # still opened by the token owner; switch to a GitHub App token if
-          # author and PR owner should be the same identity.
-          RENOVATE_GIT_AUTHOR: "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
+          # Commits and pull requests are both authored by the app's bot user,
+          # so attribution stays consistent across the whole update.
+          RENOVATE_GIT_AUTHOR: ${{ steps.bot.outputs.git-author }}
           # Global config: allowedCommands, allowedUnsafeExecutions, binarySource.
           RENOVATE_CONFIG_FILE: .github/renovate-global.json5
           RENOVATE_ONBOARDING: "false"
