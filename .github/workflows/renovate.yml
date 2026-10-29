@@ -43,7 +43,14 @@ jobs:
       - name: set-up-node
         uses: actions/setup-node@v6
         with:
+          # Renovate runs through pnpm, so it follows the newest Node release
+          # rather than an LTS line.
           node-version: latest
+
+      - name: set-up-pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 12
 
       - name: cache-gradle-and-vaadin
         # The postUpgradeTasks pay for a Gradle configuration plus, for ui-app,
@@ -55,13 +62,14 @@ jobs:
             ~/.gradle/wrapper
             ~/.vaadin
             ~/.cache/pnpm
+            ~/.local/share/pnpm
           key: renovate-${{ runner.os }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', 'modules/ui-app/package.json', 'modules/ui-app/pnpm-workspace.yaml') }}
           restore-keys: |
             renovate-${{ runner.os }}-
 
       - name: check-renovate-token
         # An unset secret expands to an empty string, which Renovate reports as
-        # "You must configure a GitHub token" after a minute of npx install.
+        # "You must configure a GitHub token" after the tool download.
         # Fail fast and name the secret instead.
         env:
           RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
@@ -72,7 +80,7 @@ jobs:
           fi
 
       - name: run-renovate
-        run: npx --yes renovate@44
+        run: pnpm dlx renovate@44
         env:
           RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
           RENOVATE_REPOSITORIES: ${{ github.repository }}
