@@ -1,0 +1,52 @@
+name: retry-blocked-prs
+
+# Re-runs the resolve-dependencies check for PRs that failed because the Avrea
+# Maven mirror did not have an artifact yet. That workflow tags them with
+# `blocked-by-mirror`; once the mirror catches up, a re-run turns the check
+# green without anyone clicking "Re-run jobs".
+#
+# Only the newest failed run of `resolve-dependencies` for the PR's current head
+# commit is retried, so this never re-runs unrelated build failures.
+on:
+  schedule:
+    # After Renovate's 0-5 UTC window, so the day's PRs exist by then.
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write
+  issues: read
+  pull-requests: read
+
+jobs:
+  retry-blocked-prs:
+    runs-on: avrea-ubuntu-latest-2-vcpu
+    steps:
+      - name: retry-blocked-prs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          repo="$GITHUB_REPOSITORY"
+
+          gh pr list --label blocked-by-mirror --state open \
+              --json number,headRefOid \
+              --jq '.[] | "\(.number)\t\(.headRefOid)"' |
+          while IFS=$'\t' read -r pr sha; do
+            run_id=$(gh api \
+              "repos/$repo/actions/workflows/resolve-dependencies.yml/runs?head_sha=$sha&per_page=1" \
+              --jq '.workflow_runs[0] | select(.conclusion == "failure") | .id')
+
+            if [ -n "$run_id" ]; then
+              echo "Re-running $run_id for #$pr"
+              gh api -X POST "repos/$repo/actions/runs/$run_id/rerun"
+            else
+              echo "No failed resolve-dependencies run for #$pr, leaving it alone"
+            fi
+          done
