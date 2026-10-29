@@ -7,6 +7,10 @@ name: pull-request
 #
 # It only generates the Quarkus application models: no tests, no packaging and
 # no container image, so it stays cheap enough to run on every dependency PR.
+#
+# A failure caused by an artifact missing from cache.avrea.com also tags the PR
+# with `blocked-by-mirror`, so those are filterable from the pull request list.
+# The label is removed again once the check passes.
 on:
   pull_request:
     paths:
@@ -25,6 +29,9 @@ concurrency:
 
 permissions:
   contents: read
+  # Labels on a pull request go through the issues API.
+  issues: write
+  pull-requests: write
 
 jobs:
   resolve-app-models:
@@ -44,5 +51,42 @@ jobs:
 
       - name: resolve-app-models
         # A bare task name runs in every project that has it, so this covers all
-        # four applications without listing them.
-        run: ./gradlew quarkusGenerateAppModel --console=plain
+        # four applications without listing them. The output is kept so the next
+        # step can tell a mirror miss from any other build failure.
+        id: resolve
+        continue-on-error: true
+        # shell: bash enables pipefail, so the step fails when Gradle does even
+        # though tee exits 0.
+        shell: bash
+        run: ./gradlew quarkusGenerateAppModel --console=plain 2>&1 | tee resolution.log
+
+      - name: label-blocked-by-mirror
+        # Fork PRs get a read-only token, and workflow_dispatch has no PR.
+        if: >-
+          steps.resolve.outcome == 'failure'
+          && github.event_name == 'pull_request'
+          && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if grep -q "cache.avrea.com" resolution.log \
+              && grep -qE "Could not (find|resolve)" resolution.log; then
+            gh label create blocked-by-mirror --color b60205 \
+              --description "Resolution failed against the Avrea Maven mirror" --force
+            gh pr edit "${{ github.event.pull_request.number }}" --add-label blocked-by-mirror
+          fi
+
+      - name: clear-blocked-by-mirror
+        if: >-
+          steps.resolve.outcome == 'success'
+          && github.event_name == 'pull_request'
+          && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr edit "${{ github.event.pull_request.number }}" --remove-label blocked-by-mirror || true
+
+      - name: fail-on-resolution-error
+        # continue-on-error above keeps the job alive long enough to label; the
+        # check still has to fail the workflow.
+        if: steps.resolve.outcome == 'failure'
+        run: exit 1
