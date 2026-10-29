@@ -1,0 +1,112 @@
+// Renovate replaces Dependabot for this repository. Requires the Renovate GitHub
+// App (or a self-hosted runner) to be installed on HowRuck/GTFSynq.
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+
+  extends: ["config:recommended"],
+
+  // Gradle's build/ and Maven's target/ are build output, not source. They are
+  // gitignored, but a local dry run would otherwise scan stale copies (the
+  // build-logic build directory contains a generated copy of the build script).
+  ignorePaths: ["**/build/**", "**/target/**"],
+
+  // Dependabot ran daily; keep that cadence but batch the runs into one early
+  // morning window (UTC) so PRs do not trickle in all day.
+  schedule: ["* 0-5 * * *"],
+
+  // Commit messages stay in the shape Dependabot produced:
+  // `build(deps): bump <dependency> to <version>`.
+  semanticCommitType: "build",
+  semanticCommitScope: "deps",
+  commitMessageAction: "bump",
+
+  // The Dependency Dashboard issue lists every pending update and lets you
+  // trigger a PR by hand; handy for the prerelease groups below.
+  dependencyDashboard: true,
+
+  // Besides GitHub's own advisory database, check osv.dev.
+  osvVulnerabilityAlerts: true,
+
+  packageRules: [
+    // --- Gradle -------------------------------------------------------------
+    {
+      // Routine library and plugin bumps go out together; majors keep their
+      // own PR (Renovate default) because they need a compatibility review.
+      // Covers build.gradle.kts, settings.gradle.kts, build-logic/ and
+      // gradle/libs.versions.toml.
+      matchManagers: ["gradle"],
+      matchUpdateTypes: ["minor", "patch"],
+      groupName: "gradle-dependencies",
+    },
+    {
+      // Quarkus is pinned to a 4.0 Beta and every app is built on that BOM, so
+      // a Quarkus bump gets its own PR that can be built and reverted alone.
+      // The glob also covers the Gradle plugin (io.quarkus:io.quarkus.gradle
+      // .plugin) and the quarkiverse Amazon Services BOM, which share the
+      // `quarkus` version reference in the catalog.
+      matchManagers: ["gradle"],
+      matchPackageNames: ["io.quarkus*"],
+      groupName: "quarkus",
+    },
+    {
+      // Vaadin is on a 25.4 alpha. Prereleases are published to Vaadin's own
+      // repository, not Maven Central, so the extra registry has to be listed
+      // explicitly. A Vaadin bump also changes the generated frontend
+      // (see the npm rule below), so it stays isolated from other updates.
+      matchManagers: ["gradle"],
+      matchPackageNames: ["com.vaadin*"],
+      registryUrls: [
+        "https://maven.vaadin.com/vaadin-prereleases",
+        "https://repo1.maven.org/maven2",
+      ],
+      groupName: "vaadin",
+    },
+    {
+      // The wrapper is upgraded by hand: bumping only distributionUrl leaves
+      // gradlew, gradlew.bat and gradle-wrapper.jar on the old version, and a
+      // bot PR cannot run `./gradlew wrapper` twice. See
+      // .agents/skills/gradle-wrapper-upgrade.
+      matchManagers: ["gradle-wrapper"],
+      enabled: false,
+    },
+
+    // --- GitHub Actions -----------------------------------------------------
+    {
+      // .github/workflows/images.yml and qodana.yml move together, so one PR
+      // updates every action pinned there.
+      matchManagers: ["github-actions"],
+      groupName: "github-actions",
+    },
+
+    // --- Docker Compose -----------------------------------------------------
+    {
+      // Routine image bumps for the dev, monitoring and application stacks in
+      // one PR. Image majors (Grafana, Kafka, TimescaleDB, ...) keep their own
+      // PR, since they need a manual review of the compose files and the
+      // Grafana dashboards under monitoring/.
+      matchManagers: ["docker-compose"],
+      matchUpdateTypes: ["minor", "patch", "digest", "pin"],
+      groupName: "docker-images",
+    },
+    {
+      // The application images in docker-compose.yaml are built and pushed by
+      // .github/workflows/images.yml; their tag is picked by the build (jib),
+      // so Renovate must not bump ghcr.io/howruck/gtfsynq-*.
+      matchManagers: ["docker-compose"],
+      matchPackageNames: ["/^ghcr\\.io\\/howruck\\/gtfsynq-/"],
+      enabled: false,
+    },
+
+    // --- Vaadin frontend ----------------------------------------------------
+    {
+      // modules/ui-app/package.json, pnpm-workspace.yaml and pnpm-lock.yaml are
+      // maintained by the Vaadin Gradle plugin: every entry is mirrored in the
+      // "vaadin" block together with a hash of the last write, and the plugin
+      // restores its own versions on the next build. Bump `vaadin` in
+      // gradle/libs.versions.toml instead; that regenerates the frontend.
+      matchManagers: ["npm"],
+      matchFileNames: ["modules/ui-app/**"],
+      enabled: false,
+    },
+  ],
+}
