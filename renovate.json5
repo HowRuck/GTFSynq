@@ -7,8 +7,21 @@
 
   // Gradle's build/ and Maven's target/ are build output, not source. They are
   // gitignored, but a local dry run would otherwise scan stale copies (the
-  // build-logic build directory contains a generated copy of the build script).
-  ignorePaths: ["**/build/**", "**/target/**"],
+  // build-logic build directory holds a generated copy of the build script).
+  // The rest repeats the defaults from `config:recommended`, which this option
+  // replaces rather than extends.
+  ignorePaths: [
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "**/vendor/**",
+    "**/examples/**",
+    "**/__tests__/**",
+    "**/test/**",
+    "**/tests/**",
+    "**/__fixtures__/**",
+    "**/build/**",
+    "**/target/**",
+  ],
 
   // Dependabot ran daily; keep that cadence but batch the runs into one early
   // morning window (UTC) so PRs do not trickle in all day.
@@ -41,18 +54,19 @@
     {
       // Quarkus is pinned to a 4.0 Beta and every app is built on that BOM, so
       // a Quarkus bump gets its own PR that can be built and reverted alone.
-      // The glob also covers the Gradle plugin (io.quarkus:io.quarkus.gradle
-      // .plugin) and the quarkiverse Amazon Services BOM, which share the
-      // `quarkus` version reference in the catalog.
+      // The glob covers the BOM, the Gradle plugin
+      // (io.quarkus:io.quarkus.gradle.plugin) and the quarkiverse Amazon
+      // Services BOM, which share the `quarkus` version in the catalog.
       matchManagers: ["gradle"],
       matchPackageNames: ["io.quarkus*"],
       groupName: "quarkus",
     },
     {
-      // Vaadin is on a 25.4 alpha. Prereleases are published to Vaadin's own
-      // repository, not Maven Central, so the extra registry has to be listed
-      // explicitly. A Vaadin bump also changes the generated frontend
-      // (see the npm rule below), so it stays isolated from other updates.
+      // Vaadin is on a 25.4 alpha, and a Vaadin bump also changes the generated
+      // frontend (see the npm rule below), so it stays isolated from every
+      // other update. Vaadin prereleases live in their own repository; the
+      // Gradle manager picks that up from settings.gradle.kts, and the rule
+      // restates it plus Maven Central so the alpha line keeps resolving.
       matchManagers: ["gradle"],
       matchPackageNames: ["com.vaadin*"],
       registryUrls: [
