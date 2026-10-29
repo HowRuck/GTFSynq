@@ -5,8 +5,8 @@ on:
     branches: ["main"]
     paths:
       - "modules/**"
-      - "build.gradle"
-      - "settings.gradle"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
       - "gradle.properties"
       - "gradle/**"
       - "qodana.yaml"
@@ -15,8 +15,8 @@ on:
     branches: ["main"]
     paths:
       - "modules/**"
-      - "build.gradle"
-      - "settings.gradle"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
       - "gradle.properties"
       - "gradle/**"
       - "qodana.yaml"
@@ -34,6 +34,13 @@ permissions:
 
 jobs:
   qodana:
+    # Dependency-only PRs (Renovate) leave the sources untouched, so a scan just
+    # re-reports the findings main already has while occupying a 4-vCPU runner
+    # and a Qodana licence slot. The push run on main still analyses the merged
+    # tree against the new classpath.
+    if: >-
+      github.event_name != 'pull_request'
+      || !contains(github.event.pull_request.labels.*.name, 'dependencies')
     runs-on: avrea-ubuntu-latest-4-vcpu
     steps:
       - name: checkout
