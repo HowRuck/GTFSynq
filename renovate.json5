@@ -116,9 +116,12 @@
       enabled: false,
     },
     {
-      // pgadmin4 still publishes legacy tags like 2021-12-15-2, which parse as
-      // absurd major versions and flood the log with maxMajorIncrement skips.
-      // Only consider the numeric release tags (9.17, 10.0.1, ...).
+      // pgadmin4 still publishes legacy tags like 2021-12-15-2. They parse as
+      // absurd major versions, so Renovate's maxMajorIncrement guard already
+      // drops them (that check runs before allowedVersions, hence the log
+      // noise). This rule pins the candidate set to the numeric release tags
+      // (9.17, 10.0.1, ...) so a date tag can never win if the guard is
+      // relaxed or raised later.
       matchManagers: ["docker-compose"],
       matchPackageNames: ["docker.io/dpage/pgadmin4"],
       allowedVersions: "/^\\d+(\\.\\d+)*$/",
