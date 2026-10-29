@@ -84,10 +84,18 @@ jobs:
           fi
 
       - name: run-renovate
-        # `--allow-build re2` runs re2's install script (it fetches a prebuilt
-        # binary for the runner's Node ABI); without it Renovate falls back to
-        # the slower JS RegExp engine and warns about it.
-        run: pnpm dlx --allow-build re2 renovate@44
+        # pnpm blocks lifecycle scripts by default. re2 fetches a prebuilt
+        # binary for the runner's Node ABI (Renovate otherwise falls back to the
+        # slower JS RegExp engine), and the other three are transitive build
+        # scripts of Renovate's own dependencies; allowing them keeps the log
+        # clean instead of printing "Ignored build scripts".
+        run: >-
+          pnpm dlx
+          --allow-build re2
+          --allow-build core-js-pure
+          --allow-build protobufjs
+          --allow-build dtrace-provider
+          renovate@44
         env:
           RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
           RENOVATE_REPOSITORIES: ${{ github.repository }}
