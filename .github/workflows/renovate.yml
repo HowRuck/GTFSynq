@@ -43,9 +43,8 @@ jobs:
       - name: set-up-node
         uses: actions/setup-node@v6
         with:
-          # Renovate runs through pnpm, so it follows the newest Node release
-          # rather than an LTS line.
-          node-version: latest
+          node-version: 24
+          check-latest: true
 
       - name: set-up-pnpm
         # Node no longer bundles Corepack, so pnpm is installed explicitly.
