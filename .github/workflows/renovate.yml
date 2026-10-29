@@ -1,0 +1,69 @@
+name: renovate
+
+# Self-hosted Renovate. It runs on the runner itself rather than in the official
+# Renovate container so that the postUpgradeTasks in renovate.json5 can call
+# ./gradlew with the JDK that setup-java installs here. The hosted Renovate app
+# cannot do that: its allowedCommands only lets a repository run `git add`,
+# `git reset` and `pwd`.
+#
+# Install the token as the RENOVATE_TOKEN secret (a PAT with repo scope) and
+# disable the hosted Renovate app for this repository, or both will run.
+on:
+  schedule:
+    # Inside the 0-5 UTC window that renovate.json5 allows updates in.
+    - cron: "0 1 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  renovate:
+    runs-on: avrea-ubuntu-latest-2-vcpu
+    steps:
+      - name: checkout
+        uses: actions/checkout@v7
+        with:
+          # Renovate clones the repository into its own work directory and
+          # pushes with RENOVATE_TOKEN, not with the checkout credentials.
+          persist-credentials: false
+
+      - name: set-up-java
+        # postUpgradeTasks run ./gradlew, so the JDK must be on the PATH.
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - name: set-up-node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "lts/*"
+
+      - name: cache-gradle-and-vaadin
+        # The postUpgradeTasks pay for a Gradle configuration plus, for ui-app,
+        # the Vaadin toolchain and pnpm store.
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ~/.vaadin
+            ~/.cache/pnpm
+          key: renovate-${{ runner.os }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', 'modules/ui-app/pnpm-lock.yaml') }}
+          restore-keys: |
+            renovate-${{ runner.os }}-
+
+      - name: run-renovate
+        run: npx --yes renovate@44
+        env:
+          RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
+          # Global config: allowedCommands, allowedUnsafeExecutions, binarySource.
+          RENOVATE_CONFIG_FILE: .github/renovate-global.json5
+          RENOVATE_ONBOARDING: "false"
+          LOG_LEVEL: info

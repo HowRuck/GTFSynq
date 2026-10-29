@@ -1,5 +1,7 @@
-// Renovate replaces Dependabot for this repository. Requires the Renovate GitHub
-// App (or a self-hosted runner) to be installed on HowRuck/GTFSynq.
+// Renovate replaces Dependabot for this repository. It runs self-hosted from
+// .github/workflows/renovate.yml, which is also where the global config
+// (.github/renovate-global.json5) is picked up; the hosted Renovate app cannot
+// run the postUpgradeTasks below.
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
 
@@ -154,6 +156,46 @@
       matchManagers: ["npm"],
       matchFileNames: ["modules/ui-app/**"],
       enabled: false,
+    },
+    // --- Post-upgrade tasks ------------------------------------------------
+    // These run only on the self-hosted instance (.github/workflows/renovate.yml),
+    // which whitelists them in .github/renovate-global.json5. The hosted app
+    // rejects any command that is not `git add`, `git reset` or `pwd`.
+    {
+      // The `regex` custom manager above reads npm versions from Vaadin's
+      // @NpmPackage annotations. The Quarkus Vaadin extension copies them into
+      // modules/ui-app/package.json and the pnpm files during augmentation, so
+      // the task regenerates those files and they land in the same commit as the
+      // annotation bump instead of drifting until the next build.
+      matchManagers: ["custom.regex"],
+      matchFileNames: ["modules/ui-app/src/main/java/**"],
+      postUpgradeTasks: {
+        commands: ["./gradlew :ui-app:quarkusBuild --console=plain"],
+        fileFilters: [
+          "modules/ui-app/package.json",
+          "modules/ui-app/pnpm-workspace.yaml",
+          "modules/ui-app/pnpm-lock.yaml",
+        ],
+        executionMode: "update",
+      },
+    },
+    {
+      // The gradle-wrapper manager already runs `./gradlew :wrapper` itself
+      // (allowedUnsafeExecutions above). A failure there is only logged as a
+      // warning, which would leave the new distributionUrl next to stale scripts
+      // and jar, so the script redoes the upgrade properly and the result is
+      // verified before the commit.
+      matchManagers: ["gradle-wrapper"],
+      postUpgradeTasks: {
+        commands: ["./scripts/update-gradle-wrapper.sh"],
+        fileFilters: [
+          "gradlew",
+          "gradlew.bat",
+          "gradle/wrapper/gradle-wrapper.jar",
+          "gradle/wrapper/gradle-wrapper.properties",
+        ],
+        executionMode: "update",
+      },
     },
   ],
 }

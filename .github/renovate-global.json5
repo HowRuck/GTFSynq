@@ -1,0 +1,29 @@
+// Global (operator) configuration for the self-hosted Renovate run in
+// .github/workflows/renovate.yml.
+//
+// These options are global-only in Renovate: the repository config
+// (renovate.json5) cannot set them, which is exactly why the hosted Renovate app
+// cannot run this repository's postUpgradeTasks -- its `allowedCommands` is
+// fixed to `git add`, `git reset` and `pwd`.
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+
+  platform: "github",
+
+  // Run ./gradlew, java and the other tools from the runner's PATH, where
+  // setup-java put the JDK, instead of through containerbase or Docker.
+  binarySource: "global",
+
+  // Allow the gradle-wrapper manager to run `./gradlew :wrapper`, so a wrapper
+  // bump also regenerates gradlew, gradlew.bat and gradle-wrapper.jar rather
+  // than only rewriting distributionUrl.
+  allowedUnsafeExecutions: ["gradleWrapper"],
+
+  // Commands that renovate.json5 postUpgradeTasks is allowed to run. Renovate
+  // refuses to execute anything that does not match one of these patterns, and
+  // records the rejection in the pull request.
+  allowedCommands: [
+    "^\\./gradlew :ui-app:quarkusBuild --console=plain$",
+    "^\\./scripts/update-gradle-wrapper\\.sh$",
+  ],
+}
