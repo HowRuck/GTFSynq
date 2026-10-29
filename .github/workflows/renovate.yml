@@ -42,7 +42,7 @@ jobs:
       - name: set-up-node
         uses: actions/setup-node@v6
         with:
-          node-version: "lts/*"
+          node-version: latest
 
       - name: cache-gradle-and-vaadin
         # The postUpgradeTasks pay for a Gradle configuration plus, for ui-app,
@@ -54,7 +54,7 @@ jobs:
             ~/.gradle/wrapper
             ~/.vaadin
             ~/.cache/pnpm
-          key: renovate-${{ runner.os }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', 'modules/ui-app/pnpm-lock.yaml') }}
+          key: renovate-${{ runner.os }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', 'modules/ui-app/package.json', 'modules/ui-app/pnpm-workspace.yaml') }}
           restore-keys: |
             renovate-${{ runner.os }}-
 
