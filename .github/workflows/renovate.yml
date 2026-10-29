@@ -6,8 +6,9 @@ name: renovate
 # cannot do that: its allowedCommands only lets a repository run `git add`,
 # `git reset` and `pwd`.
 #
-# Install the token as the RENOVATE_TOKEN secret (a PAT with repo scope) and
-# disable the hosted Renovate app for this repository, or both will run.
+# Install the token as the RENOVATE_TOKEN secret (a PAT with repo scope, plus
+# workflow scope so Renovate can update .github/workflows) and disable the
+# hosted Renovate app for this repository, or both will run.
 on:
   schedule:
     # Inside the 0-5 UTC window that renovate.json5 allows updates in.
@@ -57,6 +58,18 @@ jobs:
           key: renovate-${{ runner.os }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', 'modules/ui-app/package.json', 'modules/ui-app/pnpm-workspace.yaml') }}
           restore-keys: |
             renovate-${{ runner.os }}-
+
+      - name: check-renovate-token
+        # An unset secret expands to an empty string, which Renovate reports as
+        # "You must configure a GitHub token" after a minute of npx install.
+        # Fail fast and name the secret instead.
+        env:
+          RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
+        run: |
+          if [ -z "${RENOVATE_TOKEN}" ]; then
+            echo "::error::RENOVATE_TOKEN is empty. Add it as a repository secret (PAT with repo and workflow scopes), or share the organization secret with this repository."
+            exit 1
+          fi
 
       - name: run-renovate
         run: npx --yes renovate@44
