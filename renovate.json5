@@ -39,6 +39,11 @@
   // trigger a PR by hand; handy for the prerelease groups below.
   dependencyDashboard: true,
 
+  // Every Renovate PR gets this label; the per-manager tags are added through
+  // the `addLabels` rules at the top of packageRules below. Renovate does not
+  // create labels, so each name must already exist in the repository.
+  labels: ["dependencies"],
+
   // Besides GitHub's own advisory database, check osv.dev.
   osvVulnerabilityAlerts: true,
 
@@ -60,6 +65,33 @@
   ],
 
   packageRules: [
+    // --- Labels -------------------------------------------------------------
+    // Manager-wide tags, so they apply to majors too (the group rules further
+    // down only match minor/patch). `addLabels` is mergeable, so a Vaadin bump
+    // ends up with `dependencies`, `java`, `gradle` and `vaadin`.
+    {
+      matchManagers: ["gradle"],
+      addLabels: ["java", "gradle"],
+    },
+    {
+      matchManagers: ["gradle-wrapper"],
+      addLabels: ["gradle"],
+    },
+    {
+      matchManagers: ["docker-compose"],
+      addLabels: ["docker"],
+    },
+    {
+      matchManagers: ["github-actions"],
+      addLabels: ["github-actions"],
+    },
+    {
+      // The @NpmPackage annotations in the ui-app sources.
+      matchManagers: ["custom.regex"],
+      matchFileNames: ["modules/ui-app/src/main/java/**"],
+      addLabels: ["npm", "frontend"],
+    },
+
     // --- Gradle -------------------------------------------------------------
     {
       // Routine library and plugin bumps go out together; majors keep their
@@ -78,6 +110,7 @@
       // Services BOM, which share the `quarkus` version in the catalog.
       matchManagers: ["gradle"],
       matchPackageNames: ["io.quarkus*"],
+      addLabels: ["quarkus"],
       groupName: "quarkus",
     },
     {
@@ -92,6 +125,7 @@
         "https://maven.vaadin.com/vaadin-prereleases",
         "https://repo1.maven.org/maven2",
       ],
+      addLabels: ["vaadin", "frontend"],
       groupName: "vaadin",
     },
     {
