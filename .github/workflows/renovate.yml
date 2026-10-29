@@ -56,7 +56,10 @@ jobs:
 
       - name: cache-gradle-and-vaadin
         # The postUpgradeTasks pay for a Gradle configuration plus, for ui-app,
-        # the Vaadin toolchain and pnpm store.
+        # the Vaadin toolchain and pnpm store. ~/.cache/pnpm also holds the
+        # `dlx` install of Renovate itself; its content-addressable store lives
+        # under ~/setup-pnpm, the action's own install directory, so that one is
+        # deliberately not cached.
         uses: actions/cache@v6
         with:
           path: |
@@ -64,7 +67,6 @@ jobs:
             ~/.gradle/wrapper
             ~/.vaadin
             ~/.cache/pnpm
-            ~/.local/share/pnpm
           key: renovate-${{ runner.os }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', 'modules/ui-app/package.json', 'modules/ui-app/pnpm-workspace.yaml') }}
           restore-keys: |
             renovate-${{ runner.os }}-
@@ -86,6 +88,11 @@ jobs:
         env:
           RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
           RENOVATE_REPOSITORIES: ${{ github.repository }}
+          # Renovate cannot sign commits as its Mend-owned default author, so
+          # attribute them to the Actions bot instead. The pull requests are
+          # still opened by the token owner; switch to a GitHub App token if
+          # author and PR owner should be the same identity.
+          RENOVATE_GIT_AUTHOR: "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
           # Global config: allowedCommands, allowedUnsafeExecutions, binarySource.
           RENOVATE_CONFIG_FILE: .github/renovate-global.json5
           RENOVATE_ONBOARDING: "false"
