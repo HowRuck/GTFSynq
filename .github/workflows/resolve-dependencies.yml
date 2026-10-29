@@ -1,4 +1,4 @@
-name: pull-request
+name: resolve-dependencies
 
 # Resolves the production runtime classpath of every application on pull
 # requests. This is the step that fails when the Avrea Maven mirror does not yet
@@ -20,7 +20,7 @@ on:
       - "gradle/**"
       - "build-logic/**"
       - "modules/**"
-      - ".github/workflows/pull-request.yml"
+      - ".github/workflows/resolve-dependencies.yml"
   workflow_dispatch:
 
 concurrency:
