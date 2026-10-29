@@ -40,6 +40,23 @@
   // Besides GitHub's own advisory database, check osv.dev.
   osvVulnerabilityAlerts: true,
 
+  // Vaadin components declare extra npm packages with `@NpmPackage(...)` on the
+  // Java class, and the Vaadin Gradle plugin copies that version into
+  // modules/ui-app/package.json on the next build. For those packages the
+  // annotation is the source of truth and package.json is generated output, so
+  // they are bumped here and not by the npm manager (see the npm rule below).
+  customManagers: [
+    {
+      customType: "regex",
+      managerFilePatterns: ["/\\.java$/"],
+      matchStrings: [
+        '@NpmPackage\\(\\s*value\\s*=\\s*"(?<depName>[^"]+)"\\s*,\\s*version\\s*=\\s*"(?<currentValue>[^"]+)"',
+        '@NpmPackage\\(\\s*version\\s*=\\s*"(?<currentValue>[^"]+)"\\s*,\\s*value\\s*=\\s*"(?<depName>[^"]+)"',
+      ],
+      datasourceTemplate: "npm",
+    },
+  ],
+
   packageRules: [
     // --- Gradle -------------------------------------------------------------
     {
