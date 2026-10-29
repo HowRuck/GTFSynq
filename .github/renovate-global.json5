@@ -23,7 +23,7 @@
   // refuses to execute anything that does not match one of these patterns, and
   // records the rejection in the pull request.
   allowedCommands: [
-    "^\\./gradlew :ui-app:quarkusBuild --console=plain$",
+    "^\\./gradlew :ui-app:vaadinPrepareFrontend --console=plain$",
     "^\\./scripts/update-gradle-wrapper\\.sh$",
   ],
 }

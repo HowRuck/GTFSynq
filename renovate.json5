@@ -163,14 +163,15 @@
     // rejects any command that is not `git add`, `git reset` or `pwd`.
     {
       // The `regex` custom manager above reads npm versions from Vaadin's
-      // @NpmPackage annotations. The Quarkus Vaadin extension copies them into
-      // modules/ui-app/package.json and the pnpm files during augmentation, so
-      // the task regenerates those files and they land in the same commit as the
-      // annotation bump instead of drifting until the next build.
+      // @NpmPackage annotations. The Vaadin Gradle plugin's prepare step copies
+      // them into modules/ui-app/package.json and the pnpm files, so running
+      // just that task regenerates them -- no full Quarkus build -- and they
+      // land in the same commit as the annotation bump instead of drifting
+      // until the next build.
       matchManagers: ["custom.regex"],
       matchFileNames: ["modules/ui-app/src/main/java/**"],
       postUpgradeTasks: {
-        commands: ["./gradlew :ui-app:quarkusBuild --console=plain"],
+        commands: ["./gradlew :ui-app:vaadinPrepareFrontend --console=plain"],
         fileFilters: [
           "modules/ui-app/package.json",
           "modules/ui-app/pnpm-workspace.yaml",
