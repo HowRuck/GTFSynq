@@ -1,0 +1,48 @@
+name: pull-request
+
+# Resolves the production runtime classpath of every application on pull
+# requests. This is the step that fails when the Avrea Maven mirror does not yet
+# have a freshly bumped artifact, so it catches the problem before the change is
+# merged instead of on the next `images` run from main.
+#
+# It only generates the Quarkus application models: no tests, no packaging and
+# no container image, so it stays cheap enough to run on every dependency PR.
+on:
+  pull_request:
+    paths:
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradle.properties"
+      - "gradle/**"
+      - "build-logic/**"
+      - "modules/**"
+      - ".github/workflows/pull-request.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  resolve-app-models:
+    runs-on: avrea-ubuntu-latest-2-vcpu
+    steps:
+      - name: checkout
+        uses: actions/checkout@v7
+
+      - name: set-up-java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - name: set-up-gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: resolve-app-models
+        # A bare task name runs in every project that has it, so this covers all
+        # four applications without listing them.
+        run: ./gradlew quarkusGenerateAppModel --console=plain
