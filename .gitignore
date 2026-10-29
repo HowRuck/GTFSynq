@@ -58,6 +58,7 @@ modules/ui-app/node_modules/
 modules/ui-app/src/main/frontend/node_modules/
 modules/ui-app/vite.generated.ts
 modules/ui-app/.npmrc
+modules/ui-app/pnpm-lock.yaml
 modules/ui-app/pnpmfile.js
 modules/ui-app/.vite/
 modules/ui-app/.vaadin/
