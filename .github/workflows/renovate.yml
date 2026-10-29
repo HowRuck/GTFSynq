@@ -84,7 +84,10 @@ jobs:
           fi
 
       - name: run-renovate
-        run: pnpm dlx renovate@44
+        # `--allow-build re2` runs re2's install script (it fetches a prebuilt
+        # binary for the runner's Node ABI); without it Renovate falls back to
+        # the slower JS RegExp engine and warns about it.
+        run: pnpm dlx --allow-build re2 renovate@44
         env:
           RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
           RENOVATE_REPOSITORIES: ${{ github.repository }}
