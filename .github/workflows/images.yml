@@ -5,8 +5,9 @@ on:
     branches: ["main"]
     paths:
       - "modules/**"
-      - "build.gradle"
-      - "settings.gradle"
+      - "build-logic/**"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
       - "gradle.properties"
       - "gradle/**"
       - ".github/workflows/images.yml"
@@ -21,7 +22,73 @@ permissions:
   packages: write
 
 jobs:
+  detect-changes:
+    name: detect-changes
+    runs-on: avrea-ubuntu-26.04-1-vcpu
+    outputs:
+      # dorny/paths-filter emits a JSON array of the filters that matched, which is
+      # exactly the app matrix below. A manual dispatch has no previous commit to
+      # compare against, so it selects every app.
+      apps: ${{ steps.filter-changed-apps.outputs.changes || steps.select-all-apps.outputs.apps }}
+    steps:
+      - name: checkout
+        # paths-filter compares against the commit before the push, so the parent
+        # commits must be present; a depth-1 checkout only has the pushed commit.
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: filter-changed-apps
+        id: filter-changed-apps
+        if: github.event_name == 'push'
+        uses: dorny/paths-filter@v4
+        with:
+          # Every app filter also lists the shared module and the build logic,
+          # because a change there invalidates all four images.
+          filters: |
+            api-app:
+              - 'modules/api-app/**'
+              - 'modules/shared/**'
+              - 'build-logic/**'
+              - 'build.gradle.kts'
+              - 'settings.gradle.kts'
+              - 'gradle.properties'
+              - 'gradle/**'
+            ingest-app:
+              - 'modules/ingest-app/**'
+              - 'modules/shared/**'
+              - 'build-logic/**'
+              - 'build.gradle.kts'
+              - 'settings.gradle.kts'
+              - 'gradle.properties'
+              - 'gradle/**'
+            store-app:
+              - 'modules/store-app/**'
+              - 'modules/shared/**'
+              - 'build-logic/**'
+              - 'build.gradle.kts'
+              - 'settings.gradle.kts'
+              - 'gradle.properties'
+              - 'gradle/**'
+            ui-app:
+              - 'modules/ui-app/**'
+              - 'modules/shared/**'
+              - 'build-logic/**'
+              - 'build.gradle.kts'
+              - 'settings.gradle.kts'
+              - 'gradle.properties'
+              - 'gradle/**'
+
+      - name: select-all-apps
+        id: select-all-apps
+        if: github.event_name == 'workflow_dispatch'
+        run: echo 'apps=["api-app","ingest-app","store-app","ui-app"]' >> "$GITHUB_OUTPUT"
+
   build-push:
+    name: build-push
+    needs: detect-changes
+    # An empty matrix is an error, so skip the job when nothing matched.
+    if: needs.detect-changes.outputs.apps != '[]'
     runs-on: avrea-ubuntu-26.04-4-vcpu
     # Jib's HTTP timeout is disabled in gradle.properties, so bound the whole job
     # instead: a JVM image build plus a containerised native build fits well
@@ -29,7 +96,7 @@ jobs:
     timeout-minutes: 15
     strategy:
       matrix:
-        app: [api-app, ingest-app, store-app, ui-app]
+        app: ${{ fromJSON(needs.detect-changes.outputs.apps) }}
     steps:
       - name: checkout
         uses: actions/checkout@v7

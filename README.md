@@ -560,6 +560,11 @@ to a GraalVM native executable (see below):
 ./gradlew :api-app:imageBuild
 ```
 
+On `main`, the `images` workflow detects which apps actually changed and builds
+only those; a change under `modules/shared/`, `build-logic/` or the root Gradle
+files selects every app, and a manual dispatch builds all four. Each selected
+app still gets both its JVM and native image.
+
 The Gradle commands produce local JVM images named
 `ghcr.io/howruck/gtfsynq-<app>:0.0.1-SNAPSHOT` (e.g.
 `ghcr.io/howruck/gtfsynq-api-app:0.0.1-SNAPSHOT`); `docker-compose.yaml`
