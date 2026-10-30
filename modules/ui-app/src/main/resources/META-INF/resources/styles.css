@@ -128,6 +128,14 @@ vaadin-split-layout.live-detail-closed::part(splitter) {
  */
 vaadin-grid.live-trips::part(row) {
     cursor: pointer;
+    transition: background-color 120ms ease;
+}
+
+@media (any-hover: hover) {
+    /* The trip rows open the detail pane, so make the hover target unmistakable. */
+    vaadin-grid.live-trips::part(row):hover {
+        background-color: var(--vaadin-background-container-strong);
+    }
 }
 
 vaadin-grid::part(active-trip) {
