@@ -47,6 +47,12 @@ public class MetricsView extends VerticalLayout implements HasDynamicTitle {
         panels = List.of(
                 panel("metrics.panel.ingest", "sum by (outcome) (rate(gtfs.static.ingest[5m]))"),
                 panel("metrics.panel.validation", "sum by (result) (rate(gtfs.static.validation.feeds[5m]))"),
+                panel(
+                        "metrics.panel.tripUpdates",
+                        "sum by (type) (rate(gtfs.sink.entities.count_sum{type=\"descriptors\"}[5m]))"),
+                panel(
+                        "metrics.panel.stopTimes",
+                        "sum by (type) (rate(gtfs.sink.entities.count_sum{type=\"stop_times\"}[5m]))"),
                 panel("metrics.panel.kafkaLag", "sum by (consumergroup) (kafka_consumergroup_lag)"),
                 panel("metrics.panel.heap", "sum by (application) (jvm.memory.used{area=\"heap\"})"));
 

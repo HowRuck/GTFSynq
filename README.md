@@ -631,10 +631,11 @@ Because metrics are pushed rather than scraped, the apps no longer expose a
 Prometheus `/q/metrics` endpoint and there is no scrape job for them.
 
 The console has a **Metrics** tab that reads the last hour from VictoriaMetrics
-over its HTTP query API and charts ingest rate, feed validation results, Kafka
-consumer lag and JVM heap usage. It uses `GTFS_METRICS_URL`
-(default `http://victoriametrics:8428`; `http://localhost:8428` in dev mode);
-set it to an empty value to disable the view's data source.
+over its HTTP query API and charts ingest rate, feed validation results, the
+trip update and stop time update rates, Kafka consumer lag and JVM heap usage.
+It uses `GTFS_METRICS_URL` (default `http://victoriametrics:8428`;
+`http://localhost:8428` in dev mode); set it to an empty value to disable the
+view's data source.
 
 If the apps run without this monitoring stack, they log repeated
 `Failed to export ... otel-collector` warnings. Either start the stack with the
