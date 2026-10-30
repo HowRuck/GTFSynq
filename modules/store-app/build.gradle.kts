@@ -16,7 +16,7 @@ dependencies {
     implementation(libs.quarkus.smallrye.health)
     implementation(libs.quarkus.opentelemetry)
     implementation(libs.quarkus.micrometer.opentelemetry)
-    implementation(libs.quarkus.container.image.jib)
+    implementation(libs.quarkus.container.image.buildpack)
 
     // Reads the stored static feed archives back for validation. As in ingest-app, the extension
     // marks all HTTP clients optional, so the sync client needs one supplied explicitly.
