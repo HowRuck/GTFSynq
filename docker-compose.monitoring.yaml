@@ -41,7 +41,7 @@ services:
   # metrics (via the micrometer->opentelemetry bridge), logs and traces as OTLP
   # here; the collector batches and fans each signal out to its Victoria* store.
   otel-collector:
-    image: docker.io/otel/opentelemetry-collector:0.163.2
+    image: docker.io/otel/opentelemetry-collector:0.164.0
     container_name: otel-collector
     depends_on:
       victoriametrics:
@@ -121,7 +121,7 @@ services:
     restart: unless-stopped
 
   victoriametrics:
-    image: docker.io/victoriametrics/victoria-metrics:v1.154.1
+    image: docker.io/victoriametrics/victoria-metrics:v1.155.0
     container_name: victoriametrics
     depends_on:
       - ingest-app
@@ -159,7 +159,7 @@ services:
   # download can finish. Re-running does not help; the container exits first.
   # Installing up front removes the race and keeps the install reproducible.
   grafana-plugins:
-    image: docker.io/grafana/grafana:13.2.4
+    image: docker.io/grafana/grafana:13.3.0
     container_name: grafana-plugins
     restart: "no"
     # One plugin per invocation: `grafana cli plugins install` joins multiple
@@ -178,7 +178,7 @@ services:
       - grafana-data:/var/lib/grafana
 
   grafana:
-    image: docker.io/grafana/grafana:13.2.4
+    image: docker.io/grafana/grafana:13.3.0
     container_name: grafana
     depends_on:
       grafana-plugins:
@@ -205,7 +205,7 @@ services:
   # then the GTFSynq server is already listed — enter POSTGRES_PASSWORD
   # on first connect.
   pgadmin:
-    image: docker.io/dpage/pgadmin4:9.17
+    image: docker.io/dpage/pgadmin4:9.19
     container_name: pgadmin
     depends_on:
       timescaledb:
