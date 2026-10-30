@@ -1,16 +1,10 @@
 package org.example.gtfsynq.ui.component;
 
 import com.vaadin.flow.component.Component;
-import com.vaadin.flow.component.badge.Badge;
-import com.vaadin.flow.component.badge.BadgeVariant;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.Grid.Column;
 import com.vaadin.flow.component.grid.HeaderRow;
 import com.vaadin.flow.component.html.Span;
-import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
-import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
-import com.vaadin.flow.component.progressbar.ProgressBar;
-import com.vaadin.flow.component.treegrid.TreeGrid;
 import java.util.List;
 import org.example.gtfsynq.shared.protocol.query.Route;
 import org.example.gtfsynq.shared.protocol.query.StaticFeed;
@@ -130,142 +124,74 @@ public final class Columns {
     }
 
     /**
-     * Columns of the live updates tree.
+     * Columns of the live trip table.
      *
-     * <p>The hierarchy column doubles as the trip / stop label: a trip row shows its static short
-     * name when available, falling back to its trip id, and its stop rows are indented below it
-     * with their static stop name, falling back to the stop id.
+     * <p>The first column is the trip label: its static short name when the feed publishes one,
+     * falling back to the trip id. The stop timeline and map live in the detail pane that opens
+     * when a row is selected, so the table stays a scannable one-row-per-trip overview.
      */
-    public static void liveUpdates(TreeGrid<LiveUpdateRow> grid) {
-        grid.addComponentHierarchyColumn(row -> liveLabel(grid, row))
-                .setHeader(grid.getTranslation("column.tripOrStop"))
+    public static void liveUpdates(Grid<TripUpdate> grid) {
+        grid.addComponentColumn(trip -> label(tripName(trip)))
+                .setHeader(grid.getTranslation("column.trip"))
                 .setKey("tripId")
                 .setSortProperty("tripId")
                 .setSortable(true);
 
-        grid.addComponentColumn(row -> row instanceof TripUpdateRow trip
-                        ? UiComponents.badge(trip.update().getFeedId())
-                        : new Span())
+        grid.addComponentColumn(trip -> UiComponents.badge(trip.getFeedId()))
                 .setHeader(grid.getTranslation("column.feed"))
                 .setKey("feed");
 
-        grid.addColumn(row -> row instanceof TripUpdateRow trip
-                        ? UiFormat.text(trip.update().getAgencyName())
-                        : "")
+        grid.addColumn(trip -> UiFormat.text(trip.getAgencyName()))
                 .setHeader(grid.getTranslation("column.agency"))
                 .setKey("agency");
 
-        grid.addComponentColumn(row -> row instanceof TripUpdateRow trip ? label(routeName(trip.update())) : new Span())
+        grid.addComponentColumn(trip -> label(routeName(trip)))
                 .setHeader(grid.getTranslation("column.route"))
                 .setKey("routeId")
                 .setSortProperty("routeId")
                 .setSortable(true);
 
-        grid.addColumn(row -> row instanceof TripUpdateRow trip && trip.update().hasRouteType()
-                        ? routeTypeLabel(grid, trip.update().getRouteType())
-                        : "")
+        grid.addColumn(trip -> trip.hasRouteType() ? routeTypeLabel(grid, trip.getRouteType()) : "")
                 .setHeader(grid.getTranslation("column.routeType"))
                 .setKey("routeType");
 
-        grid.addColumn(row -> row instanceof TripUpdateRow trip
-                        ? UiFormat.text(trip.update().getStartDate())
-                        : "")
+        grid.addColumn(trip -> UiFormat.text(trip.getStartDate()))
                 .setHeader(grid.getTranslation("column.startDate"))
                 .setKey("startDate");
 
-        grid.addColumn(row -> row instanceof TripUpdateRow trip
-                        ? UiFormat.time(trip.update().getStartTime())
-                        : "")
+        grid.addColumn(trip -> UiFormat.time(trip.getStartTime()))
                 .setHeader(grid.getTranslation("column.startTime"))
                 .setKey("startTime");
 
-        grid.addColumn(row -> row instanceof TripUpdateRow trip ? currentDelay(trip.update()) : "")
+        grid.addColumn(Columns::currentDelay)
                 .setHeader(grid.getTranslation("column.currentDelay"))
                 .setKey("currentDelay")
-                .setPartNameGenerator(row -> row instanceof TripUpdateRow trip
-                        ? delayPart(
-                                trip.update().hasCurrentDelay() ? trip.update().getCurrentDelay() : null)
-                        : null);
+                .setPartNameGenerator(trip -> delayPart(trip.hasCurrentDelay() ? trip.getCurrentDelay() : null));
 
-        grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? eventTime(stop.update(), true) : "")
-                .setHeader(grid.getTranslation("column.arrivalTime"))
-                .setKey("arrivalTime")
-                .setPartNameGenerator(row -> row instanceof StopTimeUpdateRow stop
-                                && !stop.update().hasArrivalTime()
-                                && stop.update().hasScheduledArrivalTime()
-                        ? "scheduled-value"
-                        : null);
-
-        grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? delay(stop.update(), true) : "")
-                .setHeader(grid.getTranslation("column.arrivalDelay"))
-                .setKey("arrivalDelay")
-                .setPartNameGenerator(
-                        row -> row instanceof StopTimeUpdateRow stop ? delayPart(stop.update(), true) : null);
-
-        grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? eventTime(stop.update(), false) : "")
-                .setHeader(grid.getTranslation("column.departureTime"))
-                .setKey("departureTime")
-                .setPartNameGenerator(row -> row instanceof StopTimeUpdateRow stop
-                                && !stop.update().hasDepartureTime()
-                                && stop.update().hasScheduledDepartureTime()
-                        ? "scheduled-value"
-                        : null);
-
-        grid.addColumn(row -> row instanceof StopTimeUpdateRow stop ? delay(stop.update(), false) : "")
-                .setHeader(grid.getTranslation("column.departureDelay"))
-                .setKey("departureDelay")
-                .setPartNameGenerator(
-                        row -> row instanceof StopTimeUpdateRow stop ? delayPart(stop.update(), false) : null);
-
-        grid.addColumn(row -> row instanceof TripUpdateRow trip
-                        ? UiFormat.dateTime(trip.update().getFeedTs())
-                        : "")
+        grid.addColumn(trip -> UiFormat.dateTime(trip.getFeedTs()))
                 .setHeader(grid.getTranslation("column.feedTimestamp"))
                 .setKey("feedTs")
                 .setSortProperty("feedTs")
                 .setSortable(true);
 
-        grid.addColumn(row -> switch (row) {
-                    case TripUpdateRow trip -> UiFormat.dateTime(trip.update().getLastSeenAt());
-                    case StopTimeUpdateRow stop ->
-                        UiFormat.dateTime(stop.update().getLastSeenAt());
-                    case LoadingRow ignored -> "";
-                })
+        grid.addColumn(trip -> UiFormat.dateTime(trip.getLastSeenAt()))
                 .setHeader(grid.getTranslation("column.lastSeen"))
                 .setKey("lastSeenAt")
                 .setSortProperty("lastSeenAt")
                 .setSortable(true);
 
-        // Schedule-filled rows are reference data, not live predictions: dim their values so they
-        // do not read like current information.
-        grid.setPartNameGenerator(
-                row -> row instanceof StopTimeUpdateRow stop && !stop.update().getRealtime() ? "scheduled-stop" : null);
-
         groupHeaderRow(grid);
     }
 
     /**
-     * Groups the live tree's columns under a spanning header row so a fourteen-column table stays
-     * scannable. Groups must be contiguous: Vaadin joins adjacent header cells, so the column order
-     * defines the grouping.
+     * Groups the live table's columns under a spanning header row. Groups must be contiguous:
+     * Vaadin joins adjacent header cells, so the column order defines the grouping.
      */
-    private static void groupHeaderRow(TreeGrid<LiveUpdateRow> grid) {
+    private static void groupHeaderRow(Grid<TripUpdate> grid) {
         var row = grid.prependHeaderRow();
-        join(
-                row,
-                grid,
-                "column.group.trip",
-                "tripId",
-                "feed",
-                "agency",
-                "routeId",
-                "routeType",
-                "startDate",
-                "startTime",
-                "currentDelay");
-        join(row, grid, "column.group.arrival", "arrivalTime", "arrivalDelay");
-        join(row, grid, "column.group.departure", "departureTime", "departureDelay");
-        join(row, grid, "column.group.freshness", "feedTs", "lastSeenAt");
+        join(row, grid, "column.group.trip", "tripId", "feed", "agency", "routeId", "routeType");
+        join(row, grid, "column.group.service", "startDate", "startTime");
+        join(row, grid, "column.group.status", "currentDelay", "feedTs", "lastSeenAt");
     }
 
     /**
@@ -278,18 +204,10 @@ public final class Columns {
                 : String.valueOf(routeType);
     }
 
-    private static void join(HeaderRow row, TreeGrid<LiveUpdateRow> grid, String groupKey, String... columnKeys) {
+    private static void join(HeaderRow row, Grid<TripUpdate> grid, String groupKey, String... columnKeys) {
         Column<?>[] columns =
                 java.util.Arrays.stream(columnKeys).map(grid::getColumnByKey).toArray(Column<?>[]::new);
         row.join(columns).setText(grid.getTranslation(groupKey));
-    }
-
-    private static Component liveLabel(TreeGrid<LiveUpdateRow> grid, LiveUpdateRow row) {
-        return switch (row) {
-            case TripUpdateRow trip -> label(tripName(trip.update()));
-            case StopTimeUpdateRow stop -> stopLabel(grid, stop.update());
-            case LoadingRow ignored -> loadingRow(grid);
-        };
     }
 
     /**
@@ -313,35 +231,7 @@ public final class Columns {
      * and is absent when no static stop matches. The stop id stays available as the tooltip.
      */
     static String stopName(StopTimeUpdate stop) {
-        return stop.hasStopName() ? stop.getStopName() : stopId(stop);
-    }
-
-    private static Component stopLabel(TreeGrid<LiveUpdateRow> grid, StopTimeUpdate stop) {
-        var id = stopId(stop);
-        var name = stop.hasStopName() ? label(stop.getStopName(), id == null ? stop.getStopName() : id) : label(id);
-
-        // The sequence replaces the former dedicated column and sits at the left of the row, in the
-        // indentation gutter the tree already reserves for child rows.
-        var sequence = new Span(String.valueOf(stop.getStopSequence()));
-        sequence.getElement().getStyle().set("text-align", "right");
-        sequence.getElement().getStyle().set("color", "var(--vaadin-text-color-secondary)");
-        sequence.getElement().getStyle().set("font-variant-numeric", "tabular-nums");
-
-        var layout = new HorizontalLayout(sequence, name);
-        layout.setPadding(false);
-        layout.setSpacing(false);
-        layout.setAlignItems(Alignment.CENTER);
-        layout.getElement().getStyle().set("gap", "0.5rem");
-
-        if (!stop.getRealtime()) {
-            // Rows the feed did not update are filled in from the static schedule; mark them so
-            // they are not mistaken for live predictions.
-            var scheduled = new Badge(grid.getTranslation("live.stop.scheduled"));
-            scheduled.addThemeVariants(BadgeVariant.CONTRAST, BadgeVariant.SMALL);
-            scheduled.getElement().setAttribute("title", grid.getTranslation("live.stop.scheduled.title"));
-            layout.add(scheduled);
-        }
-        return layout;
+        return stop.hasStopName() ? stop.getStopName() : UiFormat.text(stopId(stop));
     }
 
     /**
@@ -370,17 +260,6 @@ public final class Columns {
         return trip.getRouteId();
     }
 
-    private static Component loadingRow(TreeGrid<LiveUpdateRow> grid) {
-        var progress = new ProgressBar();
-        progress.setIndeterminate(true);
-        progress.setWidth("5rem");
-
-        var loading = new HorizontalLayout(progress, new Span(grid.getTranslation("grid.loading")));
-        loading.setPadding(false);
-        loading.setAlignItems(Alignment.CENTER);
-        return loading;
-    }
-
     private static String stopId(StopTimeUpdate stop) {
         if (stop.hasStopId()) {
             return stop.getStopId();
@@ -388,36 +267,16 @@ public final class Columns {
         return stop.hasAssignedStopId() ? stop.getAssignedStopId() : null;
     }
 
-    private static String eventTime(StopTimeUpdate stop, boolean arrival) {
-        if (arrival) {
-            return UiFormat.eventTime(
-                    stop.getArrivalTime(),
-                    stop.getScheduledArrivalTime(),
-                    stop.hasArrivalDelay() ? stop.getArrivalDelay() : null);
-        }
-        return UiFormat.eventTime(
-                stop.getDepartureTime(),
-                stop.getScheduledDepartureTime(),
-                stop.hasDepartureDelay() ? stop.getDepartureDelay() : null);
-    }
-
     private static String currentDelay(TripUpdate trip) {
         return UiFormat.delay(trip.hasCurrentDelay() ? trip.getCurrentDelay() : null);
     }
 
-    private static String delay(StopTimeUpdate stop, boolean arrival) {
-        return UiFormat.delay(delaySeconds(stop, arrival));
-    }
-
     /**
-     * Part name that colors a delay cell: blue when early, green when on time, orange when late,
-     * and red with extra weight once the delay reaches five minutes.
+     * Part name that colors a delay: blue when early, green when on time, orange when late, and
+     * red with extra weight once the delay reaches five minutes. Shared with the trip timeline so
+     * both views read the same way.
      */
-    private static String delayPart(StopTimeUpdate stop, boolean arrival) {
-        return delayPart(delaySeconds(stop, arrival));
-    }
-
-    private static String delayPart(Integer seconds) {
+    static String delayPart(Integer seconds) {
         if (seconds == null) {
             return null;
         }
@@ -431,11 +290,5 @@ public final class Columns {
             return "delay-late";
         }
         return "delay-on-time";
-    }
-
-    private static Integer delaySeconds(StopTimeUpdate stop, boolean arrival) {
-        return arrival
-                ? (stop.hasArrivalDelay() ? stop.getArrivalDelay() : null)
-                : (stop.hasDepartureDelay() ? stop.getDepartureDelay() : null);
     }
 }

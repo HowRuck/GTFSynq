@@ -1,18 +1,13 @@
-import {
-  LngLatBounds,
-  Map as MapLibreMap,
-  NavigationControl,
-  Popup,
-  setWorkerUrl,
-} from 'maplibre-gl';
+import { LngLatBounds, Map as MapLibreMap, NavigationControl, Popup } from 'maplibre-gl';
 import type { GeoJSONSource } from 'maplibre-gl';
-import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
-
-// MapLibre derives its worker URL from its own module location. Once the library is bundled that
-// location is the app chunk, so the worker 404s and no vector tile is ever parsed: the basemap stays
-// blank. Pointing MapLibre at the worker asset Vite emits fixes it for both the dev and build output.
-setWorkerUrl(maplibreWorkerUrl);
-import 'maplibre-gl/dist/maplibre-gl.css';
+import {
+  BASEMAP_SOURCE_IDS,
+  FALLBACK_AFTER_ERRORS,
+  STYLE_LOAD_TIMEOUT_MS,
+  popupOffset,
+  rasterFallbackStyle,
+  styleFor,
+} from './map-basemap';
 
 /**
  * One trip position as a compact tuple: [lat, lon, label, detail, delaySeconds, reachedMinutesAgo].
@@ -28,18 +23,6 @@ interface MarkerProperties {
   delayClass: 'early' | 'on-time' | 'late' | 'severe' | 'unknown';
   reachedMinutesAgo: number | null;
 }
-
-/**
- * OpenFreeMap vector styles: free, no API key, no usage limits, and the style carries its own
- * attribution. Positron is a muted basemap that keeps the delay-coloured markers readable.
- */
-const STYLE_LIGHT = 'https://tiles.openfreemap.org/styles/positron';
-const STYLE_DARK = 'https://tiles.openfreemap.org/styles/dark';
-
-/** Basemap sources of the OpenFreeMap styles; their failures trigger the raster fallback. */
-const BASEMAP_SOURCE_IDS = ['openmaptiles', 'ne2_shaded'];
-const FALLBACK_AFTER_ERRORS = 5;
-const STYLE_LOAD_TIMEOUT_MS = 8000;
 
 const SOURCE_ID = 'live-trips';
 const CLUSTER_LAYER = 'live-trips-clusters';
@@ -74,37 +57,6 @@ const COLOUR_HALO = 'rgba(255, 255, 255, 0.9)';
 
 const DEFAULT_CENTER: [number, number] = [10.45, 51.16];
 const DEFAULT_ZOOM = 5;
-
-/**
- * The raster fallback used when the vector basemap cannot be loaded: one source, no glyphs, no
- * sprite, so it renders even where the OpenFreeMap CDN is unreachable. OpenStreetMap's tile usage
- * policy allows this light use, and the attribution is embedded in the style.
- */
-function rasterFallbackStyle(): Record<string, unknown> {
-  return {
-    version: 8,
-    sources: {
-      osm: {
-        type: 'raster',
-        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-        tileSize: 256,
-        maxzoom: 19,
-        attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      },
-    },
-    layers: [
-      { id: 'background', type: 'background', paint: { 'background-color': '#e8e6e1' } },
-      { id: 'osm', type: 'raster', source: 'osm' },
-    ],
-  };
-}
-
-/** Popup offset in the map's pixel space, derived from the root font size rather than hard-coded. */
-function popupOffset(): number {
-  const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
-  return Number.isFinite(rootFontSize) ? rootFontSize : 16;
-}
 
 function delayClass(delay: number | null): MarkerProperties['delayClass'] {
   if (delay === null) {
@@ -197,6 +149,7 @@ class LiveMap extends HTMLElement {
     // Vaadin flips the `theme` attribute on <html> when the user switches colour scheme.
     this.themeObserver = new MutationObserver(() => {
       if (!this.usingFallback) {
+        this.styleLoaded = false;
         map.setStyle(this.currentStyle());
       }
     });
@@ -214,12 +167,14 @@ class LiveMap extends HTMLElement {
     this.themeObserver = undefined;
     this.map?.remove();
     this.map = undefined;
+    this.styleLoaded = false;
   }
 
   /** Overrides the basemap style, for example to point at a self-hosted tile server. */
   set styleUrl(url: string) {
     this.customStyleUrl = url || undefined;
     if (this.map && !this.usingFallback) {
+      this.styleLoaded = false;
       this.map.setStyle(this.currentStyle());
     }
   }
@@ -262,11 +217,7 @@ class LiveMap extends HTMLElement {
   }
 
   private currentStyle(): string {
-    if (this.customStyleUrl) {
-      return this.customStyleUrl;
-    }
-    const theme = document.documentElement.getAttribute('theme') ?? '';
-    return theme.split(' ').includes('dark') ? STYLE_DARK : STYLE_LIGHT;
+    return styleFor(this.customStyleUrl);
   }
 
   private onMapError(event: unknown): void {
@@ -286,6 +237,7 @@ class LiveMap extends HTMLElement {
       return;
     }
     this.usingFallback = true;
+    this.styleLoaded = false;
     console.warn(`[live-map] ${reason}; switching to raster OpenStreetMap tiles`);
     map.setStyle(rasterFallbackStyle() as never);
   }
@@ -364,7 +316,9 @@ class LiveMap extends HTMLElement {
 
   private updateSource(): void {
     const map = this.map;
-    if (!map || !map.isStyleLoaded()) {
+    // Our own flag, not map.isStyleLoaded(): during the style.load event the map can still report
+    // an unloaded style, which would skip installing the sources for good on a first render.
+    if (!map || !this.styleLoaded) {
       return;
     }
     this.syncTransportOverlay();
@@ -380,7 +334,7 @@ class LiveMap extends HTMLElement {
    */
   private syncTransportOverlay(): void {
     const map = this.map;
-    if (!map || !map.isStyleLoaded()) {
+    if (!map || !this.styleLoaded) {
       return;
     }
     if (!this.transportUrl) {
@@ -453,7 +407,8 @@ class LiveMap extends HTMLElement {
         const cluster = map.queryRenderedFeatures(event.point, { layers: [CLUSTER_LAYER] })[0];
         if (cluster) {
           const clusterId = cluster.properties?.cluster_id as number;
-          const coordinates = (cluster.geometry as { coordinates: [number, number] }).coordinates;
+          const coordinates = (cluster.geometry as unknown as { coordinates: [number, number] })
+            .coordinates;
           const source = map.getSource(SOURCE_ID) as GeoJSONSource | undefined;
           source
             ?.getClusterExpansionZoom(clusterId)
@@ -471,7 +426,7 @@ class LiveMap extends HTMLElement {
       }
       const properties = point.properties as MarkerProperties;
       new Popup({ offset: popupOffset(), closeButton: false })
-        .setLngLat((point.geometry as { coordinates: [number, number] }).coordinates)
+        .setLngLat((point.geometry as unknown as { coordinates: [number, number] }).coordinates)
         .setDOMContent(this.popupContent(properties))
         .addTo(map);
     });

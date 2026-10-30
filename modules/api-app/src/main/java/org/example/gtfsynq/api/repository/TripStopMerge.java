@@ -47,6 +47,8 @@ final class TripStopMerge {
                 coalesce(live.scheduleRelationship(), schedule == null ? null : schedule.scheduleRelationship()),
                 coalesce(live.assignedStopId(), schedule == null ? null : schedule.assignedStopId()),
                 coalesce(live.stopName(), schedule == null ? null : schedule.stopName()),
+                coalesce(live.lat(), schedule == null ? null : schedule.lat()),
+                coalesce(live.lon(), schedule == null ? null : schedule.lon()),
                 coalesce(live.lastSeenAt(), schedule == null ? null : schedule.lastSeenAt()),
                 true);
     }

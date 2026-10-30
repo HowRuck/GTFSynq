@@ -16,5 +16,7 @@ public record StopTimeUpdateDto(
         String scheduleRelationship,
         String assignedStopId,
         String stopName,
+        Double lat,
+        Double lon,
         OffsetDateTime lastSeenAt,
         boolean realtime) {}

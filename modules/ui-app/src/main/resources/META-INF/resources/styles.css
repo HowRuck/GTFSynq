@@ -66,29 +66,6 @@ vaadin-grid::part(delay-severe) {
 }
 
 /*
- * Stop rows filled in from the static schedule (the feed has no live update for
- * them) are reference data. The part name comes from Columns.liveUpdates();
- * the secondary text color keeps them readable without competing with live
- * predictions.
- */
-vaadin-grid::part(scheduled-stop) {
-    color: var(--vaadin-text-color-secondary);
-}
-
-/* A time cell drawn from the static schedule rather than a live prediction. */
-vaadin-grid::part(scheduled-value) {
-    color: var(--vaadin-text-color-secondary);
-}
-
-/*
- * Live tree: tighten the per-level indentation so expanded stop names sit closer
- * to the trip column. This is the offset Vaadin applies for each hierarchy level.
- */
-vaadin-grid-tree-toggle {
-    --vaadin-grid-tree-toggle-level-offset: 0.5rem;
-}
-
-/*
  * Live map popup: the cluster and point markers are drawn by MapLibre on the canvas, so only the
  * popup needs styling here. It follows the theme's text colours.
  */
@@ -135,6 +112,255 @@ vaadin-grid-tree-toggle {
     color: var(--vaadin-text-color);
     box-shadow: 0 1px 4px rgb(0 0 0 / 0.15);
     font-size: 0.9rem;
+}
+
+/*
+ * The overview/detail splitter exists only while the detail pane is open;
+ * without a secondary region it would be an empty handle at the right edge.
+ */
+vaadin-split-layout.live-detail-closed::part(splitter) {
+    display: none;
+}
+
+/*
+ * Live updates: the trip whose detail pane is open keeps a marker in the table
+ * while the minute poll replaces the visible page underneath it.
+ */
+vaadin-grid.live-trips::part(row) {
+    cursor: pointer;
+}
+
+vaadin-grid::part(active-trip) {
+    background: var(--vaadin-background-container);
+    box-shadow: inset 3px 0 0 var(--aura-accent-color);
+}
+
+/*
+ * Trip detail pane: layout and spacing are set through the Vaadin layout APIs,
+ * because the app uses Aura (Lumo utility classes are Lumo-only) and Tailwind is
+ * still experimental. What remains here is what utilities cannot reach: shadow
+ * parts, the timeline's rail/pseudo-elements, the map pin and delay colours.
+ */
+.trip-detail {
+    overflow: hidden;
+}
+
+.trip-detail-title {
+    margin: 0;
+    font-size: var(--aura-font-size-l);
+    line-height: var(--aura-line-height-l);
+}
+
+.trip-detail-subtitle,
+.trip-detail-metadata,
+.trip-detail-stops-title {
+    color: var(--vaadin-text-color-secondary);
+    font-size: var(--aura-font-size-s);
+}
+
+.trip-detail-delay {
+    flex: 0 0 auto;
+    padding-top: 0.15rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--aura-font-weight-semibold);
+    white-space: nowrap;
+}
+
+.trip-detail-map {
+    flex: 0 0 auto;
+    height: clamp(10rem, 22vh, 16rem);
+    border: 1px solid var(--vaadin-border-color);
+    border-radius: var(--vaadin-radius-m);
+    overflow: hidden;
+}
+
+.trip-detail-no-position,
+.trip-detail-empty {
+    color: var(--vaadin-text-color-secondary);
+    font-size: var(--aura-font-size-s);
+}
+
+.trip-detail-stops-title h4 {
+    margin: 0;
+    color: var(--vaadin-text-color);
+    font-size: var(--aura-font-size-m);
+}
+
+.trip-detail-loading {
+    color: var(--vaadin-text-color-secondary);
+    font-size: var(--aura-font-size-s);
+}
+
+.trip-detail-error {
+    color: var(--aura-red-text);
+    font-size: var(--aura-font-size-s);
+}
+
+.trip-detail-timeline {
+    min-height: 0;
+}
+
+/*
+ * Stop timeline: one row per stop, with a rail on the left whose markers show
+ * reached, current, upcoming and skipped stops. The connector line is drawn by
+ * the rail so it follows the content height without a fixed row height.
+ */
+.trip-timeline-rail {
+    position: relative;
+    flex: 0 0 1.5rem;
+    align-self: stretch;
+    display: flex;
+    justify-content: center;
+    padding-top: 0.15rem;
+}
+
+.trip-timeline-row:not(:last-child) .trip-timeline-rail::after {
+    content: "";
+    position: absolute;
+    top: 1.55rem;
+    bottom: calc(-1 * var(--vaadin-gap-s));
+    left: 50%;
+    width: 2px;
+    translate: -50% 0;
+    background: var(--vaadin-border-color);
+}
+
+/* The path between reached stops is progress, not just a connector. */
+.trip-timeline-row.reached .trip-timeline-rail::after,
+.trip-timeline-row.current .trip-timeline-rail::after {
+    background: var(--aura-green-text);
+    opacity: 0.55;
+}
+
+.trip-timeline-marker {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 1.35rem;
+    height: 1.35rem;
+    border: 2px solid var(--vaadin-border-color);
+    border-radius: 50%;
+    background: var(--vaadin-background-color);
+    color: var(--vaadin-text-color-disabled);
+}
+
+.trip-timeline-row.reached .trip-timeline-marker {
+    border-color: var(--aura-green-text);
+    color: var(--aura-green-text);
+}
+
+.trip-timeline-row.current .trip-timeline-marker {
+    border-color: var(--aura-accent-color);
+    background: var(--aura-accent-color);
+    color: var(--aura-accent-contrast-color);
+}
+
+.trip-timeline-row.current .trip-timeline-marker::after {
+    content: "";
+    position: absolute;
+    inset: -0.45rem;
+    border: 2px solid color-mix(in srgb, var(--aura-accent-color) 45%, transparent);
+    border-radius: 50%;
+    animation: trip-timeline-pulse 2s ease-out infinite;
+}
+
+.trip-timeline-row.skipped .trip-timeline-marker {
+    border-color: var(--aura-red-text);
+    color: var(--aura-red-text);
+}
+
+@keyframes trip-timeline-pulse {
+    from {
+        opacity: 0.85;
+        scale: 1;
+    }
+    to {
+        opacity: 0;
+        scale: 1.45;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .trip-timeline-row.current .trip-timeline-marker::after {
+        animation: none;
+    }
+}
+
+.trip-timeline-content {
+    min-width: 0;
+    gap: 0.1rem;
+    padding-bottom: var(--vaadin-gap-s);
+}
+
+.trip-timeline-name {
+    font-weight: var(--aura-font-weight-medium);
+    overflow-wrap: anywhere;
+}
+
+.trip-timeline-row.current .trip-timeline-name {
+    font-weight: var(--aura-font-weight-semibold);
+}
+
+.trip-timeline-row.upcoming .trip-timeline-name,
+.trip-timeline-row.skipped .trip-timeline-name {
+    color: var(--vaadin-text-color-secondary);
+}
+
+.trip-timeline-sequence {
+    color: var(--vaadin-text-color-secondary);
+    font-size: var(--aura-font-size-xs);
+    font-variant-numeric: tabular-nums;
+}
+
+.trip-timeline-times {
+    color: var(--vaadin-text-color-secondary);
+    font-size: var(--aura-font-size-s);
+    font-variant-numeric: tabular-nums;
+}
+
+/*
+ * The delay colour classes are shared by the table's part names and the
+ * timeline's delay values.
+ */
+.trip-detail .delay-early {
+    color: var(--aura-blue-text);
+}
+
+.trip-detail .delay-on-time {
+    color: var(--aura-green-text);
+}
+
+.trip-detail .delay-late {
+    color: var(--aura-orange-text);
+}
+
+.trip-detail .delay-severe {
+    color: var(--aura-red-text);
+    font-weight: var(--aura-font-weight-semibold);
+}
+
+/* Current position pin drawn by the trip map; the SVG inherits the accent colour. */
+.trip-map-current-marker {
+    color: var(--aura-accent-color);
+    filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.35));
+    animation: trip-map-current-bounce 1.8s ease-in-out infinite;
+}
+
+@keyframes trip-map-current-bounce {
+    0%,
+    100% {
+        translate: 0 0;
+    }
+    50% {
+        translate: 0 -2px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .trip-map-current-marker {
+        animation: none;
+    }
 }
 
 /*

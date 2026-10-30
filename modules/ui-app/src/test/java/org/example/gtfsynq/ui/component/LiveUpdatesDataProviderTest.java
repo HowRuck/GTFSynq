@@ -1,13 +1,12 @@
 package org.example.gtfsynq.ui.component;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.vaadin.flow.data.provider.Query;
+import com.vaadin.flow.data.provider.QuerySortOrder;
 import com.vaadin.flow.data.provider.SortDirection;
-import com.vaadin.flow.data.provider.hierarchy.HierarchicalQuery;
 import java.util.List;
-import org.example.gtfsynq.shared.protocol.query.StopTimeUpdate;
 import org.example.gtfsynq.shared.protocol.query.TripUpdate;
 import org.example.gtfsynq.ui.client.GtfsQueryClient;
 import org.example.gtfsynq.ui.client.PageQuery;
@@ -21,77 +20,40 @@ class LiveUpdatesDataProviderTest {
             new LiveUpdatesDataProvider(client, "lastSeenAt", SortDirection.DESCENDING, message -> message);
 
     @Test
-    void loadsTripRowsAndCountsThem() {
-        var query = rootQuery();
+    void loadsOnePageOfTripsAndCountsThem() {
+        assertEquals(2, provider.size(query(0, 25)));
+        assertEquals(2, provider.fetch(query(0, 25)).count());
 
-        assertEquals(2, provider.getChildCount(query));
-        assertEquals(2, provider.fetchChildren(query).count());
+        assertEquals("lastSeenAt", client.lastQuery.sort());
+        assertTrue(client.lastQuery.descending());
+        assertEquals(0, client.lastQuery.page());
+        assertEquals(25, client.lastQuery.size());
     }
 
     @Test
-    void loadsStopTimesOnlyWhenATripIsExpanded() {
-        var trip =
-                (TripUpdateRow) provider.fetchChildren(rootQuery()).findFirst().orElseThrow();
+    void pagesByTheRequestedOffset() {
+        provider.fetch(query(50, 25)).count();
 
-        assertTrue(provider.hasChildren(trip));
-        assertEquals(0, client.stopCalls);
-
-        var query = new HierarchicalQuery<LiveUpdateRow, Void>(0, 100, List.of(), null, null, trip);
-        var stops = provider.fetchChildren(query).toList();
-
-        assertEquals(2, stops.size());
-        assertEquals(1, client.stopCalls);
-        assertFalse(provider.hasChildren(stops.getFirst()));
+        assertEquals(2, client.lastQuery.page());
+        assertEquals(25, client.lastQuery.size());
     }
 
     @Test
-    void everyTripIsExpandableEvenWithoutLiveStopRows() {
-        var tripWithoutLiveStops = (TripUpdateRow) provider.fetchChildren(rootQuery())
-                .filter(row ->
-                        row instanceof TripUpdateRow tripRow && tripRow.update().getStopTimeUpdateCount() == 0)
-                .findFirst()
-                .orElseThrow();
+    void usesTheTripUpdateIdAsStableRowIdentityAcrossRefreshes() {
+        var before = provider.fetch(query(0, 25)).findFirst().orElseThrow();
+        var after = before.toBuilder()
+                .setLastSeenAt(com.google.protobuf.Timestamp.newBuilder().setSeconds(1))
+                .build();
 
-        assertTrue(provider.hasChildren(tripWithoutLiveStops), "the static schedule may still have stops");
-    }
-
-    @Test
-    void cachesStopTimesUntilTheNextRefresh() {
-        var trip =
-                (TripUpdateRow) provider.fetchChildren(rootQuery()).findFirst().orElseThrow();
-        var query = new HierarchicalQuery<LiveUpdateRow, Void>(0, 100, List.of(), null, null, trip);
-
-        assertEquals(2, provider.getChildCount(query));
-        provider.fetchChildren(query).count();
-        provider.fetchChildren(query).count();
-        assertEquals(1, client.stopCalls);
-
-        provider.invalidate();
-        provider.fetchChildren(query).count();
-        assertEquals(2, client.stopCalls);
-    }
-
-    @Test
-    void usesStableIdsAcrossRefreshes() {
-        var before = provider.fetchChildren(rootQuery()).toList().getFirst();
-        provider.invalidate();
-        var after = provider.fetchChildren(rootQuery()).toList().getFirst();
-
-        assertEquals(10L, provider.getId(before));
-        assertEquals(provider.getId(before), provider.getId(after));
-
-        var child = provider.fetchChildren(
-                        new HierarchicalQuery<LiveUpdateRow, Void>(0, 100, List.of(), null, null, before))
-                .findFirst()
-                .orElseThrow();
-        assertEquals("10:1", provider.getId(child));
+        assertEquals(before.getTripUpdateId(), provider.getId(before));
+        assertEquals(provider.getId(before), provider.getId(after), "a poll changes the row, not its identity");
     }
 
     @Test
     void passesTheSearchTermToTheBackend() {
         provider.setSearch("12ab");
 
-        provider.fetchChildren(rootQuery()).count();
+        provider.fetch(query(0, 25)).count();
 
         assertEquals("12ab", client.lastQuery.search(), "the backend does the filtering, not the grid");
     }
@@ -100,7 +62,7 @@ class LiveUpdatesDataProviderTest {
     void passesTheAgencyFilterToTheBackend() {
         provider.setAgency("Verkehrsgemeinschaft Osnabrück");
 
-        provider.fetchChildren(rootQuery()).count();
+        provider.fetch(query(0, 25)).count();
 
         assertEquals("Verkehrsgemeinschaft Osnabrück", client.lastQuery.agency());
     }
@@ -110,52 +72,46 @@ class LiveUpdatesDataProviderTest {
         provider.setRoute("221");
         provider.setRouteType(3);
 
-        provider.fetchChildren(rootQuery()).count();
+        provider.fetch(query(0, 25)).count();
 
         assertEquals("221", client.lastQuery.route());
         assertEquals(3, client.lastQuery.routeType());
     }
 
-    private static HierarchicalQuery<LiveUpdateRow, Void> rootQuery() {
-        return new HierarchicalQuery<>(0, 25, List.of(), null, null, null);
+    @Test
+    void countsOncePerFilterCombination() {
+        provider.size(query(0, 25));
+        provider.size(query(25, 25));
+        assertEquals(1, client.calls, "the count does not depend on the page offset");
+
+        provider.setRouteType(3);
+        provider.size(query(0, 25));
+        assertEquals(2, client.calls, "a changed filter needs a fresh count");
     }
 
-    /** Serves two trips; only the first one has stop time updates. */
+    private static Query<TripUpdate, Void> query(int offset, int limit) {
+        return new Query<>(offset, limit, List.<QuerySortOrder>of(), null, null);
+    }
+
     private static final class FakeClient extends GtfsQueryClient {
 
-        private int stopCalls;
+        private int calls;
         private PageQuery lastQuery;
 
         @Override
         public PagedResult<TripUpdate> tripUpdates(PageQuery query) {
+            calls++;
             lastQuery = query;
             var items = List.of(
                     TripUpdate.newBuilder()
                             .setTripUpdateId(10)
                             .setFeedId("feed")
-                            .setStopTimeUpdateCount(2)
                             .build(),
                     TripUpdate.newBuilder()
                             .setTripUpdateId(20)
                             .setFeedId("feed")
                             .build());
             return new PagedResult<>(items, items.size());
-        }
-
-        @Override
-        public List<StopTimeUpdate> stopTimeUpdates(long tripUpdateId) {
-            stopCalls++;
-            return List.of(
-                    StopTimeUpdate.newBuilder()
-                            .setTripUpdateId(tripUpdateId)
-                            .setStopSequence(1)
-                            .setStopId("A")
-                            .build(),
-                    StopTimeUpdate.newBuilder()
-                            .setTripUpdateId(tripUpdateId)
-                            .setStopSequence(2)
-                            .setStopId("B")
-                            .build());
         }
     }
 }

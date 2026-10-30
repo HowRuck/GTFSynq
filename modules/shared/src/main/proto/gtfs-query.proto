@@ -294,6 +294,11 @@ message StopTimeUpdate {
   // True when the feed has a stop time update for this stop. False means the row
   // was filled in from the static schedule and only carries scheduled times.
   bool realtime = 14;
+  // Static coordinates of the stop, so the UI can draw the trip path and mark the
+  // stop the trip has reached. Absent when no static stop matches or the feed
+  // publishes no coordinates.
+  optional double stop_lat = 15;
+  optional double stop_lon = 16;
 }
 
 message StopTimeUpdatesRequest {

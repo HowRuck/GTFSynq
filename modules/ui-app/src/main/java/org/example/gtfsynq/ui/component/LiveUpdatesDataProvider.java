@@ -1,39 +1,31 @@
 package org.example.gtfsynq.ui.component;
 
-import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.data.provider.AbstractBackEndDataProvider;
+import com.vaadin.flow.data.provider.Query;
 import com.vaadin.flow.data.provider.SortDirection;
-import com.vaadin.flow.data.provider.hierarchy.AbstractHierarchicalDataProvider;
-import com.vaadin.flow.data.provider.hierarchy.HierarchicalQuery;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Stream;
+import org.example.gtfsynq.shared.protocol.query.TripUpdate;
 import org.example.gtfsynq.ui.client.DataAccessException;
 import org.example.gtfsynq.ui.client.GtfsQueryClient;
 import org.example.gtfsynq.ui.client.PageQuery;
 
 /**
- * Lazy hierarchical data provider for the live updates tree.
+ * Lazy server-side data provider for the live trip table.
  *
- * <p>Root rows are paged and sorted by the backend exactly like {@code LazyGrid}; a trip's children
- * are fetched only when the trip is expanded and then cached until the next refresh. Row ids are
- * stable across refreshes, so the tree keeps its expansion when the polling view reloads it.
+ * <p>The grid asks for one page at a time, so only the visible trips are held in memory. Trips are
+ * identified by their {@code trip_update_id}, which stays stable across polls even though every
+ * field of the row (the feed timestamp, the last-seen time) changes. That lets a poll refresh the
+ * rows without dropping the open trip detail panel.
  */
-final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<LiveUpdateRow, Void> {
+final class LiveUpdatesDataProvider extends AbstractBackEndDataProvider<TripUpdate, Void> {
 
     private final GtfsQueryClient client;
     private final String defaultSort;
     private final SortDirection defaultDirection;
     private final Function<String, String> errorMessage;
-
-    private final Map<Long, List<LiveUpdateRow>> stopTimesByTrip = new HashMap<>();
-    private final Set<Long> loadingTrips = new HashSet<>();
 
     private String feedId;
     private String search;
@@ -41,10 +33,8 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
     private String route;
     private Integer routeType;
     private String lastError;
-    private RootPage rootPage;
     private CountKey countKey;
     private long total = -1;
-    private long generation;
 
     LiveUpdatesDataProvider(
             GtfsQueryClient client,
@@ -57,62 +47,9 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
         this.errorMessage = errorMessage;
     }
 
-    @Override
-    public boolean isInMemory() {
-        return false;
-    }
-
-    @Override
-    public HierarchyFormat getHierarchyFormat() {
-        return HierarchyFormat.NESTED;
-    }
-
-    /**
-     * Every trip row is expandable: the expansion query returns the whole static schedule merged
-     * with the live stop time updates, so a trip whose feed reports no stop rows can still show its
-     * scheduled stops. The live count is not used to decide this, which keeps the list query free of
-     * an extra static-table lookup per row.
-     */
-    @Override
-    public boolean hasChildren(LiveUpdateRow item) {
-        return item instanceof TripUpdateRow;
-    }
-
-    @Override
-    public int getChildCount(HierarchicalQuery<LiveUpdateRow, Void> query) {
-        if (query.getParent() == null) {
-            return rootCount(query);
-        }
-        return childrenOf(query.getParent()).size();
-    }
-
-    @Override
-    public Stream<LiveUpdateRow> fetchChildren(HierarchicalQuery<LiveUpdateRow, Void> query) {
-        if (query.getParent() == null) {
-            return rootPage(query).rows().stream().map(LiveUpdateRow.class::cast);
-        }
-        return childrenOf(query.getParent()).stream().skip(query.getOffset()).limit(query.getLimit());
-    }
-
-    /**
-     * Stable identity used by the tree to keep a trip expanded while its data is refreshed.
-     *
-     * <p>Trip rows are keyed by the trip update id instead of the record instance, because the
-     * record changes on every refresh (the feed timestamp and last-seen time move).
-     */
-    @Override
-    public Object getId(LiveUpdateRow item) {
-        return switch (item) {
-            case TripUpdateRow trip -> trip.tripUpdateId();
-            case StopTimeUpdateRow stop ->
-                stop.tripUpdateId() + ":" + stop.update().getStopSequence();
-            case LoadingRow loading -> loading.tripUpdateId() + ":loading";
-        };
-    }
-
     /** Applies a feed filter; returns whether it changed. */
     boolean setFeedId(String value) {
-        var normalized = value == null || value.isBlank() ? null : value;
+        var normalized = normalize(value);
         if (Objects.equals(feedId, normalized)) {
             return false;
         }
@@ -122,7 +59,7 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
 
     /** Applies an agency filter; returns whether it changed. */
     boolean setAgency(String value) {
-        var normalized = value == null || value.isBlank() ? null : value;
+        var normalized = normalize(value);
         if (Objects.equals(agency, normalized)) {
             return false;
         }
@@ -132,7 +69,7 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
 
     /** Applies a route-id filter; returns whether it changed. */
     boolean setRoute(String value) {
-        var normalized = value == null || value.isBlank() ? null : value.trim();
+        var normalized = normalize(value);
         if (Objects.equals(route, normalized)) {
             return false;
         }
@@ -160,161 +97,77 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
         return true;
     }
 
-    /** Drops the cached pages so the next query hits the backend again. */
+    /** Drops the cached count so the next query hits the backend again. */
     void invalidate() {
-        generation++;
-        stopTimesByTrip.clear();
-        loadingTrips.clear();
-        rootPage = null;
         countKey = null;
         total = -1;
     }
 
+    @Override
+    public Object getId(TripUpdate item) {
+        return item.getTripUpdateId();
+    }
+
+    @Override
+    protected Stream<TripUpdate> fetchFromBackEnd(Query<TripUpdate, Void> query) {
+        try {
+            var result = client.tripUpdates(pageQuery(query, query.getOffset(), Math.max(query.getLimit(), 1)));
+            total = result.total();
+            countKey = countKey(query);
+            lastError = null;
+            return result.items().stream();
+        } catch (DataAccessException e) {
+            report(e);
+            return Stream.empty();
+        }
+    }
+
     /**
-     * Returns the row count without loading a page of rows.
-     *
-     * <p>Vaadin asks for the count with an unbounded query limit, so this uses a one-row page and
-     * reads its total instead of transferring a full page.
+     * Counts with a one-row page and reads its total, so the grid never transfers a full page just
+     * to display the scrollbar.
      */
-    private int rootCount(HierarchicalQuery<LiveUpdateRow, Void> query) {
-        var key = rootKey(query);
-        var keyWithoutPage = new CountKey(
-                key.feedId(), key.search(), key.agency(), key.route(), key.routeType(), key.sort(), key.descending());
-        if (total < 0 || !keyWithoutPage.equals(countKey)) {
-            var counted = loadRoot(new RootKey(
-                    key.feedId(),
-                    key.search(),
-                    key.agency(),
-                    key.route(),
-                    key.routeType(),
-                    key.sort(),
-                    key.descending(),
-                    0,
-                    1));
-            total = counted.total();
-            countKey = keyWithoutPage;
+    @Override
+    protected int sizeInBackEnd(Query<TripUpdate, Void> query) {
+        var key = countKey(query);
+        if (total < 0 || !key.equals(countKey)) {
+            try {
+                var oneRow = client.tripUpdates(pageQuery(query, 0, 1));
+                total = oneRow.total();
+                countKey = key;
+                lastError = null;
+            } catch (DataAccessException e) {
+                report(e);
+                return 0;
+            }
         }
         return (int) Math.min(total, Integer.MAX_VALUE);
     }
 
-    private RootPage rootPage(HierarchicalQuery<LiveUpdateRow, Void> query) {
-        var key = rootKey(query);
-        if (rootPage != null && rootPage.key().equals(key)) {
-            return rootPage;
-        }
-
-        rootPage = loadRoot(key);
-        total = rootPage.total();
-        countKey = new CountKey(
-                key.feedId(), key.search(), key.agency(), key.route(), key.routeType(), key.sort(), key.descending());
-        return rootPage;
-    }
-
-    private RootKey rootKey(HierarchicalQuery<LiveUpdateRow, Void> query) {
+    private PageQuery pageQuery(Query<TripUpdate, Void> query, long offset, int size) {
         var order = query.getSortOrders().stream().findFirst().orElse(null);
         var sort = order == null ? defaultSort : order.getSorted();
         var descending = order == null
                 ? defaultDirection == SortDirection.DESCENDING
                 : order.getDirection() == SortDirection.DESCENDING;
 
-        var size = Math.max(query.getLimit(), 1);
-        var page = (int) (query.getOffset() / size);
-        return new RootKey(feedId, search, agency, route, routeType, sort, descending, page, size);
+        return new PageQuery(
+                feedId, search, agency, route, routeType, null, null, (int) (offset / size), size, sort, descending);
     }
 
-    private RootPage loadRoot(RootKey key) {
-        try {
-            var result = client.tripUpdates(new PageQuery(
-                    key.feedId(),
-                    key.search(),
-                    key.agency(),
-                    key.route(),
-                    key.routeType(),
-                    null,
-                    null,
-                    key.page(),
-                    key.size(),
-                    key.sort(),
-                    key.descending()));
-            lastError = null;
-            return new RootPage(
-                    key, result.items().stream().map(TripUpdateRow::new).toList(), result.total());
-        } catch (DataAccessException e) {
-            report(e);
-            return new RootPage(key, List.of(), 0);
-        }
+    private CountKey countKey(Query<TripUpdate, Void> query) {
+        var page = pageQuery(query, 0, 1);
+        return new CountKey(
+                page.feedId(),
+                page.search(),
+                page.agency(),
+                page.route(),
+                page.routeType(),
+                page.sort(),
+                page.descending());
     }
 
-    private List<LiveUpdateRow> childrenOf(LiveUpdateRow parent) {
-        if (!(parent instanceof TripUpdateRow trip)) {
-            return List.of();
-        }
-
-        var tripId = trip.tripUpdateId();
-        var cached = stopTimesByTrip.get(tripId);
-        if (cached != null) {
-            return cached;
-        }
-
-        // Without a UI (unit tests, background use) keep the original synchronous path.
-        var ui = UI.getCurrent();
-        if (ui == null) {
-            return stopTimesByTrip.computeIfAbsent(tripId, this::loadStopTimes);
-        }
-
-        // Show a placeholder immediately, then replace it when the backend answers.
-        if (loadingTrips.add(tripId)) {
-            loadStopTimesAsync(trip, ui);
-        }
-        return List.of(new LoadingRow(tripId));
-    }
-
-    private void loadStopTimesAsync(TripUpdateRow trip, UI ui) {
-        var tripId = trip.tripUpdateId();
-        var startedIn = generation;
-        CompletableFuture.runAsync(() -> {
-            List<LiveUpdateRow> rows;
-            DataAccessException failure = null;
-            try {
-                rows = stopTimes(tripId);
-            } catch (DataAccessException e) {
-                failure = e;
-                rows = List.of();
-            }
-
-            var loaded = rows;
-            var error = failure;
-            ui.access(() -> {
-                // A poll refresh may have invalidated the cache while this load ran.
-                if (startedIn != generation) {
-                    return;
-                }
-                loadingTrips.remove(tripId);
-                stopTimesByTrip.put(tripId, loaded);
-                if (error != null) {
-                    report(error);
-                }
-                // Clear the placeholder child from the grid's hierarchy cache.
-                refreshItem(trip, true);
-            });
-        });
-    }
-
-    private List<LiveUpdateRow> loadStopTimes(long tripUpdateId) {
-        try {
-            var rows = stopTimes(tripUpdateId);
-            lastError = null;
-            return rows;
-        } catch (DataAccessException e) {
-            report(e);
-            return List.of();
-        }
-    }
-
-    private List<LiveUpdateRow> stopTimes(long tripUpdateId) {
-        return client.stopTimeUpdates(tripUpdateId).stream()
-                .map(stop -> (LiveUpdateRow) new StopTimeUpdateRow(tripUpdateId, stop))
-                .toList();
+    private static String normalize(String value) {
+        return value == null || value.isBlank() ? null : value;
     }
 
     private void report(DataAccessException e) {
@@ -326,17 +179,6 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
         }
     }
 
-    private record RootKey(
-            String feedId,
-            String search,
-            String agency,
-            String route,
-            Integer routeType,
-            String sort,
-            boolean descending,
-            int page,
-            int size) {}
-
     private record CountKey(
             String feedId,
             String search,
@@ -345,6 +187,4 @@ final class LiveUpdatesDataProvider extends AbstractHierarchicalDataProvider<Liv
             Integer routeType,
             String sort,
             boolean descending) {}
-
-    private record RootPage(RootKey key, List<TripUpdateRow> rows, long total) {}
 }

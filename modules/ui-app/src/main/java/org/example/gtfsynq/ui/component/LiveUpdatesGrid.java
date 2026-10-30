@@ -7,25 +7,27 @@ import com.vaadin.flow.component.grid.GridSortOrder;
 import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.textfield.TextFieldVariant;
-import com.vaadin.flow.component.treegrid.TreeGrid;
 import com.vaadin.flow.data.provider.SortDirection;
 import com.vaadin.flow.data.value.ValueChangeMode;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
+import org.example.gtfsynq.shared.protocol.query.TripUpdate;
 import org.example.gtfsynq.ui.client.DataAccessException;
 import org.example.gtfsynq.ui.client.GtfsQueryClient;
 
 /**
- * Live trip updates as a tree: each trip expands to its stop time updates.
+ * Live trip updates as a flat table.
  *
- * <p>The trip rows are loaded lazily page by page, and a trip's stops are requested only when the
- * trip is expanded. Polling refresh clears the caches but keeps expanded trips open because rows
- * have stable ids.
+ * <p>Each row is a live trip; selecting it opens the trip timeline and map in the detail pane
+ * instead of expanding the row into a tree. Trips are loaded lazily page by page, and a poll
+ * replaces the visible page while keeping the open trip highlighted.
  */
-public class LiveUpdatesGrid extends TreeGrid<LiveUpdateRow> {
+public class LiveUpdatesGrid extends Grid<TripUpdate> {
 
     private final LiveUpdatesDataProvider provider;
+    private String activeTripKey;
 
     public LiveUpdatesGrid(GtfsQueryClient client, String defaultSort, SortDirection defaultDirection) {
         provider = new LiveUpdatesDataProvider(client, defaultSort, defaultDirection, this::errorMessage);
@@ -34,13 +36,19 @@ public class LiveUpdatesGrid extends TreeGrid<LiveUpdateRow> {
         setMultiSort(false);
         setSelectionMode(Grid.SelectionMode.NONE);
         addThemeVariants(GridVariant.ROW_STRIPES);
+        // Rows open the trip detail pane, so they read as clickable.
+        addClassName("live-trips");
         Columns.liveUpdates(this);
         // Size each column to its content, then let the columns share any remaining width.
         // Resizable lets users widen a truncated column by dragging its header edge.
         getColumns().forEach(column -> column.setAutoWidth(true).setFlexGrow(1).setResizable(true));
 
+        // The open trip stays marked while the polling view reloads the page underneath it.
+        setPartNameGenerator(
+                trip -> activeTripKey != null && activeTripKey.equals(tripKey(trip)) ? "active-trip" : null);
+
         inlineFilters(client);
-        setDataProvider(provider);
+        setItems(provider);
         getColumns().stream()
                 .filter(column -> defaultSort.equals(column.getKey()))
                 .findFirst()
@@ -151,7 +159,22 @@ public class LiveUpdatesGrid extends TreeGrid<LiveUpdateRow> {
         }
     }
 
-    /** Reloads trips and stops, keeping expanded trips expanded. */
+    /**
+     * Marks the trip whose detail pane is open, or clears the mark when {@code null}.
+     *
+     * <p>Only the part-name generator changes, but the rows already rendered keep their old part
+     * name until Vaadin re-renders them, so the provider is refreshed.
+     */
+    public void setActiveTrip(TripUpdate trip) {
+        var key = trip == null ? null : tripKey(trip);
+        if (Objects.equals(activeTripKey, key)) {
+            return;
+        }
+        activeTripKey = key;
+        getDataProvider().refreshAll();
+    }
+
+    /** Reloads the current page, keeping the open trip marked. */
     public void refresh() {
         provider.invalidate();
         provider.refreshAll();
@@ -159,5 +182,9 @@ public class LiveUpdatesGrid extends TreeGrid<LiveUpdateRow> {
 
     private String errorMessage(String detail) {
         return getTranslation("grid.error.load", detail);
+    }
+
+    private static String tripKey(TripUpdate trip) {
+        return trip.getTripUpdateId() + ":" + trip.getFeedId();
     }
 }

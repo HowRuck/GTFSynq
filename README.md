@@ -23,7 +23,7 @@ It is built with **Gradle**, runs on **Java 25**, and is designed to work with *
 - **Static feed ingestion**: Download GTFS static (CSV) archives, store them in S3-compatible object storage, and publish an ingestion event for validation
 - **Event-driven handoff**: Kafka carries GTFS-RT payloads and static feed storage references
 - **Time-series storage**: Store transit data efficiently in TimescaleDB
-- **Web console**: A server-side Vaadin Flow console with an overview, lazy-loaded static feed / route / stop / trip tables, and a live trip-update tree that refreshes every minute
+- **Web console**: A server-side Vaadin Flow console with an overview, lazy-loaded static feed / route / stop / trip tables, and a live trip-update table with a per-trip map and stop timeline that refresh every minute
 - **Kafka integration**: Stream transit payloads through Apache Kafka
 - **Protobuf support**: Encode and decode GTFS-RT messages efficiently
 - **GraalVM native images**: Ahead-of-time compile any app into a standalone native executable for fast startup and low memory
@@ -195,7 +195,7 @@ no datasource and never calls the REST API.
 | Routes | `/routes` | Static routes with a feed filter and search |
 | Stops | `/stops` | Stops and stations with coordinates, location type and parent station |
 | Trips | `/trips` | Trips with their route, service and direction |
-| Live Updates | `/live` | Current trip updates with the agency of each trip's route; expand a trip to see its stop time updates, plus a map of every live trip |
+| Live Updates | `/live` | Current trip updates with the agency of each trip's route; select a trip to open its stop timeline and route map beside the table, plus a map of every live trip |
 
 Behaviour shared by the tables:
 
@@ -207,24 +207,32 @@ Behaviour shared by the tables:
   any remaining width.
 - Routes, stops and trips offer a feed selector and a search box (three or more
   characters, matching the API).
-- The live view polls every minute through server push, keeps expanded trips
-  open across refreshes, and has a manual refresh button. A vertical split between
-  the map and the table can be dragged to resize them. The map plots one marker per
-  live trip at the most advanced stop the trip has actually reached (a stop whose
-  predicted time is not in the future), independently of the table's filters and
-  paging: it loads its own unpaged `ListTripMarkers` result (cached for ten seconds
-  so open sessions share one query), clusters markers client-side and falls back to
-  raster tiles when the vector basemap is unreachable. Marker snapshots travel as
-  compact `[lat, lon, label, detail, delay, reachedMinutesAgo]` tuples and are only
-  pushed when they change; co-located trips are spread a few metres so a cluster's
-  number matches the markers that become visible when zooming in. The popup also
-  says how long ago the trip reached that stop. Trip, route and stop
-  labels prefer their static names and fall back to ids when no matching static
-  name is available; long labels are shortened to 32 characters with the full
-  value in a tooltip. Each trip row also shows the agency of its route and its
-  current delay, taken from the first upcoming stop that reports one. Expanding a
-  trip shows a loading row with an indeterminate progress bar until its stop time
-  updates arrive, so the UI never waits on the backend with the session lock held.
+- The live view polls every minute through server push, keeps the open trip detail
+  pane in sync across refreshes, and has a manual refresh button. A vertical split
+  between the map and the table can be dragged to resize them. The overview map
+  plots one marker per live trip at the most advanced stop the trip has actually
+  reached (a stop whose predicted time is not in the future), independently of the
+  table's filters and paging: it loads its own unpaged `ListTripMarkers` result
+  (cached for ten seconds so open sessions share one query), clusters markers
+  client-side and falls back to raster tiles when the vector basemap is
+  unreachable. Marker snapshots travel as compact
+  `[lat, lon, label, detail, delay, reachedMinutesAgo]` tuples and are only pushed
+  when they change; co-located trips are spread a few metres so a cluster's number
+  matches the markers that become visible when zooming in. The popup also says how
+  long ago the trip reached that stop. Trip, route and stop labels prefer their
+  static names and fall back to ids when no matching static name is available; long
+  labels are shortened to 32 characters with the full value in a tooltip. Each trip
+  row also shows the agency of its route and its current delay, taken from the last
+  stop that reports one.
+- Selecting a trip opens a full-height detail pane to the right of the map and
+  table. A draggable vertical splitter separates the overview and the detail pane,
+  like the horizontal one between the map and the table, and remembers the width the
+  user dragged it to. The pane has a small map at the top with the trip's path through its
+  stops and a pin on the current stop, followed by a scrollable timeline of every
+  stop. Reached stops are green, the current stop carries a pin and a badge, upcoming
+  stops are muted, skipped stops are marked, and schedule-filled stops are labelled
+  as such. Stop times and delays come from the merged static/live stop list, loaded
+  off the UI thread so the session lock is never held while the backend answers.
 - gRPC failures appear as notifications instead of breaking the view. The API
   host and port come from `GTFS_API_GRPC_HOST` / `GTFS_API_GRPC_PORT`.
 - All text goes through Vaadin's I18N provider
@@ -306,11 +314,11 @@ The Vaadin Flow web console (see [Web Console](#web-console)):
 - lazy-loaded grids backed by paged unary `GtfsQueryService` calls, with
   server-side sorting, content-sized columns that fill the grid, feed filters and
   search
-- an expandable live tree: trip updates load lazily and expand to their stop time
-  updates (with a progress-bar loading row while they fetch), refreshed every
-  minute through server push
-- a live trip map that loads every positioned trip independently of the table's
-  paging, so the overview stays complete while the tree stays lazy
+- a flat live trip table whose rows open a resizable detail pane, split off from
+  the overview, with a stop timeline, a per-trip path map and the trip's current
+  position, refreshed every minute through server push
+- a live trip overview map that loads every positioned trip independently of the
+  table's paging, so the overview stays complete while the table stays lazy
 - English, German and French translations via Vaadin I18N, Aura theme with the
   Inter font and an orange accent palette
 - no database access and no REST calls — it is a pure gRPC client of `api-app`

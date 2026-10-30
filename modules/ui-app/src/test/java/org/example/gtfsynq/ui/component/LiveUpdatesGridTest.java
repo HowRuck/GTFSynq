@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.protobuf.Timestamp;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.grid.ColumnTextAlign;
 import com.vaadin.flow.component.grid.Grid;
@@ -58,16 +57,25 @@ class LiveUpdatesGridTest {
     void fallsBackToTheNumericCodeForExtendedRouteTypes() {
         assertFalse(Filters.ROUTE_TYPES.contains(100));
 
-        assertEquals("100", Columns.routeTypeLabel(new Grid<LiveUpdateRow>(), 100));
+        assertEquals("100", Columns.routeTypeLabel(new Grid<TripUpdate>(), 100));
     }
 
     @Test
-    void buildsTripAndStopColumnsWithTheHierarchyFirst() {
+    void colorsDelaysByHowEarlyOrLateTheyAre() {
+        assertEquals("delay-early", Columns.delayPart(-61));
+        assertEquals("delay-on-time", Columns.delayPart(0));
+        assertEquals("delay-late", Columns.delayPart(61));
+        assertEquals("delay-severe", Columns.delayPart(300));
+        assertNull(Columns.delayPart(null));
+    }
+
+    @Test
+    void buildsATripTableWithTheTripColumnFirst() {
         UI.setCurrent(new UI());
         try {
             var grid = new LiveUpdatesGrid(new GtfsQueryClient(), "lastSeenAt", SortDirection.DESCENDING);
 
-            assertEquals(14, grid.getColumns().size());
+            assertEquals(10, grid.getColumns().size());
             assertEquals("tripId", grid.getColumns().getFirst().getKey());
             assertNotNull(grid.getColumnByKey("lastSeenAt"));
             assertNotNull(grid.getColumnByKey("feedTs"));
@@ -77,29 +85,12 @@ class LiveUpdatesGridTest {
             assertTrue(grid.getColumns().stream().allMatch(column -> column.getFlexGrow() == 1));
             assertTrue(grid.getColumns().stream().allMatch(column -> column.getTextAlign() == ColumnTextAlign.START));
 
-            var partNames = grid.getPartNameGenerator();
-            var scheduled = new StopTimeUpdateRow(
-                    1, StopTimeUpdate.newBuilder().setRealtime(false).build());
-            var live = new StopTimeUpdateRow(
-                    1, StopTimeUpdate.newBuilder().setRealtime(true).build());
-            assertEquals("scheduled-stop", partNames.apply(scheduled));
-            assertNull(partNames.apply(live));
-            assertNull(partNames.apply(new TripUpdateRow(TripUpdate.getDefaultInstance())), "trip rows are not dimmed");
-
-            var arrival = grid.getColumnByKey("arrivalTime").getPartNameGenerator();
-            var prediction = new StopTimeUpdateRow(
-                    1,
-                    StopTimeUpdate.newBuilder()
-                            .setArrivalTime(Timestamp.newBuilder().setSeconds(1))
-                            .build());
-            var delayOnly = new StopTimeUpdateRow(
-                    1,
-                    StopTimeUpdate.newBuilder()
-                            .setArrivalDelay(120)
-                            .setScheduledArrivalTime(Timestamp.newBuilder().setSeconds(1))
-                            .build());
-            assertNull(arrival.apply(prediction), "a live predicted time keeps the normal colour");
-            assertEquals("scheduled-value", arrival.apply(delayOnly), "a time derived from the schedule is dimmed");
+            var currentDelay = grid.getColumnByKey("currentDelay").getPartNameGenerator();
+            assertEquals(
+                    "delay-late",
+                    currentDelay.apply(
+                            TripUpdate.newBuilder().setCurrentDelay(120).build()));
+            assertNull(currentDelay.apply(TripUpdate.getDefaultInstance()));
 
             assertEquals(3, grid.getHeaderRows().size(), "group, column headers and the inline filter row");
             var filters = grid.getHeaderRows().get(2);
@@ -109,15 +100,15 @@ class LiveUpdatesGridTest {
             assertNotNull(filters.getCell(grid.getColumnByKey("routeType")).getComponent(), "route-type filter");
 
             var groups = grid.getHeaderRows().getFirst();
-            assertEquals(4, groups.getCells().size(), "one cell per column group");
+            assertEquals(3, groups.getCells().size(), "one cell per column group");
             assertEquals(
                     grid.getTranslation("column.group.trip"),
                     groups.getCell(grid.getColumnByKey("tripId")).getText());
             assertEquals(
-                    grid.getTranslation("column.group.arrival"),
-                    groups.getCell(grid.getColumnByKey("arrivalTime")).getText());
+                    grid.getTranslation("column.group.service"),
+                    groups.getCell(grid.getColumnByKey("startDate")).getText());
             assertEquals(
-                    grid.getTranslation("column.group.freshness"),
+                    grid.getTranslation("column.group.status"),
                     groups.getCell(grid.getColumnByKey("lastSeenAt")).getText());
         } finally {
             UI.setCurrent(null);

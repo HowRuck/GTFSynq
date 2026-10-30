@@ -248,6 +248,33 @@ class GtfsQueryMapperTest {
 
     private static StopTimeUpdateDto stopTimeUpdate(String stopName, boolean realtime) {
         return new StopTimeUpdateDto(
-                1, 1, "stop-id", null, null, null, null, null, null, null, null, stopName, null, realtime);
+                1, 1, "stop-id", null, null, null, null, null, null, null, null, stopName, null, null, null, realtime);
+    }
+
+    @Test
+    void mapsStopCoordinatesForTheTripPath() {
+        var update = GtfsQueryMapper.stopTimeUpdatesReply(List.of(new StopTimeUpdateDto(
+                        1,
+                        1,
+                        "stop-id",
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        "Central Station",
+                        52.52,
+                        13.405,
+                        null,
+                        true)))
+                .getItems(0);
+
+        assertTrue(update.hasStopLat());
+        assertTrue(update.hasStopLon());
+        assertEquals(52.52, update.getStopLat());
+        assertEquals(13.405, update.getStopLon());
     }
 }

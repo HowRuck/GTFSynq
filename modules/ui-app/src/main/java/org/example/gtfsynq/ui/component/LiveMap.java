@@ -114,13 +114,13 @@ public class LiveMap extends Component {
                 json.append(',');
             }
             json.append('[')
-                    .append(coordinate(marker.lat()))
+                    .append(JsonText.coordinate(marker.lat()))
                     .append(',')
-                    .append(coordinate(marker.lon()))
+                    .append(JsonText.coordinate(marker.lon()))
                     .append(',')
-                    .append(quote(marker.label()))
+                    .append(JsonText.quote(marker.label()))
                     .append(',')
-                    .append(quote(marker.detail()))
+                    .append(JsonText.quote(marker.detail()))
                     .append(',')
                     .append(marker.delaySeconds() == null ? "null" : marker.delaySeconds())
                     .append(',')
@@ -128,40 +128,5 @@ public class LiveMap extends Component {
                     .append(']');
         }
         return json.append(']').toString();
-    }
-
-    /**
-     * Six decimals are about 0.1 m, far below what a basemap can show, and noticeably shorter in the
-     * JSON than the full double representation.
-     */
-    private static String coordinate(double value) {
-        var rounded = Math.round(value * 1_000_000) / 1_000_000.0;
-        return Double.toString(rounded);
-    }
-
-    /** Quotes a string for JSON without pulling a serialiser into the UI module. */
-    private static String quote(String value) {
-        if (value == null) {
-            return "null";
-        }
-        var quoted = new StringBuilder(value.length() + 2).append('"');
-        for (var index = 0; index < value.length(); index++) {
-            var character = value.charAt(index);
-            switch (character) {
-                case '"' -> quoted.append("\\\"");
-                case '\\' -> quoted.append("\\\\");
-                case '\n' -> quoted.append("\\n");
-                case '\r' -> quoted.append("\\r");
-                case '\t' -> quoted.append("\\t");
-                default -> {
-                    if (character < 0x20) {
-                        quoted.append(String.format("\\u%04x", (int) character));
-                    } else {
-                        quoted.append(character);
-                    }
-                }
-            }
-        }
-        return quoted.append('"').toString();
     }
 }

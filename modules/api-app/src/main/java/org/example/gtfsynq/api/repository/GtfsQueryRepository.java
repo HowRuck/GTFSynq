@@ -614,7 +614,7 @@ public class GtfsQueryRepository {
                        s.departure_time, s.departure_delay, s.scheduled_departure_time,
                        s.schedule_relationship::text AS schedule_relationship, s.assigned_stop_id,
                        s.last_seen_at,
-                       st.stop_name
+                       st.stop_name, st.stop_lat, st.stop_lon
                 FROM rt_stop_time_updates_hot s
                 LEFT JOIN static_stops st
                        ON st.feed_id = s.feed_id
@@ -641,6 +641,8 @@ public class GtfsQueryRepository {
                             rs.getString("schedule_relationship"),
                             rs.getString("assigned_stop_id"),
                             rs.getString("stop_name"),
+                            nullableDouble(rs, "stop_lat"),
+                            nullableDouble(rs, "stop_lon"),
                             offsetDateTime(rs, "last_seen_at"),
                             true));
                 }
@@ -667,7 +669,7 @@ public class GtfsQueryRepository {
                 SELECT st.stop_sequence, st.stop_id,
                        st.arrival_time, st.arrival_time_overflow_days,
                        st.departure_time, st.departure_time_overflow_days,
-                       s.stop_name
+                       s.stop_name, s.stop_lat, s.stop_lon
                 FROM static_stop_times st
                 LEFT JOIN static_stops s
                        ON s.feed_id = st.feed_id AND s.stop_id = st.stop_id
@@ -702,6 +704,8 @@ public class GtfsQueryRepository {
                             "SCHEDULED",
                             null,
                             rs.getString("stop_name"),
+                            nullableDouble(rs, "stop_lat"),
+                            nullableDouble(rs, "stop_lon"),
                             null,
                             false));
                 }
