@@ -69,7 +69,7 @@ quarkus-smallrye-health = { module = "io.quarkus:quarkus-smallrye-health" }
 quarkus-opentelemetry = { module = "io.quarkus:quarkus-opentelemetry" }
 quarkus-micrometer-opentelemetry = { module = "io.quarkus:quarkus-micrometer-opentelemetry" }
 # Build, Containerization & Testing
-quarkus-container-image-buildpack = { module = "io.quarkus:quarkus-container-image-buildpack" }
+quarkus-container-image-jib = { module = "io.quarkus:quarkus-container-image-jib" }
 quarkus-junit5 = { module = "io.quarkus:quarkus-junit5" }
 junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junitJupiter" }
 junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junitJupiter" }

@@ -15,7 +15,7 @@ dependencies {
     implementation(libs.quarkus.smallrye.health)
     implementation(libs.quarkus.opentelemetry)
     implementation(libs.quarkus.micrometer.opentelemetry)
-    implementation(libs.quarkus.container.image.buildpack)
+    implementation(libs.quarkus.container.image.jib)
 
     compileOnly(libs.bundles.lombok)
     annotationProcessor(libs.bundles.lombok)

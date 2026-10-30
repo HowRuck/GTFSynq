@@ -15,7 +15,7 @@ dependencies {
     implementation(libs.quarkus.smallrye.health)
     implementation(libs.quarkus.opentelemetry)
     implementation(libs.quarkus.micrometer.opentelemetry)
-    implementation(libs.quarkus.container.image.buildpack)
+    implementation(libs.quarkus.container.image.jib)
     implementation(libs.zero.allocation.hashing)
     implementation(libs.yavi)
 
