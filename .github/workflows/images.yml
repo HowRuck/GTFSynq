@@ -23,6 +23,10 @@ permissions:
 jobs:
   build-push:
     runs-on: avrea-ubuntu-26.04-4-vcpu
+    # Jib's HTTP timeout is disabled in gradle.properties, so bound the whole job
+    # instead: a JVM image build plus a containerised native build fits well
+    # inside this, and a dead registry connection cannot hang a runner forever.
+    timeout-minutes: 15
     strategy:
       matrix:
         app: [api-app, ingest-app, store-app, ui-app]
