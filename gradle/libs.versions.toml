@@ -26,7 +26,7 @@ jspecify = "1.0.1"
 micrometer-jvm-extras = "0.3.0"
 fastcsv = "4.4.0"
 junitJupiter = "6.1.3"
-yavi = "0.17.1"
+yavi = "0.17.2"
 
 [libraries]
 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }

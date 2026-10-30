@@ -35,7 +35,7 @@ permissions:
 
 jobs:
   resolve-app-models:
-    runs-on: avrea-ubuntu-latest-2-vcpu
+    runs-on: avrea-ubuntu-26.04-2-vcpu
     steps:
       - name: checkout
         uses: actions/checkout@v7

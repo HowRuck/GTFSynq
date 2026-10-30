@@ -41,7 +41,7 @@ jobs:
     if: >-
       github.event_name != 'pull_request'
       || !contains(github.event.pull_request.labels.*.name, 'dependencies')
-    runs-on: avrea-ubuntu-latest-4-vcpu
+    runs-on: avrea-ubuntu-26.04-4-vcpu
     steps:
       - name: checkout
         uses: actions/checkout@v7
