@@ -63,6 +63,8 @@ class TripMap extends HTMLElement {
   private usingFallback = false;
   private styleLoaded = false;
   private fallbackTimer?: number;
+  /** The current stops still have to be framed; applied once the container has a real size. */
+  private fitPending = false;
 
   connectedCallback(): void {
     if (this.map) {
@@ -92,7 +94,13 @@ class TripMap extends HTMLElement {
 
     this.onStopClick();
 
-    this.resizeObserver = new ResizeObserver(() => map.resize());
+    this.resizeObserver = new ResizeObserver(() => {
+      map.resize();
+      // The pane is hidden while a trip loads, so the container can be 0x0 when the stops first
+      // arrive. Framing them before the browser has laid the pane out would fit a zero-sized
+      // viewport and leave the route wildly zoomed in; refit as soon as there is real space.
+      this.applyFit();
+    });
     this.resizeObserver.observe(this);
 
     this.themeObserver = new MutationObserver(() => {
@@ -291,16 +299,40 @@ class TripMap extends HTMLElement {
       .addTo(map);
   }
 
+  /**
+   * Requests a fit to the current stops.
+   *
+   * <p>The trip map is reused across trips and its frame is hidden while the stop times load, so a
+   * fit can arrive while the container is still unlaid-out. It is remembered instead of applied so
+   * the ResizeObserver can frame the route once the pane is visible; otherwise MapLibre would fit a
+   * 0x0 viewport and open the new route at a nonsensical zoom.
+   */
   private fitStops(): void {
+    if (!this.map || !this.styleLoaded) {
+      return;
+    }
+    this.fitPending = this.positionedStops().length > 0;
+    this.applyFit();
+  }
+
+  private applyFit(): void {
     const map = this.map;
+    if (!map || !this.styleLoaded || !this.fitPending) {
+      return;
+    }
+    // display:none (the frame is hidden while loading) reports a zero-sized container.
+    if (this.clientWidth === 0 || this.clientHeight === 0) {
+      return;
+    }
     const stops = this.positionedStops();
-    if (!map || stops.length === 0) {
+    if (stops.length === 0) {
+      this.fitPending = false;
       return;
     }
-    if (!map.loaded()) {
-      map.once('load', () => this.fitStops());
-      return;
-    }
+    this.fitPending = false;
+    // The canvas can still carry the size it had while hidden; resize before computing the fit so
+    // zoom and centre are derived from the space the route is actually drawn in.
+    map.resize();
     if (stops.length === 1) {
       map.jumpTo({ center: [stops[0][1], stops[0][0]], zoom: 14 });
       return;

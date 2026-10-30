@@ -193,10 +193,12 @@ public class TripDetailPanel extends VerticalLayout {
             }
         }
 
-        map.setStops(mapStops);
+        // Show the frame before the stops arrive: the element fits the route as soon as it gets the
+        // data, and a frame that is still hidden has no size to fit against.
         var hasPosition = !mapStops.isEmpty();
         mapFrame.setVisible(hasPosition);
         noPosition.setVisible(!hasPosition);
+        map.setStops(mapStops);
         stopsCount.setText(getTranslation("live.detail.stops.count", stops.size()));
 
         if (stops.isEmpty()) {

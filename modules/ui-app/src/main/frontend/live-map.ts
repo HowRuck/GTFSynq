@@ -143,7 +143,12 @@ class LiveMap extends HTMLElement {
     this.onClick();
     this.onHover();
 
-    this.resizeObserver = new ResizeObserver(() => map.resize());
+    this.resizeObserver = new ResizeObserver(() => {
+      map.resize();
+      // The splitter and the page layout can change the map's size at any time; keep the overview
+      // framed on the trips instead of leaving the old view stretched into the new space.
+      this.fitMarkers();
+    });
     this.resizeObserver.observe(this);
 
     // Vaadin flips the `theme` attribute on <html> when the user switches colour scheme.
@@ -473,21 +478,25 @@ class LiveMap extends HTMLElement {
     return wrapper;
   }
 
-  /** Fits the view to the markers while the user has not taken over the map. */
+  /**
+   * Fits the view to the markers while the user has not taken over the map.
+   *
+   * <p>Safe to call before the map is laid out: a container without a usable size is left alone,
+   * and the ResizeObserver fits again once the map has real space, so the overview never settles on
+   * a view computed from a 0x0 viewport.
+   */
   private fitMarkers(): void {
     const map = this.map;
-    if (!map || !this.followMarkers || this.markerData.length === 0) {
+    if (!map || !this.styleLoaded || !this.followMarkers) {
+      return;
+    }
+    if (this.clientWidth === 0 || this.clientHeight === 0) {
       return;
     }
     const positioned = this.markerData.filter(
       (marker) => Number.isFinite(marker[0]) && Number.isFinite(marker[1]),
     );
     if (positioned.length === 0) {
-      return;
-    }
-    if (!map.loaded()) {
-      // The container has no usable size before the first style load, so fit once it does.
-      map.once('load', () => this.fitMarkers());
       return;
     }
     if (positioned.length === 1) {
