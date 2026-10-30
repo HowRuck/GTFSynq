@@ -32,6 +32,17 @@ tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 }
 
+// Quarkus derives a JPMS module name for every dependency that does not declare
+// one, warning for each occurrence ("does not have a defined module name").
+// Declare it in the manifest instead: the build stays quiet, and the name no
+// longer changes if the group or artifact id is ever renamed.
+tasks.withType<Jar>().configureEach {
+    manifest {
+        // `group` alone would resolve to the Jar task's task group, not the project's.
+        attributes("Automatic-Module-Name" to "${project.group}.${project.name.replace('-', '.')}")
+    }
+}
+
 // The generated protobuf code validates at runtime that protobuf-java is at
 // least as new as the protoc that produced it, so the runtime must not be
 // downgraded by a platform/BOM constraint.
