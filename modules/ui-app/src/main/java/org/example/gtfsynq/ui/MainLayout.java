@@ -19,6 +19,7 @@ import java.util.Locale;
 import java.util.Map;
 import org.example.gtfsynq.ui.view.FeedsView;
 import org.example.gtfsynq.ui.view.LiveUpdatesView;
+import org.example.gtfsynq.ui.view.MetricsView;
 import org.example.gtfsynq.ui.view.OverviewView;
 import org.example.gtfsynq.ui.view.RoutesView;
 import org.example.gtfsynq.ui.view.StopsView;
@@ -47,6 +48,7 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
         addTab(getTranslation("nav.stops"), "stops", StopsView.class);
         addTab(getTranslation("nav.trips"), "trips", TripsView.class);
         addTab(getTranslation("nav.live"), "live", LiveUpdatesView.class);
+        addTab(getTranslation("nav.metrics"), "metrics", MetricsView.class);
 
         tabs.addSelectedChangeListener(event -> {
             var tab = event.getSelectedTab();

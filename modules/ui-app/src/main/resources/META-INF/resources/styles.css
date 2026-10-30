@@ -136,3 +136,16 @@ vaadin-grid-tree-toggle {
     box-shadow: 0 1px 4px rgb(0 0 0 / 0.15);
     font-size: 0.9rem;
 }
+
+/*
+ * Metrics view: charts share the available width and wrap into one column on
+ * narrow screens. The minimum keeps a time axis readable; the chart itself is
+ * sized by the card and the ChartContainer's fixed height.
+ */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 28rem), 1fr));
+    gap: 1rem;
+    width: 100%;
+    align-items: start;
+}

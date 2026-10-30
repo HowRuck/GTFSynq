@@ -27,6 +27,7 @@ micrometer-jvm-extras = "0.3.0"
 fastcsv = "4.4.0"
 junitJupiter = "6.1.3"
 yavi = "0.17.2"
+vaadin-chartjs = "2.1.0"
 
 [libraries]
 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
@@ -46,6 +47,11 @@ quarkus-bom = { module = "io.quarkus.platform:quarkus-bom", version.ref = "quark
 quarkus-amazon-services-bom = { module = "io.quarkiverse.amazonservices:quarkus-amazon-services-bom", version.ref = "quarkus-amazon-services" }
 vaadin-bom = { module = "com.vaadin:vaadin-bom", version.ref = "vaadin" }
 vaadin-quarkus-extension = { module = "com.vaadin:vaadin-quarkus-extension", version.ref = "vaadin" }
+# Chart.js wrapper for Vaadin Flow views.
+vaadin-chartjs-wrapper = { module = "software.xdev:vaadin-chartjs-wrapper", version.ref = "vaadin-chartjs" }
+# Jackson 3 is the version Quarkus 4 manages; the tree model is used for
+# VictoriaMetrics replies and the Chart.js payload.
+jackson-databind = { module = "tools.jackson.core:jackson-databind" }
 grpc-stub = { module = "io.grpc:grpc-stub", version.ref = "grpc" }
 grpc-protobuf = { module = "io.grpc:grpc-protobuf", version.ref = "grpc" }
 # Core & Runtime

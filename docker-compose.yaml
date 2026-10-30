@@ -48,6 +48,8 @@ services:
             # Optional Thunderforest Transport raster overlay; requires an API key.
             GTFS_MAP_TRANSPORT_OVERLAY_URL: ${GTFS_MAP_TRANSPORT_OVERLAY_URL:-}
             GTFS_MAP_TRANSPORT_OVERLAY_OPACITY: ${GTFS_MAP_TRANSPORT_OVERLAY_OPACITY:-0.55}
+            # VictoriaMetrics base URL backing the console's Metrics view.
+            GTFS_METRICS_URL: ${GTFS_METRICS_URL:-http://victoriametrics:8428}
         ports:
             # Host-only by default, same policy as the API.
             - "127.0.0.1:8083:8083"

@@ -19,6 +19,11 @@ dependencies {
     implementation(project(":shared"))
 
     implementation(libs.vaadin.quarkus.extension)
+    // The metrics view charts VictoriaMetrics query results with Chart.js.
+    implementation(libs.vaadin.chartjs.wrapper)
+    // Parses VictoriaMetrics' JSON replies and builds the Chart.js payload. Only
+    // the JsonNode tree API is used, which needs no reflection in a native image.
+    implementation(libs.jackson.databind)
 
     implementation(libs.quarkus.config.yaml)
     implementation(libs.quarkus.grpc)

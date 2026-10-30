@@ -69,6 +69,10 @@ quarkus:
 # that holder visible in the log instead of only the threads waiting for it.
 gtfsynq:
   ui:
+    metrics:
+      # VictoriaMetrics base URL used by the Metrics view. The monitoring stack exposes it
+      # under this Compose hostname; set GTFS_METRICS_URL to point the console elsewhere.
+      victoriametrics-url: ${GTFS_METRICS_URL:http://victoriametrics:8428}
     map:
       # Optional raster overlay blended over the vector basemap, for example Thunderforest's
       # Transport map. Thunderforest requires an API key and its own attribution/terms, so this is
@@ -98,3 +102,8 @@ vaadin:
     otel:
       sdk:
         disabled: true
+  gtfsynq:
+    ui:
+      metrics:
+        # VictoriaMetrics is published on the host in the monitoring stack.
+        victoriametrics-url: ${GTFS_METRICS_URL:http://localhost:8428}
