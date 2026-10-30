@@ -1,5 +1,6 @@
 package org.example.gtfsynq.ui.component;
 
+import com.vaadin.flow.component.dependency.JsModule;
 import com.vaadin.flow.component.html.Span;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -10,19 +11,26 @@ import org.example.gtfsynq.ui.client.MetricsClient.Point;
 import org.example.gtfsynq.ui.client.MetricsClient.Series;
 import software.xdev.vaadin.chartjs.ChartContainer;
 import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.node.ObjectNode;
 
 /**
  * A Chart.js line chart fed from VictoriaMetrics range-query series.
  *
  * <p>The payload is built with Jackson's tree model rather than a POJO: the chart model library
  * serialises POJOs reflectively, which would need reflection registrations in the native image.
+ *
+ * <p>Chart.js draws on a canvas, so it cannot inherit CSS custom properties. The defaults for
+ * text, grid and font are applied by {@code metrics-chart-theme.js}, which resolves them from the
+ * Aura/Lumo theme tokens before a chart is built and refreshes them when the browser switches
+ * between light and dark.
  */
+@JsModule("./metrics-chart-theme.js")
 public class MetricsChart extends ChartContainer {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm");
+
+    private static final String APPLY_THEME = "if (window.gtfsynqChartTheme) { window.gtfsynqChartTheme.apply(); }";
 
     public MetricsChart() {
         setWidthFull();
@@ -31,6 +39,7 @@ public class MetricsChart extends ChartContainer {
 
     /** Draws one line per series, aligned on their timestamps. */
     public void show(List<Series> series) {
+        getElement().executeJs(APPLY_THEME);
         showChart(payload(series));
     }
 
@@ -74,26 +83,12 @@ public class MetricsChart extends ChartContainer {
                     values.add(value);
                 }
             }
-            dataset.put("borderWidth", 2);
-            dataset.put("pointRadius", 0);
-            dataset.put("tension", 0.25);
-            dataset.put("fill", false);
         }
 
-        var options = root.putObject("options");
-        options.put("responsive", true);
-        options.put("maintainAspectRatio", false);
-        options.put("animation", false);
-        options.putObject("interaction").put("mode", "index").put("intersect", false);
-        options.putObject("plugins").putObject("legend").put("display", true).put("position", "bottom");
-        var scales = options.putObject("scales");
-        scales.putObject("x").putObject("ticks").put("maxTicksLimit", 8);
-        scales.putObject("y").put("beginAtZero", true);
+        // Everything else stays at the Chart.js defaults; only the fixed card height needs the
+        // aspect ratio turned off so the chart follows the container instead of its width.
+        root.putObject("options").put("maintainAspectRatio", false);
 
-        return toJson(root);
-    }
-
-    private static String toJson(ObjectNode root) {
         return MAPPER.writeValueAsString(root);
     }
 }
