@@ -15,6 +15,7 @@ import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
+import com.vaadin.flow.component.orderedlayout.FlexComponent.JustifyContentMode;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.Scroller;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -113,10 +114,13 @@ public class TripDetailPanel extends VerticalLayout {
 
         var progress = new ProgressBar();
         progress.setIndeterminate(true);
-        progress.setWidth("5rem");
+        progress.setWidth("10rem");
         loading.add(progress, new Span(getTranslation("live.detail.loading")));
         loading.setPadding(false);
+        loading.setWidthFull();
         loading.setAlignItems(Alignment.CENTER);
+        loading.setJustifyContentMode(JustifyContentMode.CENTER);
+        loading.getElement().setAttribute("aria-live", "polite");
         loading.addClassName("trip-detail-loading");
         loading.setVisible(false);
 
@@ -124,6 +128,8 @@ public class TripDetailPanel extends VerticalLayout {
         error.setVisible(false);
 
         add(header, metadata, mapFrame, noPosition, stopsTitle, loading, error, scroller);
+        // Whichever of the two is visible fills the space below the header; the other is display:none.
+        setFlexGrow(1, loading);
         setFlexGrow(1, scroller);
         setVisible(false);
     }

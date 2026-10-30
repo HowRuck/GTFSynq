@@ -233,6 +233,8 @@ Behaviour shared by the tables:
   stops are muted, skipped stops are marked, and schedule-filled stops are labelled
   as such. Stop times and delays come from the merged static/live stop list, loaded
   off the UI thread so the session lock is never held while the backend answers.
+  A centred progress indicator fills the pane until the stop list arrives, keeping
+  the selected trip's header visible instead of showing an empty sidebar.
 - gRPC failures appear as notifications instead of breaking the view. The API
   host and port come from `GTFS_API_GRPC_HOST` / `GTFS_API_GRPC_PORT`.
 - All text goes through Vaadin's I18N provider

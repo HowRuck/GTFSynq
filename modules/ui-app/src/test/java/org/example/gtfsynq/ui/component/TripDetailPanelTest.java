@@ -1,12 +1,17 @@
 package org.example.gtfsynq.ui.component;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.protobuf.Timestamp;
+import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.UI;
 import java.time.Instant;
 import java.util.List;
 import org.example.gtfsynq.shared.protocol.query.StopTimeUpdate;
+import org.example.gtfsynq.shared.protocol.query.TripUpdate;
 import org.junit.jupiter.api.Test;
 
 class TripDetailPanelTest {
@@ -70,5 +75,34 @@ class TripDetailPanelTest {
                 .setSeconds(instant.getEpochSecond())
                 .setNanos(instant.getNano())
                 .build();
+    }
+
+    @Test
+    void showsTheLoadingStateUntilTheTripArrives() {
+        UI.setCurrent(new UI());
+        try {
+            var panel = new TripDetailPanel();
+            var trip =
+                    TripUpdate.newBuilder().setTripUpdateId(1).setFeedId("feed").build();
+
+            panel.showLoading(trip);
+
+            assertTrue(child(panel, "trip-detail-loading").isVisible(), "the loading indicator fills the pane");
+            assertFalse(child(panel, "trip-detail-timeline").isVisible(), "the timeline waits for the stop times");
+
+            panel.showTrip(trip, List.of(), NOW);
+
+            assertFalse(child(panel, "trip-detail-loading").isVisible());
+            assertTrue(child(panel, "trip-detail-timeline").isVisible());
+        } finally {
+            UI.setCurrent(null);
+        }
+    }
+
+    private static Component child(TripDetailPanel panel, String className) {
+        return panel.getChildren()
+                .filter(component -> component.hasClassName(className))
+                .findFirst()
+                .orElseThrow();
     }
 }
