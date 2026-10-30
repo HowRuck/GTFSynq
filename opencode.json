@@ -12,13 +12,11 @@
       },
       "gradle": {
         "type": "local",
-        "command": [
-          "jbang",
-          "run",
-          "--quiet",
-          "--fresh",
-          "gradle-mcp@rnett"
-        ]
+        "command": ["jbang", "run", "--quiet", "--fresh", "gradle-mcp@rnett"]
+      },
+      "playwright": {
+        "type": "local",
+        "command": ["npx", "@playwright/mcp@latest"]
       }
     }
   }
