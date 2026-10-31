@@ -3,10 +3,10 @@ package org.example.gtfsynq.ingest.adapter.inbound.http;
 /**
  * HTTP cache validators learned from a static feed's last response.
  * <p>
- * Static feeds are polled on a schedule measured in days, and most polls find the archive
- * unchanged. Sending the validators back as {@code If-None-Match} / {@code If-Modified-Since}
- * lets the origin answer with {@code 304 Not Modified}, which turns a full archive download
- * into a tiny header exchange.
+ * Static feeds are polled repeatedly, and most polls find the archive unchanged. Sending the
+ * validators back as {@code If-None-Match} / {@code If-Modified-Since} lets the origin answer
+ * with {@code 304 Not Modified}, which turns a full archive download into a tiny header
+ * exchange.
  * <p>
  * Both values are kept exactly as the origin sent them: an entity tag may be weak
  * ({@code W/"..."}) or quoted, and a {@code Last-Modified} value is an HTTP date that must be

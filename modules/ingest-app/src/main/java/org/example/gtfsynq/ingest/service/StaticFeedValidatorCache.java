@@ -12,7 +12,7 @@ import org.example.gtfsynq.ingest.adapter.inbound.http.StaticFeedValidators;
  * and the content-addressed object store already makes that download cheap to absorb (the digest
  * is found and nothing is re-uploaded). Persisting them would require a second source of truth
  * that has to be kept in step with object storage, which is not worth a once-per-restart
- * download of an archive that is polled daily.
+ * download.
  * <p>
  * Entries are keyed by feed id and scoped to the configured URL, so changing a feed's
  * {@code static-config.url} ignores validators that describe a different origin.

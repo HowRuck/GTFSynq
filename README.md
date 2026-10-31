@@ -404,7 +404,7 @@ REST clients mean the API answers them. Dashed arrows are telemetry exports.
 ## Static Feed Ingestion
 
 Every source that has a `gtfs.sources.<id>.static-config.url` is polled on the static
-schedule (`gtfsynq.static-polling.interval`, daily by default), independently of the
+schedule (`gtfsynq.static-polling.interval`, every five minutes by default), independently of the
 GTFS-RT polling cadence. A source may configure only a static feed or only realtime
 feeds; the missing side is simply skipped.
 
@@ -532,7 +532,7 @@ Important defaults:
 - PostgreSQL / TimescaleDB: `localhost:5432`, database `gtfsynq`
 - S3-compatible object storage: `http://localhost:9000`, bucket `gtfsynq-static`
 - Static persistence: enabled, batch size `5000` rows
-- Realtime polling interval: `60s`; static polling interval: `24h`
+- Realtime polling interval: `60s`; static polling interval: `5m`
 - Buffered sink flush interval: `10s`, hot data retention `1h`
 - Management endpoints: `/q/health` (the apps never start Dev
   Services containers; external infrastructure comes from Compose)

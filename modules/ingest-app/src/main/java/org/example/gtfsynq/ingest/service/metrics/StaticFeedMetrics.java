@@ -16,8 +16,8 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Metrics for the static feed ingestion pipeline.
  * <p>
- * Static feeds are polled on a schedule measured in days, so counters on their own cannot
- * tell a healthy quiet pipeline apart from a stalled one: both simply produce no samples.
+ * Static feeds are polled far less often than realtime feeds, so counters on their own cannot
+ * tell a healthy quiet pipeline apart from a stalled one: both simply produce no new revisions.
  * {@code gtfs.static.last.success.age.seconds} is therefore the primary signal. It is
  * registered per feed the first time that feed is attempted and grows until the feed
  * ingests successfully, so "no data" becomes an alertable condition rather than an

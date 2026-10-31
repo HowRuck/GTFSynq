@@ -94,11 +94,13 @@ gtfsynq:
 
   # ---- Polling -------------------------------------------------------------
   # Durations; the realtime and static feeds run on independent schedules.
+  # Static polls are cheap when the origin supports conditional requests: an
+  # unchanged archive answers 304 and is not transferred again.
   polling:
     interval: 60s
   static-polling:
     enabled: true
-    interval: 24h
+    interval: 5m
 
   # ---- Static archive storage (S3 compatible) -----------------------------
   storage:

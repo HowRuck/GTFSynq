@@ -31,8 +31,8 @@ import org.example.gtfsynq.shared.util.SizeFormat;
  * <p>
  * When the previous response carried an {@code ETag} or {@code Last-Modified}, the request is
  * made conditional. An origin that recognises the validator answers {@code 304 Not Modified}
- * and no archive is transferred at all, which is what makes a daily poll of an unchanged feed
- * nearly free.
+ * and no archive is transferred at all, which is what makes a five-minute poll of an unchanged
+ * feed nearly free.
  */
 @ApplicationScoped
 @Slf4j

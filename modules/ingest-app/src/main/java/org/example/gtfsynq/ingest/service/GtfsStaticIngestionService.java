@@ -19,9 +19,10 @@ import org.example.gtfsynq.ingest.service.metrics.StaticFeedMetrics.Outcome;
  * Service responsible for ingesting the static feeds of all configured sources at
  * regular intervals
  * <p>
- * Static feeds change on the order of days, not seconds, so they are polled on their own
+ * Static feeds change much less often than realtime data, so they are polled on their own
  * schedule rather than on the GTFS-RT polling cadence. As the archives are large, a tick
- * that is still running when the next one fires is skipped entirely instead of queued
+ * that is still running when the next one fires is skipped entirely instead of queued;
+ * conditional requests keep an unchanged poll down to a header exchange
  */
 @Singleton
 @Slf4j

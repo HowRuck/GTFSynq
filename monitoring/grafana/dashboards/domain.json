@@ -361,7 +361,7 @@
       "id": 28,
       "type": "timeseries",
       "title": "Static feed cycle duration (average)",
-      "description": "Wall clock time for one scheduled cycle, 95th percentile. Rising toward the 24h poll interval is the early warning that cycle.skipped will start incrementing.",
+      "description": "Wall clock time for one scheduled cycle, 95th percentile. Rising toward the poll interval is the early warning that cycle.skipped will start incrementing.",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
