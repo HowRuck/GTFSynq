@@ -128,18 +128,30 @@ vaadin-split-layout.live-detail-closed::part(splitter) {
  */
 vaadin-grid.live-trips::part(row) {
     cursor: pointer;
-    transition: background-color 120ms ease;
 }
 
 @media (any-hover: hover) {
-    /* The trip rows open the detail pane, so make the hover target unmistakable. */
-    vaadin-grid.live-trips::part(row):hover {
-        background-color: var(--vaadin-background-container-strong);
+    /*
+     * The trip rows open the detail pane, so make the hover target unmistakable. The grid's
+     * cells paint their own opaque background over the <tr>, so the row background would stay
+     * invisible; the supported cell background property tints the whole row instead.
+     */
+    vaadin-grid.live-trips {
+        --vaadin-grid-row-hover-background-color: var(--vaadin-background-container-strong);
     }
 }
 
+/*
+ * A part name from Grid.setPartNameGenerator is applied to every cell of the row, not to the
+ * <tr> itself. A box-shadow on the part therefore drew a 3px bar at the start of each cell,
+ * which read as orange lines between the columns. Tint the cells, but draw the accent bar on
+ * the row's first cell only.
+ */
 vaadin-grid::part(active-trip) {
-    background: var(--vaadin-background-container);
+    background-color: var(--vaadin-background-container);
+}
+
+vaadin-grid::part(active-trip first-column-cell) {
     box-shadow: inset 3px 0 0 var(--aura-accent-color);
 }
 
