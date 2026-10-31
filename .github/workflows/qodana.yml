@@ -46,6 +46,11 @@ jobs:
       - name: checkout
         uses: actions/checkout@v7
         with:
+          # A pull_request run checks out GitHub's synthetic merge commit by
+          # default, so a PR scan would also see target-branch changes merged in
+          # and report them as findings introduced here. Scan the PR head
+          # instead; push and workflow_dispatch have no PR head, so use the ref.
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
           fetch-depth: 0
       - name: set-up-java
         uses: actions/setup-java@v6
