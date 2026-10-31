@@ -36,4 +36,13 @@ message StaticFeedIngested {
 
   // Object storage entity tag of the stored archive.
   string etag = 8;
+
+  // Upstream HTTP ETag of the archive, when the origin sent one. This is what the ingest
+  // app sends back as If-None-Match on the next poll; it is unrelated to the storage ETag
+  // above.
+  string source_etag = 9;
+
+  // Upstream HTTP Last-Modified value of the archive, verbatim, when the origin sent one.
+  // The ingest app sends it back as If-Modified-Since on the next poll.
+  string source_last_modified = 10;
 }

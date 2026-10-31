@@ -132,6 +132,24 @@ public class StaticFeedMetrics {
     }
 
     /**
+     * Records a conditional request that the origin answered with {@code 304 Not Modified}.
+     * <p>
+     * This is the count of polls that were resolved without transferring an archive. It is kept
+     * apart from {@code gtfs.static.archive.size} and the download duration, which describe
+     * actual transfers, so a feed that stops revalidating is visible instead of hidden in a
+     * shrinking average.
+     *
+     * @param feedId feed source identifier
+     */
+    public void recordNotModified(String feedId) {
+        Counter.builder("gtfs.static.download.not_modified")
+                .description("Static feed polls answered with 304 Not Modified")
+                .tag("feed", feedId)
+                .register(registry)
+                .increment();
+    }
+
+    /**
      * Records how long a full scheduled cycle took, from tick to all feeds settled.
      *
      * @param durationNanos elapsed cycle time

@@ -3,6 +3,7 @@ package org.example.gtfsynq.ingest.service;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.quarkus.scheduler.Scheduled;
 import jakarta.inject.Singleton;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -51,15 +52,13 @@ public class GtfsIngestionService {
 
             var futures = gtfsConfig.sources().entrySet().stream()
                     .flatMap(e -> {
-                        var realtimeConfig = e.getValue().realtimeConfig();
+                        var urls = e.getValue().realtimeConfig().urls().orElse(List.of());
 
-                        if (realtimeConfig == null
-                                || realtimeConfig.urls() == null
-                                || realtimeConfig.urls().isEmpty()) {
+                        if (urls.isEmpty()) {
                             return Stream.empty();
                         }
 
-                        return realtimeConfig.urls().stream().map(url -> submitFeed(e.getKey(), url));
+                        return urls.stream().map(url -> submitFeed(e.getKey(), url));
                     })
                     .toList();
 

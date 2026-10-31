@@ -53,10 +53,13 @@ public class IngestConfigValidation {
 
         gtfsProperties.sources().forEach((name, source) -> {
             var prefix = "gtfs.sources." + name;
-            collect(
-                    problems,
-                    prefix + ".static-config.url",
-                    URL_VALIDATOR.validate(new FeedUrl(source.staticConfig().url())));
+
+            // A source may legitimately configure only realtime feeds, or only a static feed.
+            source.staticConfig()
+                    .url()
+                    .filter(url -> !url.isBlank())
+                    .ifPresent(url ->
+                            collect(problems, prefix + ".static-config.url", URL_VALIDATOR.validate(new FeedUrl(url))));
 
             for (var entry : source.staticConfig().fileUrls().entrySet()) {
                 collect(
@@ -65,7 +68,7 @@ public class IngestConfigValidation {
                         URL_VALIDATOR.validate(new FeedUrl(entry.getValue())));
             }
 
-            for (var url : source.realtimeConfig().urls()) {
+            for (var url : source.realtimeConfig().urls().orElse(List.of())) {
                 collect(problems, prefix + ".realtime-config.urls", URL_VALIDATOR.validate(new FeedUrl(url)));
             }
         });

@@ -79,8 +79,12 @@ public interface GtfsProperties {
 
         /**
          * URL to the GTFS static feed ZIP file. Validated when the application starts.
+         * <p>
+         * Empty when the source has no static feed, which lets a source configure only realtime
+         * feeds. A source may likewise configure only a static feed and leave
+         * {@link RealtimeConfig#urls()} empty.
          */
-        String url();
+        Optional<String> url();
 
         /**
          * Map of GTFS static feed files to their respective URLs. Allows specifying custom
@@ -110,9 +114,10 @@ public interface GtfsProperties {
 
         /**
          * List of URLs for GTFS-RT feeds. Can include TripUpdates, VehiclePositions, Alerts,
-         * etc.
+         * etc. Empty when the source has no realtime feed, which lets a source configure only
+         * a static feed.
          */
-        List<String> urls();
+        Optional<List<String>> urls();
 
         /**
          * Name of the HTTP header to use for authentication. Empty when the feed is public.

@@ -405,19 +405,32 @@ REST clients mean the API answers them. Dashed arrows are telemetry exports.
 
 Every source that has a `gtfs.sources.<id>.static-config.url` is polled on the static
 schedule (`gtfsynq.static-polling.interval`, daily by default), independently of the
-GTFS-RT polling cadence:
+GTFS-RT polling cadence. A source may configure only a static feed or only realtime
+feeds; the missing side is simply skipped.
 
-1. The archive is streamed to a temporary file while its SHA-256 digest is computed.
-2. The archive is uploaded to S3-compatible object storage under a content-addressed key,
+1. The request is conditional on the previous response: the feed's `ETag` is sent back as
+   `If-None-Match` and its `Last-Modified` value as `If-Modified-Since`. A `304 Not Modified`
+   answer ends the poll there - no archive is transferred and downstream is not woken up.
+   Origin servers that send neither header simply keep receiving unconditional GETs.
+2. Otherwise the archive is streamed to a temporary file while its SHA-256 digest is computed.
+   The `ETag` and `Last-Modified` of that response are remembered for the next poll.
+3. The archive is uploaded to S3-compatible object storage under a content-addressed key,
    `static/<feed-id>/<sha256>.zip`, so a revision is stored exactly once and every revision
    is kept.
-3. A `StaticFeedIngested` protobuf event (feed id, bucket, key, source URL, size, digest,
-   ingestion time, ETag) is published to the `gtfs-static-feeds` topic, keyed by feed id.
+4. A `StaticFeedIngested` protobuf event (feed id, bucket, key, source URL, size, digest,
+   ingestion time, storage ETag, upstream ETag and Last-Modified) is published to the
+   `gtfs-static-feeds` topic, keyed by feed id.
+
+Conditional validators are held in memory per feed and tied to the configured URL. After a
+restart the first poll transfers the archive once more; the content-addressed store recognises
+the digest and nothing is re-uploaded or republished.
 
 When the digest of a polled archive already exists in the bucket, the upload and the event
 are both skipped: downstream consumers are only woken up by an actual revision change.
 The archive itself never travels over Kafka - consumers fetch and validate the referenced
-object themselves.
+object themselves. A poll answered with `304` is counted separately in
+`gtfs.static.download.not_modified{feed=...}`; both that and a content match after a full
+download are reported as the `unchanged` ingestion outcome.
 
 ## Static Feed Validation
 

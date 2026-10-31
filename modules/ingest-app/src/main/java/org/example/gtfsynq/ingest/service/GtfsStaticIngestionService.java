@@ -70,10 +70,10 @@ public class GtfsStaticIngestionService {
 
         try {
             var futures = gtfsConfig.sources().entrySet().stream()
-                    .filter(entry -> entry.getValue().staticConfig() != null)
                     .filter(entry -> hasUrl(entry.getValue()))
                     .map(entry -> submitStaticFeed(
-                            entry.getKey(), entry.getValue().staticConfig().url()))
+                            entry.getKey(),
+                            entry.getValue().staticConfig().url().orElseThrow()))
                     .toList();
 
             metrics.recordFeedsConfigured(futures.size());
@@ -97,15 +97,7 @@ public class GtfsStaticIngestionService {
     }
 
     private static boolean hasUrl(GtfsProperties.FeedSource source) {
-        var staticConfig = source.staticConfig();
-
-        if (staticConfig == null) {
-            return false;
-        }
-
-        var url = staticConfig.url();
-
-        return url != null && !url.isBlank();
+        return source.staticConfig().url().filter(url -> !url.isBlank()).isPresent();
     }
 
     /**
