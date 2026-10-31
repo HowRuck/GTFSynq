@@ -22,3 +22,9 @@ dependencies {
 
     testImplementation(libs.quarkus.junit5)
 }
+
+// Dev mode shares one Compose stack: the root `devInfra` task starts it once per build, and
+// every dev-mode app then discovers it instead of running its own `compose up`.
+tasks.named("quarkusDev") {
+    dependsOn(":devInfra")
+}

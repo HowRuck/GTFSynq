@@ -84,11 +84,17 @@ takes longer than the backend modules.
 
 ### 3. Run the application locally
 
-If Kafka and TimescaleDB are available on your machine, start an app with
-Quarkus dev mode (live reload) or from the built artifact:
+Quarkus dev mode (live reload) starts the infrastructure containers by itself,
+so this is the only command needed:
 
 ```bash
 ./gradlew :api-app:quarkusDev     # dev mode, live reload
+```
+
+The built artifact still runs against whatever Kafka and TimescaleDB the
+environment points it at:
+
+```bash
 java -jar modules/api-app/build/quarkus-app/quarkus-run.jar
 ```
 
@@ -172,14 +178,35 @@ docker compose logs -f api-app
 
 ## Local Development Flow
 
-A typical local development setup looks like this:
+Dev mode starts the infrastructure itself. Quarkus [Compose Dev
+Services](https://quarkus.io/guides/compose-dev-services/) brings up Kafka,
+TimescaleDB and the S3 gateway from `docker-compose.dev.yaml`, waits for their
+health checks, and copies their credentials into the app (the `config_map`
+labels in that file map the container environment onto `quarkus.datasource.*`
+and `gtfsynq.storage.s3.*`), so nothing has to be exported.
 
-1. Start infrastructure services with Docker Compose.
-2. Run an app with `./gradlew :api-app:quarkusDev`.
-3. Make changes in `src/main/java` — Quarkus dev mode reloads them on refresh.
-4. Re-run `./gradlew test` and `./gradlew build` as needed.
+1. Run an app with `./gradlew :api-app:quarkusDev`.
+2. Make changes in `src/main/java` — Quarkus dev mode reloads them on refresh.
+3. Re-run `./gradlew test` and `./gradlew build` as needed.
 
-If you want to run only the infrastructure containers and keep the app on your host machine, start Kafka, TimescaleDB and the S3 service separately using the same Compose file (`docker compose -f docker-compose.dev.yaml up -d`), export the `GTFSYNQ_STORAGE_S3_*` values from `.env.template`, then run the app locally with `./gradlew`.
+The apps share one Compose project (`gtfsynq`), so a second app started in dev
+mode reuses the running stack rather than starting another copy on the same host
+ports. The stack is started once per build, before any dev-mode app (the root
+`devInfra` task); the apps themselves only discover it. It is left running when
+dev mode stops, so stop it explicitly when you are done:
+
+```bash
+docker compose -f docker-compose.dev.yaml down
+```
+
+Starting every app from one build also works with `./gradlew quarkusDev`. Add
+`-Ddebug=false` to such a run: Quarkus dev mode opens a JDWP debug port per app,
+and several apps starting at once would race for port 5005. Alternatively start
+each app in its own terminal.
+
+Dev mode needs a working Docker or Podman with Compose V2 (`docker compose` or
+`podman compose`). Starting the infrastructure yourself with the same file still
+works; dev mode then discovers the running containers instead of starting them.
 
 ## Web Console
 

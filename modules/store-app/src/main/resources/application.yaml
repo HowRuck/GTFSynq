@@ -178,3 +178,38 @@ gtfsynq:
     otel:
       sdk:
         disabled: true
+
+    # The Quarkus Gradle plugin puts its LGTM dev resource on the dev-mode classpath. This
+    # project exports to its own monitoring stack, so the dev resource is not used; leaving it
+    # on makes the Dev UI observability endpoint require grafana.endpoint and otel-collector.url,
+    # which nothing provides when LGTM is skipped.
+    observability:
+      enabled: false
+
+    # S3 is the versitygw service in the compose stack; left enabled, the Amazon Services dev
+    # service starts its own floci container next to it.
+    s3:
+      devservices:
+        enabled: false
+
+    # Compose Dev Services is a Dev Services implementation, so dev mode switches the global
+    # switch back on (production keeps it off above). The explicit datasource and Kafka
+    # settings keep the extension dev services from starting containers of their own.
+    devservices:
+      enabled: true
+
+    # Compose Dev Services brings the infrastructure up with dev mode, so a single
+    # ./gradlew :store-app:quarkusDev needs no separate `docker compose up`. The path is
+    # relative to this module, which is the Gradle project root dev mode runs in.
+    #
+    # All apps share one fixed project name: an app that starts while the stack is already up
+    # discovers it instead of starting a second copy on the same host ports. stop-services is
+    # off so the first app to exit does not tear the stack down under the others, and Ryuk is
+    # off for the same reason (and because it needs the Docker socket under rootless Podman).
+    compose:
+      devservices:
+        files: ../../docker-compose.dev.yaml
+        project-name: gtfsynq
+        stop-services: false
+        ryuk-enabled: false
+        startup-timeout: 180s

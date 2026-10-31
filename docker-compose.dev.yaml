@@ -1,3 +1,10 @@
+# Local infrastructure for dev mode.
+#
+# Quarkus Compose Dev Services starts this file automatically when an app runs with
+# ./gradlew :<app>:quarkusDev (see the %dev profile in each app's application.yaml). The
+# services keep the standard host ports, so the apps' default localhost connection settings
+# keep working, and the labels below copy the container credentials into the matching Quarkus
+# properties, so dev mode needs no exported datasource or S3 secrets.
 services:
     kafka:
         image: docker.io/apache/kafka:4.4.0
@@ -41,6 +48,13 @@ services:
         depends_on:
             kafka:
                 condition: service_healthy
+        # The broker advertises localhost:9092 so host-run apps can reach it; from a separate
+        # container that name is the container itself. Sharing the broker's network namespace
+        # keeps localhost pointing at the broker while the topics are created.
+        network_mode: "service:kafka"
+        labels:
+            # One-shot topic setup, not a service any dev service should discover.
+            io.quarkus.devservices.compose.ignore: true
         entrypoint:
             - /bin/sh
             - -c
@@ -60,6 +74,11 @@ services:
             ROOT_ACCESS_KEY: ${S3_ACCESS_KEY:-gtfsynq}
             ROOT_SECRET_KEY: ${S3_SECRET_KEY:-gtfsynq-dev-secret}
             VGW_REGION: ${S3_REGION:-us-east-1}
+        labels:
+            # Compose Dev Services exposes the container environment to the app, so dev mode
+            # authenticates against the gateway without exporting the keys itself.
+            io.quarkus.devservices.compose.config_map.env.ROOT_ACCESS_KEY: gtfsynq.storage.s3.access-key
+            io.quarkus.devservices.compose.config_map.env.ROOT_SECRET_KEY: gtfsynq.storage.s3.secret-key
         command: ["--port", ":7070", "posix", "/data"]
         volumes:
             - s3-data:/data
@@ -79,8 +98,14 @@ services:
             - "127.0.0.1:5432:5432"
         environment:
             POSTGRES_USER: ${POSTGRES_USER:-postgres}
-            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set (see .env.template)}
+            # A dev default keeps `quarkusDev` self-contained on a checkout without .env;
+            # an existing .env still wins, so the password matches an initialized volume.
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gtfsynq-dev}
             POSTGRES_DB: ${POSTGRES_DB:-gtfsynq}
+        labels:
+            # Hand the credentials the container was initialized with to the datasource, so
+            # dev mode connects without exporting QUARKUS_DATASOURCE_PASSWORD.
+            io.quarkus.devservices.compose.config_map.env.POSTGRES_PASSWORD: quarkus.datasource.password
         volumes:
             - timescaledb-data:/var/lib/postgresql
         healthcheck:
