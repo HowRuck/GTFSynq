@@ -100,6 +100,41 @@ vaadin-grid::part(delay-severe) {
 }
 
 /*
+ * Header resource usage. The values are aggregate JVM CPU and heap from VictoriaMetrics, kept
+ * visually quiet so they read as ambient status rather than another navigation item.
+ */
+.app-usage {
+    gap: 0.75rem;
+    margin-inline: 0.25rem 0.5rem;
+    color: var(--vaadin-text-color-secondary);
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.app-usage-item {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.25rem;
+}
+
+.app-usage-label {
+    font-size: 0.7rem;
+    font-weight: var(--aura-font-weight-semibold);
+    letter-spacing: 0.04em;
+}
+
+.app-usage-value {
+    color: var(--vaadin-text-color);
+}
+
+@media (max-width: 900px) {
+    .app-usage {
+        display: none;
+    }
+}
+
+/*
  * Live map popup: the cluster and point markers are drawn by MapLibre on the canvas, so only the
  * popup needs styling here. It follows the theme's text colours.
  */

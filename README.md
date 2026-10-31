@@ -693,6 +693,9 @@ Prometheus `/q/metrics` endpoint and there is no scrape job for them.
 The console has a **Metrics** tab that reads the last hour from VictoriaMetrics
 over its HTTP query API and charts ingest rate, feed validation results, the
 trip update and stop time update rates, Kafka consumer lag and JVM heap usage.
+The navbar also shows aggregate CPU and heap usage for the Java processes from
+the same source, refreshed every 30 seconds; it stays hidden when no
+VictoriaMetrics URL is configured.
 It uses `GTFS_METRICS_URL` (default `http://victoriametrics:8428`;
 `http://localhost:8428` in dev mode); set it to an empty value to disable the
 view's data source.

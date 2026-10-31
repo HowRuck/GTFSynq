@@ -13,10 +13,13 @@ import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.flow.router.AfterNavigationEvent;
 import com.vaadin.flow.router.AfterNavigationObserver;
 import com.vaadin.flow.server.VaadinSession;
+import jakarta.inject.Inject;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import org.example.gtfsynq.ui.client.MetricsClient;
+import org.example.gtfsynq.ui.component.HeaderUsage;
 import org.example.gtfsynq.ui.view.FeedsView;
 import org.example.gtfsynq.ui.view.LiveUpdatesView;
 import org.example.gtfsynq.ui.view.MetricsView;
@@ -35,7 +38,8 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
 
     private Tab activeTab;
 
-    public MainLayout() {
+    @Inject
+    public MainLayout(MetricsClient metrics) {
         setPrimarySection(Section.NAVBAR);
 
         var brand = new HorizontalLayout(new Span(getTranslation("app.name")), new Badge(getTranslation("app.badge")));
@@ -59,7 +63,7 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
             UI.getCurrent().navigate(routes.get(tab).view());
         });
 
-        var navbar = new HorizontalLayout(brand, tabs, languageSwitcher(), clock());
+        var navbar = new HorizontalLayout(brand, tabs, new HeaderUsage(metrics), languageSwitcher(), clock());
         navbar.setPadding(false);
         navbar.setWidthFull();
         navbar.setAlignItems(Alignment.CENTER);
