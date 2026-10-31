@@ -4,6 +4,8 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.Tag;
 import com.vaadin.flow.component.dependency.JsModule;
 import com.vaadin.flow.component.dependency.NpmPackage;
+import com.vaadin.flow.function.SerializableConsumer;
+import com.vaadin.flow.shared.Registration;
 import java.util.List;
 
 /**
@@ -17,20 +19,26 @@ import java.util.List;
  * user zooms in.
  *
  * <p>The element is a plain custom element ({@code live-map.ts}); markers are passed as a compact
- * JSON property (one {@code [lat, lon, label, detail, delay]} tuple per trip), so a poll only sends
- * the marker list and never re-creates the map, and an unchanged snapshot is not sent at all.
- * Clustering and the basemap live in the element: it uses OpenFreeMap vector styles and falls back
- * to raster tiles when that CDN cannot be reached, so an offline deployment shows markers instead of
- * a blank map.
+ * JSON property (one {@code [lat, lon, label, detail, delay, reachedMinutesAgo, tripUpdateId]}
+ * tuple per trip), so a poll only sends the marker list and never re-creates the map, and an
+ * unchanged snapshot is not sent at all. Clustering and the basemap live in the element: it uses
+ * OpenFreeMap vector styles and falls back to raster tiles when that CDN cannot be reached, so an
+ * offline deployment shows markers instead of a blank map.
  */
 @Tag("live-map")
 @NpmPackage(value = "maplibre-gl", version = "6.16.0")
 @JsModule("./live-map.ts")
 public class LiveMap extends Component {
 
-    /** One trip's latest reported position and how long ago it reached that stop. */
+    /** One trip's latest reported position, label, and the update id that opens its detail pane. */
     public record Marker(
-            double lat, double lon, String label, String detail, Integer delaySeconds, Integer reachedMinutesAgo) {}
+            double lat,
+            double lon,
+            String label,
+            String detail,
+            Integer delaySeconds,
+            Integer reachedMinutesAgo,
+            long tripUpdateId) {}
 
     public LiveMap() {
         getElement()
@@ -70,6 +78,35 @@ public class LiveMap extends Component {
     }
 
     /**
+     * Sets the popup link text that opens the trip's detail pane.
+     *
+     * @param text localized action label, e.g. "Open trip"
+     */
+    public void setOpenTripText(String text) {
+        getElement().setProperty("openTripText", text == null ? "" : text);
+    }
+
+    /**
+     * Registers a listener for a popup's "open trip" action.
+     *
+     * <p>The popup is rendered by the map element inside MapLibre, so the click is delivered as the
+     * custom {@code trip-open} DOM event rather than through a server-side button.
+     *
+     * @param listener receives the trip update id
+     * @return registration that removes the listener
+     */
+    public Registration addTripOpenListener(SerializableConsumer<Long> listener) {
+        var registration = getElement().addEventListener("trip-open", event -> {
+            var tripUpdateId = event.getEventDetail(Long.class);
+            if (tripUpdateId != null && tripUpdateId > 0) {
+                listener.accept(tripUpdateId);
+            }
+        });
+        registration.addEventDetail();
+        return registration;
+    }
+
+    /**
      * Adds an optional raster overlay above the vector basemap and below the trip markers, for
      * example Thunderforest's Transport map.
      *
@@ -99,7 +136,8 @@ public class LiveMap extends Component {
 
     /**
      * Serialises the markers as one
-     * {@code [lat, lon, label, detail, delaySeconds, reachedMinutesAgo]} array per trip.
+     * {@code [lat, lon, label, detail, delaySeconds, reachedMinutesAgo, tripUpdateId]} array per
+     * trip.
      *
      * <p>The tuple form keeps the pushed JSON small: at tens of thousands of markers, repeating the
      * keys of an object costs more than the values themselves.
@@ -125,6 +163,8 @@ public class LiveMap extends Component {
                     .append(marker.delaySeconds() == null ? "null" : marker.delaySeconds())
                     .append(',')
                     .append(marker.reachedMinutesAgo() == null ? "null" : marker.reachedMinutesAgo())
+                    .append(',')
+                    .append(marker.tripUpdateId())
                     .append(']');
         }
         return json.append(']').toString();

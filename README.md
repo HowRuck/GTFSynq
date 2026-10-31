@@ -243,16 +243,17 @@ Behaviour shared by the tables:
   (cached for ten seconds so open sessions share one query), clusters markers
   client-side and falls back to raster tiles when the vector basemap is
   unreachable. Marker snapshots travel as compact
-  `[lat, lon, label, detail, delay, reachedMinutesAgo]` tuples and are only pushed
-  when they change; co-located trips are spread a few metres so a cluster's number
-  matches the markers that become visible when zooming in. The popup also says how
-  long ago the trip reached that stop. Trip, route and stop labels prefer their
-  static names and fall back to ids when no matching static name is available; long
-  labels are shortened to 32 characters with the full value in a tooltip. Each trip
-  row also shows the agency of its route and its current delay, taken from the last
-  stop that reports one.
-- Selecting a trip opens a full-height detail pane to the right of the map and
-  table. A draggable vertical splitter separates the overview and the detail pane,
+  `[lat, lon, label, detail, delay, reachedMinutesAgo, tripUpdateId]` tuples and are
+  only pushed when they change; co-located trips are spread a few metres so a
+  cluster's number matches the markers that become visible when zooming in. The
+  popup also says how long ago the trip reached that stop and offers a link that
+  opens the trip's detail pane. Trip, route and stop labels prefer their static
+  names and fall back to ids when no matching static name is available; long labels
+  are shortened to 32 characters with the full value in a tooltip. Each trip row also
+  shows the agency of its route and its current delay, taken from the last stop that
+  reports one.
+- Selecting a trip from the table or from a map popup opens the same full-height
+  detail pane to the right of the map and table. A draggable vertical splitter separates the overview and the detail pane,
   like the horizontal one between the map and the table, and remembers the width the
   user dragged it to. The pane has a small map at the top with the trip's path through its
   stops and a pin on the current stop, followed by a scrollable timeline of every

@@ -1,6 +1,7 @@
 package org.example.gtfsynq.api.grpc;
 
 import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import io.quarkus.grpc.GrpcService;
 import io.smallrye.common.annotation.Blocking;
@@ -25,6 +26,8 @@ import org.example.gtfsynq.shared.protocol.query.StopsReply;
 import org.example.gtfsynq.shared.protocol.query.StopsRequest;
 import org.example.gtfsynq.shared.protocol.query.TripMarkersReply;
 import org.example.gtfsynq.shared.protocol.query.TripMarkersRequest;
+import org.example.gtfsynq.shared.protocol.query.TripUpdate;
+import org.example.gtfsynq.shared.protocol.query.TripUpdateRequest;
 import org.example.gtfsynq.shared.protocol.query.TripUpdatesReply;
 import org.example.gtfsynq.shared.protocol.query.TripUpdatesRequest;
 import org.example.gtfsynq.shared.protocol.query.TripsReply;
@@ -148,6 +151,18 @@ public class GtfsQueryGrpcService extends GtfsQueryServiceGrpc.GtfsQueryServiceI
     }
 
     @Override
+    public void getTripUpdate(TripUpdateRequest request, StreamObserver<TripUpdate> observer) {
+        unary(
+                observer,
+                () -> repository
+                        .liveTripUpdate(request.getTripUpdateId())
+                        .map(GtfsQueryMapper::tripUpdate)
+                        .orElseThrow(() -> Status.NOT_FOUND
+                                .withDescription("Trip update " + request.getTripUpdateId() + " is no longer live")
+                                .asRuntimeException()));
+    }
+
+    @Override
     public void listTripMarkers(TripMarkersRequest request, StreamObserver<TripMarkersReply> observer) {
         unary(observer, this::tripMarkers);
     }
@@ -180,6 +195,9 @@ public class GtfsQueryGrpcService extends GtfsQueryServiceGrpc.GtfsQueryServiceI
         try {
             observer.onNext(query.get());
             observer.onCompleted();
+        } catch (StatusRuntimeException e) {
+            // A query can choose its own status, for example NOT_FOUND for a row that just expired.
+            observer.onError(e);
         } catch (RuntimeException e) {
             observer.onError(Status.INTERNAL
                     .withDescription(e.getMessage() == null ? "Query failed" : e.getMessage())

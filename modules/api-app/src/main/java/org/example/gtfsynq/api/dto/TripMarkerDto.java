@@ -9,6 +9,7 @@ import java.time.OffsetDateTime;
  * row the paged table shows.
  */
 public record TripMarkerDto(
+        long tripUpdateId,
         double lat,
         double lon,
         String routeShortName,

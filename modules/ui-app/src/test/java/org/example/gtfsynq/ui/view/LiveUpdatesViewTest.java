@@ -93,6 +93,7 @@ class LiveUpdatesViewTest {
             assertEquals(1, markers.size());
             assertEquals(52.5, markers.getFirst().lat());
             assertEquals(13.4, markers.getFirst().lon());
+            assertEquals(7, markers.getFirst().tripUpdateId());
         });
     }
 
@@ -133,6 +134,7 @@ class LiveUpdatesViewTest {
                 .setRouteType(routeType)
                 .setRouteShortName(routeShortName)
                 .setTripShortName(tripShortName)
+                .setTripUpdateId(7)
                 .build();
     }
 }

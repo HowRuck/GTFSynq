@@ -26,6 +26,7 @@ import org.example.gtfsynq.shared.protocol.query.Trip;
 import org.example.gtfsynq.shared.protocol.query.TripMarker;
 import org.example.gtfsynq.shared.protocol.query.TripMarkersRequest;
 import org.example.gtfsynq.shared.protocol.query.TripUpdate;
+import org.example.gtfsynq.shared.protocol.query.TripUpdateRequest;
 import org.example.gtfsynq.shared.protocol.query.TripUpdatesRequest;
 import org.example.gtfsynq.shared.protocol.query.TripsRequest;
 
@@ -152,6 +153,13 @@ public class GtfsQueryClient {
             var reply = stub().listTripUpdates(request.build());
             return page(reply.getItemsList(), reply.getPage());
         });
+    }
+
+    /** One live trip update by id, for opening the detail pane from a map marker. */
+    public TripUpdate tripUpdate(long tripUpdateId) {
+        return call(() -> stub().getTripUpdate(TripUpdateRequest.newBuilder()
+                .setTripUpdateId(tripUpdateId)
+                .build()));
     }
 
     /** Every live trip that has a position, for the map; unpaged on purpose. */

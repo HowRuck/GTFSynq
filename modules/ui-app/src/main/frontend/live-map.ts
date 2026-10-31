@@ -10,18 +10,20 @@ import {
 } from './map-basemap';
 
 /**
- * One trip position as a compact tuple: [lat, lon, label, detail, delaySeconds, reachedMinutesAgo].
+ * One trip position as a compact tuple:
+ * [lat, lon, label, detail, delaySeconds, reachedMinutesAgo, tripUpdateId].
  *
  * <p>The tuple form replaces a keyed object because the marker array is pushed to the browser on
  * every poll; repeating the keys per marker costs more than the values themselves at scale.
  */
-type LiveMapMarker = [number, number, string, string, number | null, number | null];
+type LiveMapMarker = [number, number, string, string, number | null, number | null, number];
 
 interface MarkerProperties {
   label: string;
   detail: string;
   delayClass: 'early' | 'on-time' | 'late' | 'severe' | 'unknown';
   reachedMinutesAgo: number | null;
+  tripUpdateId: number;
 }
 
 const SOURCE_ID = 'live-trips';
@@ -100,6 +102,7 @@ class LiveMap extends HTMLElement {
   private fitPending = false;
   private reachedJustNowText = 'Reached just now';
   private reachedMinutesFormat = 'Reached {0} min ago';
+  private openTripLabel = 'Open trip';
   private transportUrl?: string;
   private transportOpacity = 0.55;
 
@@ -212,6 +215,11 @@ class LiveMap extends HTMLElement {
   /** Localized text with a {0} placeholder for the elapsed minutes. */
   set reachedMinutes(value: string) {
     this.reachedMinutesFormat = value || 'Reached {0} min ago';
+  }
+
+  /** Localized action label that opens the trip's detail pane. */
+  set openTripText(value: string) {
+    this.openTripLabel = value || 'Open trip';
   }
 
   /** Optional raster tile URL; an empty value removes the overlay. */
@@ -404,6 +412,7 @@ class LiveMap extends HTMLElement {
             detail: marker[3],
             delayClass: delayClass(marker[4]),
             reachedMinutesAgo: marker[5],
+            tripUpdateId: marker[6],
           },
         })),
     };
@@ -482,6 +491,24 @@ class LiveMap extends HTMLElement {
           ? this.reachedJustNowText
           : this.reachedMinutesFormat.replace('{0}', String(minutes));
       wrapper.appendChild(reached);
+    }
+    if (properties.tripUpdateId > 0) {
+      const open = document.createElement('button');
+      open.type = 'button';
+      open.className = 'live-map-popup-open';
+      open.textContent = this.openTripLabel;
+      open.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        this.dispatchEvent(
+          new CustomEvent('trip-open', {
+            detail: properties.tripUpdateId,
+            bubbles: true,
+            composed: true,
+          }),
+        );
+      });
+      wrapper.appendChild(open);
     }
     return wrapper;
   }

@@ -38,6 +38,9 @@ service GtfsQueryService {
   // Live trip updates from the hot table.
   rpc ListTripUpdates(TripUpdatesRequest) returns (TripUpdatesReply);
 
+  // One live trip update by id, used to open the detail pane from a map marker.
+  rpc GetTripUpdate(TripUpdateRequest) returns (TripUpdate);
+
   // One marker per live trip that has a position, unpaged: the map shows the whole
   // live set while the table pages.
   rpc ListTripMarkers(TripMarkersRequest) returns (TripMarkersReply);
@@ -248,6 +251,10 @@ message TripUpdatesReply {
   PageInfo page = 2;
 }
 
+message TripUpdateRequest {
+  int64 trip_update_id = 1;
+}
+
 // No filters: the map shows every live trip regardless of the table's filters and paging.
 message TripMarkersRequest {}
 
@@ -271,6 +278,8 @@ message TripMarker {
   // Predicted arrival/departure time of that stop, so a popup can say how long ago the trip
   // reached it. Unset when the feed supplies no time information.
   google.protobuf.Timestamp reached_at = 10;
+  // Hot-table row id, so a map popup can open the same trip detail pane as a table row.
+  int64 trip_update_id = 11;
 }
 
 message TripMarkersReply {

@@ -67,6 +67,7 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
     private long lastMarkersFingerprint;
     private String lastMapError;
     private TripUpdate selectedTrip;
+    private long tripLookupRequest;
     private long detailRequest;
     private boolean detailLoaded;
     private String lastDetailError;
@@ -89,6 +90,8 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
 
         map.getElement().setAttribute("aria-label", getTranslation("live.map.aria"));
         map.setReachedTexts(getTranslation("live.map.reached.justNow"), getTranslation("live.map.reached.minutes"));
+        map.setOpenTripText(getTranslation("live.map.openTrip"));
+        map.addTripOpenListener(this::openTripFromMap);
 
         var progress = new ProgressBar();
         progress.setIndeterminate(true);
@@ -155,6 +158,39 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
      * keeps the map and the other trips visible while it is open.
      */
     private void openTrip(TripUpdate trip) {
+        // A table row wins over a map lookup that is still on the way.
+        tripLookupRequest++;
+        showTrip(trip);
+    }
+
+    /**
+     * Opens a trip selected from a map popup. The marker only carries the update id, so the full row
+     * is fetched first; a lookup superseded by another selection is discarded.
+     */
+    private void openTripFromMap(long tripUpdateId) {
+        var request = ++tripLookupRequest;
+        getUI().ifPresent(ui -> CompletableFuture.runAsync(() -> {
+            TripUpdate trip;
+            try {
+                trip = client.tripUpdate(tripUpdateId);
+            } catch (DataAccessException e) {
+                ui.access(() -> {
+                    if (request == tripLookupRequest && attached) {
+                        var message = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+                        reportDetailError(message);
+                    }
+                });
+                return;
+            }
+            ui.access(() -> {
+                if (request == tripLookupRequest && attached) {
+                    showTrip(trip);
+                }
+            });
+        }));
+    }
+
+    private void showTrip(TripUpdate trip) {
         selectedTrip = trip;
         detailLoaded = false;
         lastDetailError = null;
@@ -171,6 +207,7 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
     private void closeTrip() {
         selectedTrip = null;
         detailLoaded = false;
+        tripLookupRequest++;
         detailRequest++;
         table.setActiveTrip(null);
         if (layout.getSecondaryComponent() == detail) {
@@ -370,7 +407,8 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
                 label,
                 detail,
                 update.hasDelaySeconds() ? update.getDelaySeconds() : null,
-                reachedMinutesAgo));
+                reachedMinutesAgo,
+                update.getTripUpdateId()));
     }
 
     /** Route part of the label: the route type names the mode, then the short name or id. */

@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.sql.DataSource;
 import org.example.gtfsynq.api.dto.OverviewDto;
@@ -66,6 +67,48 @@ public class GtfsQueryRepository {
             "feedTs", "h.feed_ts",
             "tripId", "m.trip_id",
             "routeId", "m.route_id");
+
+    /** Shared projection of a live trip update, used by the page query and the single-row lookup. */
+    private static final String LIVE_TRIP_UPDATE_SELECT = """
+            SELECT h.trip_update_id, h.feed_id::text AS feed_id, h.feed_ts, h.last_seen_at,
+                   m.entity_id, m.trip_id, m.route_id, m.start_date, m.start_time,
+                   t.trip_short_name, r.route_short_name, r.route_long_name, r.route_type, a.agency_name,
+                   (SELECT count(*) FROM rt_stop_time_updates_hot s
+                    WHERE s.trip_update_id = h.trip_update_id) AS stop_time_update_count,
+                   (SELECT COALESCE(s.arrival_delay, s.departure_delay)
+                    FROM rt_stop_time_updates_hot s
+                    WHERE s.trip_update_id = h.trip_update_id
+                      AND COALESCE(s.arrival_delay, s.departure_delay) IS NOT NULL
+                    -- The last stop that reports a delay, not the first: the lowest stop
+                    -- sequence is often a stale value for a stop the trip has already passed.
+                    ORDER BY s.stop_sequence DESC
+                    LIMIT 1) AS current_delay,
+                   latest.stop_lat AS latest_stop_lat,
+                   latest.stop_lon AS latest_stop_lon,
+                   latest.stop_name AS latest_stop_name
+            FROM rt_trip_updates_hot h
+            LEFT JOIN rt_trip_updates_meta m ON m.id = h.trip_update_id
+            LEFT JOIN static_trips t ON t.feed_id = h.feed_id AND t.trip_id = m.trip_id
+            LEFT JOIN static_routes r
+                   ON r.feed_id = h.feed_id AND r.route_id = COALESCE(t.route_id, m.route_id)
+            LEFT JOIN static_agency a
+                   ON a.feed_id = h.feed_id AND a.agency_id = COALESCE(r.agency_id, '')
+            -- The most advanced stop with static coordinates: the best available position for
+            -- a trip that only publishes stop time predictions. Index-only on the hot table's
+            -- primary key and a primary-key lookup on static_stops, so it stays cheap per row.
+            LEFT JOIN LATERAL (
+                SELECT st.stop_name, st.stop_lat, st.stop_lon
+                FROM static_stops st
+                WHERE st.feed_id = h.feed_id
+                  AND st.stop_id = (
+                      SELECT COALESCE(s.assigned_stop_id, s.stop_id)
+                      FROM rt_stop_time_updates_hot s
+                      WHERE s.trip_update_id = h.trip_update_id
+                      ORDER BY s.stop_sequence DESC
+                      LIMIT 1)
+            ) latest ON TRUE
+            """;
+
     private final DataSource dataSource;
 
     private volatile OverviewDto cachedOverview;
@@ -354,45 +397,7 @@ public class GtfsQueryRepository {
             parameters.add(routeType);
         }
 
-        String select = """
-                SELECT h.trip_update_id, h.feed_id::text AS feed_id, h.feed_ts, h.last_seen_at,
-                       m.entity_id, m.trip_id, m.route_id, m.start_date, m.start_time,
-                       t.trip_short_name, r.route_short_name, r.route_long_name, r.route_type, a.agency_name,
-                       (SELECT count(*) FROM rt_stop_time_updates_hot s
-                        WHERE s.trip_update_id = h.trip_update_id) AS stop_time_update_count,
-                       (SELECT COALESCE(s.arrival_delay, s.departure_delay)
-                        FROM rt_stop_time_updates_hot s
-                        WHERE s.trip_update_id = h.trip_update_id
-                          AND COALESCE(s.arrival_delay, s.departure_delay) IS NOT NULL
-                        -- The last stop that reports a delay, not the first: the lowest stop
-                        -- sequence is often a stale value for a stop the trip has already passed.
-                        ORDER BY s.stop_sequence DESC
-                        LIMIT 1) AS current_delay,
-                       latest.stop_lat AS latest_stop_lat,
-                       latest.stop_lon AS latest_stop_lon,
-                       latest.stop_name AS latest_stop_name
-                FROM rt_trip_updates_hot h
-                LEFT JOIN rt_trip_updates_meta m ON m.id = h.trip_update_id
-                LEFT JOIN static_trips t ON t.feed_id = h.feed_id AND t.trip_id = m.trip_id
-                LEFT JOIN static_routes r
-                       ON r.feed_id = h.feed_id AND r.route_id = COALESCE(t.route_id, m.route_id)
-                LEFT JOIN static_agency a
-                       ON a.feed_id = h.feed_id AND a.agency_id = COALESCE(r.agency_id, '')
-                -- The most advanced stop with static coordinates: the best available position for
-                -- a trip that only publishes stop time predictions. Index-only on the hot table's
-                -- primary key and a primary-key lookup on static_stops, so it stays cheap per row.
-                LEFT JOIN LATERAL (
-                    SELECT st.stop_name, st.stop_lat, st.stop_lon
-                    FROM static_stops st
-                    WHERE st.feed_id = h.feed_id
-                      AND st.stop_id = (
-                          SELECT COALESCE(s.assigned_stop_id, s.stop_id)
-                          FROM rt_stop_time_updates_hot s
-                          WHERE s.trip_update_id = h.trip_update_id
-                          ORDER BY s.stop_sequence DESC
-                          LIMIT 1)
-                ) latest ON TRUE
-                """;
+        String select = LIVE_TRIP_UPDATE_SELECT;
         // The agency condition reaches static_agency through the trip and route joins; only widen
         // the count query when that filter is actually in use.
         String count = hasText(agency) || hasText(route) || routeType != null ? """
@@ -417,27 +422,53 @@ public class GtfsQueryRepository {
                 order,
                 page,
                 size,
-                rs -> new TripUpdateDto(
-                        rs.getLong("trip_update_id"),
-                        rs.getString("feed_id"),
-                        offsetDateTime(rs, "feed_ts"),
-                        offsetDateTime(rs, "last_seen_at"),
-                        rs.getString("entity_id"),
-                        rs.getString("trip_id"),
-                        rs.getString("route_id"),
-                        rs.getObject("start_date", LocalDate.class),
-                        rs.getObject("start_time", LocalTime.class),
-                        rs.getInt("stop_time_update_count"),
-                        nullableInt(rs, "current_delay"),
-                        rs.getString("trip_short_name"),
-                        rs.getString("route_short_name"),
-                        rs.getString("route_long_name"),
-                        rs.getString("agency_name"),
-                        nullableInt(rs, "route_type"),
-                        rs.getObject("latest_stop_lat", Double.class),
-                        rs.getObject("latest_stop_lon", Double.class),
-                        rs.getString("latest_stop_name")),
+                GtfsQueryRepository::tripUpdate,
                 includeTotal);
+    }
+
+    /**
+     * Loads one live trip update by its hot-table id.
+     *
+     * <p>The UI needs the full row when the user opens a trip from a map marker, because the marker
+     * itself carries only the fields needed to draw and label it.
+     *
+     * @param tripUpdateId hot table row id
+     * @return the update, or empty when the row disappeared between the map poll and the click
+     */
+    public Optional<TripUpdateDto> liveTripUpdate(long tripUpdateId) {
+        var sql = LIVE_TRIP_UPDATE_SELECT + " WHERE h.trip_update_id = ?";
+        try (Connection connection = dataSource.getConnection();
+                PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setLong(1, tripUpdateId);
+            try (ResultSet rs = statement.executeQuery()) {
+                return rs.next() ? Optional.of(tripUpdate(rs)) : Optional.empty();
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to query GTFS data", e);
+        }
+    }
+
+    private static TripUpdateDto tripUpdate(ResultSet rs) throws SQLException {
+        return new TripUpdateDto(
+                rs.getLong("trip_update_id"),
+                rs.getString("feed_id"),
+                offsetDateTime(rs, "feed_ts"),
+                offsetDateTime(rs, "last_seen_at"),
+                rs.getString("entity_id"),
+                rs.getString("trip_id"),
+                rs.getString("route_id"),
+                rs.getObject("start_date", LocalDate.class),
+                rs.getObject("start_time", LocalTime.class),
+                rs.getInt("stop_time_update_count"),
+                nullableInt(rs, "current_delay"),
+                rs.getString("trip_short_name"),
+                rs.getString("route_short_name"),
+                rs.getString("route_long_name"),
+                rs.getString("agency_name"),
+                nullableInt(rs, "route_type"),
+                rs.getObject("latest_stop_lat", Double.class),
+                rs.getObject("latest_stop_lon", Double.class),
+                rs.getString("latest_stop_name"));
     }
 
     /**
@@ -462,7 +493,7 @@ public class GtfsQueryRepository {
      */
     public List<TripMarkerDto> liveTripMarkers() {
         String sql = """
-                SELECT h.feed_id::text AS feed_id,
+                SELECT h.feed_id::text AS feed_id, h.trip_update_id,
                        latest_stop.stop_time, latest_stop.stop_sequence,
                        latest.stop_lat, latest.stop_lon, latest.stop_name,
                        r.route_short_name, r.route_type, t.trip_short_name,
@@ -540,6 +571,7 @@ public class GtfsQueryRepository {
             List<TripMarkerDto> unkeyed = new ArrayList<>();
             while (rs.next()) {
                 var marker = new TripMarkerDto(
+                        rs.getLong("trip_update_id"),
                         rs.getDouble("stop_lat"),
                         rs.getDouble("stop_lon"),
                         rs.getString("route_short_name"),

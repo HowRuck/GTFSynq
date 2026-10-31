@@ -125,39 +125,46 @@ final class GtfsQueryMapper {
     static TripUpdatesReply tripUpdatesReply(PageResponse<TripUpdateDto> page) {
         var reply = TripUpdatesReply.newBuilder().setPage(pageInfo(page));
         for (var update : page.items()) {
-            var item = TripUpdate.newBuilder()
-                    .setTripUpdateId(update.tripUpdateId())
-                    .setFeedId(update.feedId())
-                    .setFeedTs(timestamp(update.feedTs()))
-                    .setLastSeenAt(timestamp(update.lastSeenAt()))
-                    .setStopTimeUpdateCount(update.stopTimeUpdateCount());
-            setIfPresent(update.entityId(), item::setEntityId);
-            setIfPresent(update.tripId(), item::setTripId);
-            setIfPresent(update.routeId(), item::setRouteId);
-            setIfPresent(timeText(update.startDate()), item::setStartDate);
-            setIfPresent(timeText(update.startTime()), item::setStartTime);
-            setIfPresent(update.currentDelay(), item::setCurrentDelay);
-            setIfPresent(update.tripShortName(), item::setTripShortName);
-            setIfPresent(update.routeShortName(), item::setRouteShortName);
-            setIfPresent(update.routeLongName(), item::setRouteLongName);
-            setIfPresent(update.agencyName(), item::setAgencyName);
-            setIfPresent(update.routeType(), item::setRouteType);
-            if (update.latestStopLat() != null) {
-                item.setLatestStopLat(update.latestStopLat());
-            }
-            if (update.latestStopLon() != null) {
-                item.setLatestStopLon(update.latestStopLon());
-            }
-            setIfPresent(update.latestStopName(), item::setLatestStopName);
-            reply.addItems(item);
+            reply.addItems(tripUpdate(update));
         }
         return reply.build();
+    }
+
+    static TripUpdate tripUpdate(TripUpdateDto update) {
+        var item = TripUpdate.newBuilder()
+                .setTripUpdateId(update.tripUpdateId())
+                .setFeedId(update.feedId())
+                .setFeedTs(timestamp(update.feedTs()))
+                .setLastSeenAt(timestamp(update.lastSeenAt()))
+                .setStopTimeUpdateCount(update.stopTimeUpdateCount());
+        setIfPresent(update.entityId(), item::setEntityId);
+        setIfPresent(update.tripId(), item::setTripId);
+        setIfPresent(update.routeId(), item::setRouteId);
+        setIfPresent(timeText(update.startDate()), item::setStartDate);
+        setIfPresent(timeText(update.startTime()), item::setStartTime);
+        setIfPresent(update.currentDelay(), item::setCurrentDelay);
+        setIfPresent(update.tripShortName(), item::setTripShortName);
+        setIfPresent(update.routeShortName(), item::setRouteShortName);
+        setIfPresent(update.routeLongName(), item::setRouteLongName);
+        setIfPresent(update.agencyName(), item::setAgencyName);
+        setIfPresent(update.routeType(), item::setRouteType);
+        if (update.latestStopLat() != null) {
+            item.setLatestStopLat(update.latestStopLat());
+        }
+        if (update.latestStopLon() != null) {
+            item.setLatestStopLon(update.latestStopLon());
+        }
+        setIfPresent(update.latestStopName(), item::setLatestStopName);
+        return item.build();
     }
 
     static TripMarkersReply tripMarkersReply(List<TripMarkerDto> markers) {
         var reply = TripMarkersReply.newBuilder();
         for (var marker : markers) {
-            var item = TripMarker.newBuilder().setLat(marker.lat()).setLon(marker.lon());
+            var item = TripMarker.newBuilder()
+                    .setTripUpdateId(marker.tripUpdateId())
+                    .setLat(marker.lat())
+                    .setLon(marker.lon());
             setIfPresent(marker.routeShortName(), item::setRouteShortName);
             setIfPresent(marker.tripShortName(), item::setTripShortName);
             setIfPresent(marker.routeId(), item::setRouteId);

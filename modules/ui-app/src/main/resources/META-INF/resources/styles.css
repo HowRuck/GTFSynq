@@ -86,6 +86,25 @@ vaadin-grid::part(delay-severe) {
     font-size: 0.9em;
 }
 
+/* Popup action that opens the trip detail pane; styled as a link but behaves as a button. */
+.live-map-popup-open {
+    display: inline-block;
+    margin-top: 0.45rem;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--aura-accent-color);
+    font: inherit;
+    font-weight: var(--aura-font-weight-semibold);
+    text-align: left;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.live-map-popup-open:hover {
+    text-decoration: none;
+}
+
 /*
  * Live map loading state: a Vaadin ProgressBar in a centered card, overlaid on the map so the
  * basemap keeps painting underneath. LiveUpdatesView toggles the overlay's visibility around the

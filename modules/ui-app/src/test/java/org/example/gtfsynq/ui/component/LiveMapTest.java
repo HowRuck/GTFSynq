@@ -14,34 +14,43 @@ class LiveMapTest {
 
     @Test
     void writesOneTuplePerMarker() {
-        var json = LiveMap.json(List.of(new LiveMap.Marker(52.5, 13.4, "10 · Trip 1", "Central", 120, 5)));
+        var json = LiveMap.json(List.of(new LiveMap.Marker(52.5, 13.4, "10 · Trip 1", "Central", 120, 5, 42)));
 
-        assertEquals("[[52.5,13.4,\"10 · Trip 1\",\"Central\",120,5]]", json);
+        assertEquals("[[52.5,13.4,\"10 · Trip 1\",\"Central\",120,5,42]]", json);
     }
 
     @Test
     void roundsCoordinatesWithoutLosingMapPrecision() {
         var json = LiveMap.json(
-                List.of(new LiveMap.Marker(52.12345678, 13.98765432, "10 · Trip 1", "Central", null, null)));
+                List.of(new LiveMap.Marker(52.12345678, 13.98765432, "10 · Trip 1", "Central", null, null, 42)));
 
-        assertEquals("[[52.123457,13.987654,\"10 · Trip 1\",\"Central\",null,null]]", json);
+        assertEquals("[[52.123457,13.987654,\"10 · Trip 1\",\"Central\",null,null,42]]", json);
     }
 
     @Test
     void escapesQuotesAndControlCharacters() {
-        var json = LiveMap.json(List.of(new LiveMap.Marker(1, 2, "a\"b", "line\nbreak", null, null)));
+        var json = LiveMap.json(List.of(new LiveMap.Marker(1, 2, "a\"b", "line\nbreak", null, null, 42)));
 
         assertFalse(json.contains("\"a\"b\""), "an unescaped quote would break the JSON array");
-        assertEquals("[[1.0,2.0,\"a\\\"b\",\"line\\nbreak\",null,null]]", json);
+        assertEquals("[[1.0,2.0,\"a\\\"b\",\"line\\nbreak\",null,null,42]]", json);
     }
 
     @Test
     void dropsMarkersWithoutFiniteCoordinates() {
         var json = LiveMap.json(List.of(
-                new LiveMap.Marker(Double.NaN, 13.4, "nan", "detail", null, null),
-                new LiveMap.Marker(52.5, Double.POSITIVE_INFINITY, "infinite", "detail", null, null)));
+                new LiveMap.Marker(Double.NaN, 13.4, "nan", "detail", null, null, 1),
+                new LiveMap.Marker(52.5, Double.POSITIVE_INFINITY, "infinite", "detail", null, null, 2)));
 
         assertEquals("[]", json, "MapLibre cannot render, and JSON cannot express, non-finite coordinates");
+    }
+
+    @Test
+    void exposesTheOpenTripLabel() {
+        var map = new LiveMap();
+
+        map.setOpenTripText("Open trip");
+
+        assertEquals("Open trip", map.getElement().getProperty("openTripText"));
     }
 
     @Test
