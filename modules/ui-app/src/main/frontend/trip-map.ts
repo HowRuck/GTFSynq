@@ -95,10 +95,13 @@ class TripMap extends HTMLElement {
     this.onStopClick();
 
     this.resizeObserver = new ResizeObserver(() => {
-      map.resize();
       // The pane is hidden while a trip loads, so the container can be 0x0 when the stops first
-      // arrive. Framing them before the browser has laid the pane out would fit a zero-sized
-      // viewport and leave the route wildly zoomed in; refit as soon as there is real space.
+      // arrive. Resizing the canvas to 0x0 and back flashes it; skip until there is real space,
+      // then frame the route instead of fitting a zero-sized viewport.
+      if (this.clientWidth === 0 || this.clientHeight === 0) {
+        return;
+      }
+      map.resize();
       this.applyFit();
     });
     this.resizeObserver.observe(this);
@@ -330,9 +333,8 @@ class TripMap extends HTMLElement {
       return;
     }
     this.fitPending = false;
-    // The canvas can still carry the size it had while hidden; resize before computing the fit so
-    // zoom and centre are derived from the space the route is actually drawn in.
-    map.resize();
+    // The ResizeObserver resizes the canvas before calling this, including when a hidden frame
+    // becomes visible, so a second resize here would only make the canvas flicker with the fit.
     if (stops.length === 1) {
       map.jumpTo({ center: [stops[0][1], stops[0][0]], zoom: 14 });
       return;

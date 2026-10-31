@@ -96,6 +96,8 @@ class LiveMap extends HTMLElement {
   private styleLoaded = false;
   private fallbackTimer?: number;
   private markersAt = Date.now();
+  /** The current markers still have to be framed; applied once the container has a real size. */
+  private fitPending = false;
   private reachedJustNowText = 'Reached just now';
   private reachedMinutesFormat = 'Reached {0} min ago';
   private transportUrl?: string;
@@ -144,10 +146,16 @@ class LiveMap extends HTMLElement {
     this.onHover();
 
     this.resizeObserver = new ResizeObserver(() => {
+      // A splitter can report a zero-sized step mid-drag; resizing the canvas to 0x0 and back is
+      // what makes it flash, and the next non-zero callback sizes it correctly anyway.
+      if (this.clientWidth === 0 || this.clientHeight === 0) {
+        return;
+      }
       map.resize();
-      // The splitter and the page layout can change the map's size at any time; keep the overview
-      // framed on the trips instead of leaving the old view stretched into the new space.
-      this.fitMarkers();
+      // Resizing changes the viewport, not the subject: keep the user's current view. Only a fit
+      // that could not be applied yet (for example while the container was still 0x0) is completed
+      // here. Refitting on every splitter tick made the map jump and flicker while dragging.
+      this.applyFit();
     });
     this.resizeObserver.observe(this);
 
@@ -479,26 +487,31 @@ class LiveMap extends HTMLElement {
   }
 
   /**
-   * Fits the view to the markers while the user has not taken over the map.
+   * Requests a fit to the current markers while the user has not taken over the map.
    *
-   * <p>Safe to call before the map is laid out: a container without a usable size is left alone,
-   * and the ResizeObserver fits again once the map has real space, so the overview never settles on
-   * a view computed from a 0x0 viewport.
+   * <p>Safe to call before the map is laid out: a container without a usable size leaves the fit
+   * pending, and the ResizeObserver applies it once the map has real space. Unlike a fit on every
+   * resize, this keeps a splitter drag from re-zooming the map continuously.
    */
   private fitMarkers(): void {
+    this.fitPending = this.positionedMarkers().length > 0;
+    this.applyFit();
+  }
+
+  private applyFit(): void {
     const map = this.map;
-    if (!map || !this.styleLoaded || !this.followMarkers) {
+    if (!map || !this.styleLoaded || !this.followMarkers || !this.fitPending) {
       return;
     }
     if (this.clientWidth === 0 || this.clientHeight === 0) {
       return;
     }
-    const positioned = this.markerData.filter(
-      (marker) => Number.isFinite(marker[0]) && Number.isFinite(marker[1]),
-    );
+    const positioned = this.positionedMarkers();
     if (positioned.length === 0) {
+      this.fitPending = false;
       return;
     }
+    this.fitPending = false;
     if (positioned.length === 1) {
       map.jumpTo({ center: [positioned[0][1], positioned[0][0]], zoom: 12 });
       return;
@@ -506,6 +519,12 @@ class LiveMap extends HTMLElement {
     const bounds = new LngLatBounds();
     positioned.forEach((marker) => bounds.extend([marker[1], marker[0]]));
     map.fitBounds(bounds, { padding: 48, maxZoom: 12, duration: 0 });
+  }
+
+  private positionedMarkers(): LiveMapMarker[] {
+    return this.markerData.filter(
+      (marker) => Number.isFinite(marker[0]) && Number.isFinite(marker[1]),
+    );
   }
 }
 
