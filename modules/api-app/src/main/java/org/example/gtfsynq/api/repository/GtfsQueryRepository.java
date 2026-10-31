@@ -134,7 +134,8 @@ public class GtfsQueryRepository {
         // A feed may describe several agencies, so they are aggregated into one array beside the
         // feed's row instead of widening the page by one row per agency.
         String select = """
-                SELECT f.feed_id::text, f.sha256, f.bucket, f.object_key, f.source_url, f.size_bytes,
+                SELECT f.feed_id::text, f.sha256, f.bucket, f.object_key, f.source_url,
+                       f.object_etag, f.source_etag, f.source_last_modified, f.size_bytes,
                        f.ingested_at, f.loaded_at, a.agency_names
                 FROM static_feeds f
                 LEFT JOIN LATERAL (
@@ -157,6 +158,9 @@ public class GtfsQueryRepository {
                         rs.getString("bucket"),
                         rs.getString("object_key"),
                         rs.getString("source_url"),
+                        rs.getString("object_etag"),
+                        rs.getString("source_etag"),
+                        rs.getString("source_last_modified"),
                         rs.getLong("size_bytes"),
                         offsetDateTime(rs, "ingested_at"),
                         offsetDateTime(rs, "loaded_at"),

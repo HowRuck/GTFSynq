@@ -39,7 +39,13 @@ public final class Columns {
         grid.addColumn(feed -> UiFormat.shortHash(feed.getSha256())).setHeader(grid.getTranslation("column.sha256"));
         grid.addColumn(feed -> UiFormat.bytes(feed.getSizeBytes())).setHeader(grid.getTranslation("column.size"));
         grid.addColumn(StaticFeed::getObjectKey).setHeader(grid.getTranslation("column.objectKey"));
+        grid.addComponentColumn(feed -> UiComponents.etag(feed.hasObjectEtag() ? feed.getObjectEtag() : null))
+                .setHeader(grid.getTranslation("column.objectEtag"));
         grid.addComponentColumn(UiComponents::sourceLink).setHeader(grid.getTranslation("column.source"));
+        grid.addComponentColumn(feed -> UiComponents.etag(feed.hasSourceEtag() ? feed.getSourceEtag() : null))
+                .setHeader(grid.getTranslation("column.sourceEtag"));
+        grid.addColumn(feed -> UiFormat.text(feed.hasSourceLastModified() ? feed.getSourceLastModified() : null))
+                .setHeader(grid.getTranslation("column.sourceLastModified"));
         grid.addColumn(feed -> UiFormat.dateTime(feed.getIngestedAt()))
                 .setHeader(grid.getTranslation("column.ingested"));
         grid.addColumn(feed -> UiFormat.dateTime(feed.getLoadedAt())).setHeader(grid.getTranslation("column.loaded"));

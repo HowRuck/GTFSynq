@@ -157,6 +157,15 @@ class GtfsQueryMapperTest {
         assertTrue(feed.getAgencyNamesList().isEmpty());
     }
 
+    @Test
+    void mapsHttpValidatorsOnStaticFeeds() {
+        var feed = GtfsQueryMapper.staticFeedsReply(staticFeedPage(List.of())).getItems(0);
+
+        assertEquals("\"storage\"", feed.getObjectEtag());
+        assertEquals("\"source\"", feed.getSourceEtag());
+        assertEquals("Mon, 12 Oct 2026 10:15:00 GMT", feed.getSourceLastModified());
+    }
+
     private static TripUpdateDto tripUpdateWithPosition(double lat, double lon, String stopName) {
         return new TripUpdateDto(
                 1,
@@ -190,7 +199,10 @@ class GtfsQueryMapperTest {
                 "sha256",
                 "bucket",
                 "object-key",
-                null,
+                "https://example.com/gtfs.zip",
+                "\"storage\"",
+                "\"source\"",
+                "Mon, 12 Oct 2026 10:15:00 GMT",
                 1024,
                 OffsetDateTime.parse("2026-10-23T10:00:00Z"),
                 OffsetDateTime.parse("2026-10-23T10:01:00Z"),

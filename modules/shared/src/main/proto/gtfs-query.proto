@@ -92,6 +92,13 @@ message StaticFeed {
   // Agency names from static_agency, in agency_id order. A feed may describe
   // several agencies; the list is empty when no agency row was loaded.
   repeated string agency_names = 9;
+  // Object storage entity tag recorded when the revision was written.
+  optional string object_etag = 10;
+  // Upstream HTTP ETag observed when the revision was ingested. Diagnostic only;
+  // the ingest app owns the conditional-request cache.
+  optional string source_etag = 11;
+  // Upstream HTTP Last-Modified header value, verbatim. Diagnostic only.
+  optional string source_last_modified = 12;
 }
 
 message StaticFeedsRequest {

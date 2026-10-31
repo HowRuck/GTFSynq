@@ -218,7 +218,7 @@ no datasource and never calls the REST API.
 | Page | Path | Contents |
 |---|---|---|
 | Overview | `/` | Row counts for static feeds, routes, stops, trips and live updates, plus the most recent static feed revisions |
-| Static Feeds | `/feeds` | One current revision per feed: agency, digest, size, object key, source, ingestion and load times |
+| Static Feeds | `/feeds` | One current revision per feed: agency, digest, size, object key, object and source ETags, upstream Last-Modified, source, ingestion and load times |
 | Routes | `/routes` | Static routes with a feed filter and search |
 | Stops | `/stops` | Stops and stations with coordinates, location type and parent station |
 | Trips | `/trips` | Trips with their route, service and direction |

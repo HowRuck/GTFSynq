@@ -60,6 +60,9 @@ final class GtfsQueryMapper {
                     .setLoadedAt(timestamp(feed.loadedAt()))
                     .addAllAgencyNames(feed.agencyNames());
             setIfPresent(feed.sourceUrl(), item::setSourceUrl);
+            setIfPresent(feed.objectEtag(), item::setObjectEtag);
+            setIfPresent(feed.sourceEtag(), item::setSourceEtag);
+            setIfPresent(feed.sourceLastModified(), item::setSourceLastModified);
             reply.addItems(item);
         }
         return reply.build();

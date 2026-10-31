@@ -36,6 +36,15 @@ public final class UiComponents {
         return link;
     }
 
+    /**
+     * ETag cell: shortened to keep the column narrow, with the full value available as a tooltip.
+     */
+    public static Component etag(String value) {
+        var span = new Span(UiFormat.elideId(value));
+        span.setTitle(UiFormat.text(value));
+        return span;
+    }
+
     public static Card statCard(String label, String value) {
         var card = new Card();
         card.setWidth("14rem");
