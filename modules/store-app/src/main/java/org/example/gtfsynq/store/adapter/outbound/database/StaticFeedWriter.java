@@ -412,6 +412,9 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
             log.info("Static feed {}: COPY finalised in {} ms", feedId, (System.nanoTime() - copyStart) / 1_000_000);
 
             if (unchanged) {
+                // A redelivered event carries the same revision but may be the first one to
+                // carry the upstream validators (for example after this metadata was added).
+                updateRevisionMetadata();
                 connection.commit();
                 committed = true;
                 return;
@@ -646,6 +649,28 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
         return rowsByTable.values().stream().mapToLong(Long::longValue).sum();
     }
 
+    /**
+     * Refreshes the diagnostic HTTP metadata of an already loaded revision without touching its
+     * rows or counts.
+     */
+    private void updateRevisionMetadata() throws SQLException {
+        var sql = """
+                UPDATE static_feeds
+                SET object_etag = COALESCE(?, object_etag),
+                    source_etag = COALESCE(?, source_etag),
+                    source_last_modified = COALESCE(?, source_last_modified)
+                WHERE feed_id = ?
+                """;
+
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, emptyToNull(event.getEtag()));
+            preparedStatement.setString(2, emptyToNull(event.getSourceEtag()));
+            preparedStatement.setString(3, emptyToNull(event.getSourceLastModified()));
+            preparedStatement.setObject(4, feedId, Types.OTHER);
+            preparedStatement.executeUpdate();
+        }
+    }
+
     private void recordRevision() throws SQLException {
         var sql = """
                 INSERT INTO static_feeds (
@@ -654,18 +679,24 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
                     bucket,
                     object_key,
                     source_url,
+                    object_etag,
+                    source_etag,
+                    source_last_modified,
                     size_bytes,
                     route_count,
                     stop_count,
                     trip_count,
                     ingested_at,
                     loaded_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
                 ON CONFLICT (feed_id) DO UPDATE SET
                     sha256 = EXCLUDED.sha256,
                     bucket = EXCLUDED.bucket,
                     object_key = EXCLUDED.object_key,
                     source_url = EXCLUDED.source_url,
+                    object_etag = EXCLUDED.object_etag,
+                    source_etag = EXCLUDED.source_etag,
+                    source_last_modified = EXCLUDED.source_last_modified,
                     size_bytes = EXCLUDED.size_bytes,
                     route_count = EXCLUDED.route_count,
                     stop_count = EXCLUDED.stop_count,
@@ -680,11 +711,14 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
             preparedStatement.setString(3, event.getBucket());
             preparedStatement.setString(4, event.getObjectKey());
             preparedStatement.setString(5, emptyToNull(event.getSourceUrl()));
-            preparedStatement.setLong(6, event.getSizeBytes());
-            preparedStatement.setLong(7, rowsByTable.getOrDefault(ROUTES, 0L));
-            preparedStatement.setLong(8, rowsByTable.getOrDefault(STOPS, 0L));
-            preparedStatement.setLong(9, rowsByTable.getOrDefault(TRIPS, 0L));
-            preparedStatement.setTimestamp(10, Timestamp.from(ingestedAt()));
+            preparedStatement.setString(6, emptyToNull(event.getEtag()));
+            preparedStatement.setString(7, emptyToNull(event.getSourceEtag()));
+            preparedStatement.setString(8, emptyToNull(event.getSourceLastModified()));
+            preparedStatement.setLong(9, event.getSizeBytes());
+            preparedStatement.setLong(10, rowsByTable.getOrDefault(ROUTES, 0L));
+            preparedStatement.setLong(11, rowsByTable.getOrDefault(STOPS, 0L));
+            preparedStatement.setLong(12, rowsByTable.getOrDefault(TRIPS, 0L));
+            preparedStatement.setTimestamp(13, Timestamp.from(ingestedAt()));
             preparedStatement.executeUpdate();
         }
     }

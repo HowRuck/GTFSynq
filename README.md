@@ -472,7 +472,10 @@ the feed in the database is always a revision that was checked end to end:
    archive back in through `GtfsStaticArchiveReader`, the same entry order the validator used,
    into `StaticFeedWriter`.
 3. The `static_feeds` row naming the loaded revision is written last, so the revision marker and
-   the rows it describes are committed together.
+   the rows it describes are committed together. It also records the storage ETag and the
+   upstream `ETag` / `Last-Modified` the event carried, so a stored revision can be traced back
+   to what the origin advertised; those columns are diagnostic and do not drive conditional
+   requests.
 
 The replace and the insert share one transaction on a single pooled connection, so a feed is
 either fully at the new revision or fully at the old one - a failure halfway through a
