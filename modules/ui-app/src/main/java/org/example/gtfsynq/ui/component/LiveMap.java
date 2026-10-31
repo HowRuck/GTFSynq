@@ -97,9 +97,15 @@ public class LiveMap extends Component {
      */
     public Registration addTripOpenListener(SerializableConsumer<Long> listener) {
         var registration = getElement().addEventListener("trip-open", event -> {
-            var tripUpdateId = event.getEventDetail(Long.class);
-            if (tripUpdateId != null && tripUpdateId > 0) {
-                listener.accept(tripUpdateId);
+            // The browser sends the id as a string: it may be larger than 2^53 and would lose
+            // precision if it travelled as a JSON number.
+            var tripUpdateId = event.getEventDetail(String.class);
+            if (tripUpdateId != null && !tripUpdateId.isBlank()) {
+                try {
+                    listener.accept(Long.parseLong(tripUpdateId));
+                } catch (NumberFormatException ignored) {
+                    // A malformed client payload is not worth failing the event over.
+                }
             }
         });
         registration.addEventDetail();
@@ -140,7 +146,9 @@ public class LiveMap extends Component {
      * trip.
      *
      * <p>The tuple form keeps the pushed JSON small: at tens of thousands of markers, repeating the
-     * keys of an object costs more than the values themselves.
+     * keys of an object costs more than the values themselves. The trip update id is written as a
+     * quoted string because it can exceed JavaScript's safe integer range, and a rounded id would
+     * make the popup link fetch a different row.
      */
     static String json(List<Marker> markers) {
         var json = new StringBuilder("[");
@@ -164,7 +172,7 @@ public class LiveMap extends Component {
                     .append(',')
                     .append(marker.reachedMinutesAgo() == null ? "null" : marker.reachedMinutesAgo())
                     .append(',')
-                    .append(marker.tripUpdateId())
+                    .append(JsonText.quote(Long.toString(marker.tripUpdateId())))
                     .append(']');
         }
         return json.append(']').toString();

@@ -13,17 +13,19 @@ import {
  * One trip position as a compact tuple:
  * [lat, lon, label, detail, delaySeconds, reachedMinutesAgo, tripUpdateId].
  *
+ * <p>The id is a string because a 64-bit id can exceed JavaScript's safe integer range.
+ *
  * <p>The tuple form replaces a keyed object because the marker array is pushed to the browser on
  * every poll; repeating the keys per marker costs more than the values themselves at scale.
  */
-type LiveMapMarker = [number, number, string, string, number | null, number | null, number];
+type LiveMapMarker = [number, number, string, string, number | null, number | null, string];
 
 interface MarkerProperties {
   label: string;
   detail: string;
   delayClass: 'early' | 'on-time' | 'late' | 'severe' | 'unknown';
   reachedMinutesAgo: number | null;
-  tripUpdateId: number;
+  tripUpdateId: string;
 }
 
 const SOURCE_ID = 'live-trips';
@@ -492,7 +494,7 @@ class LiveMap extends HTMLElement {
           : this.reachedMinutesFormat.replace('{0}', String(minutes));
       wrapper.appendChild(reached);
     }
-    if (properties.tripUpdateId > 0) {
+    if (properties.tripUpdateId && properties.tripUpdateId !== '0') {
       const open = document.createElement('button');
       open.type = 'button';
       open.className = 'live-map-popup-open';

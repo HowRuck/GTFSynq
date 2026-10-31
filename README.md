@@ -243,8 +243,9 @@ Behaviour shared by the tables:
   (cached for ten seconds so open sessions share one query), clusters markers
   client-side and falls back to raster tiles when the vector basemap is
   unreachable. Marker snapshots travel as compact
-  `[lat, lon, label, detail, delay, reachedMinutesAgo, tripUpdateId]` tuples and are
-  only pushed when they change; co-located trips are spread a few metres so a
+  `[lat, lon, label, detail, delay, reachedMinutesAgo, tripUpdateId]` tuples (the
+  update id as a quoted string, since it can exceed JavaScript's safe integer range)
+  and are only pushed when they change; co-located trips are spread a few metres so a
   cluster's number matches the markers that become visible when zooming in. The
   popup also says how long ago the trip reached that stop and offers a link that
   opens the trip's detail pane. Trip, route and stop labels prefer their static
