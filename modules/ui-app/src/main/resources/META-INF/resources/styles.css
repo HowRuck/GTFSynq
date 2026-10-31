@@ -115,6 +115,15 @@ vaadin-grid::part(delay-severe) {
 }
 
 /*
+ * The theme paints the splitter with the container-strong colour, which reads as a shaded
+ * strip between the panes. The splitter is a divider, so give it the plain background and
+ * let the handle stay as the grab affordance.
+ */
+vaadin-split-layout {
+    --vaadin-split-layout-splitter-background: var(--vaadin-background-color);
+}
+
+/*
  * The overview/detail splitter exists only while the detail pane is open;
  * without a secondary region it would be an empty handle at the right edge.
  */
