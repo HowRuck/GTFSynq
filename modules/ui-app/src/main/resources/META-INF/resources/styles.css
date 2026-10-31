@@ -120,23 +120,44 @@ vaadin-grid::part(delay-severe) {
     font-size: 0.9em;
 }
 
-/* Popup action that opens the trip detail pane; styled as a link but behaves as a button. */
+/* Popup action that opens the trip detail pane; a quiet accent button, not a raw link. */
 .live-map-popup-open {
-    display: inline-block;
-    margin-top: 0.45rem;
-    padding: 0;
-    border: none;
-    background: none;
-    color: var(--aura-accent-color);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.6rem;
+    padding: 0.3rem 0.65rem;
+    border: 1px solid color-mix(in oklab, var(--aura-accent-color) 45%, var(--vaadin-border-color));
+    border-radius: var(--vaadin-radius-m);
+    background: color-mix(in oklab, var(--aura-accent-color) 12%, transparent);
+    color: var(--vaadin-text-color);
     font: inherit;
+    font-size: 0.9em;
     font-weight: var(--aura-font-weight-semibold);
+    line-height: 1.2;
     text-align: left;
-    text-decoration: underline;
+    text-decoration: none;
     cursor: pointer;
+    transition:
+        background-color 120ms ease,
+        border-color 120ms ease;
+}
+
+.live-map-popup-open::after {
+    content: '→';
+    color: var(--aura-accent-color);
+    font-size: 1.1em;
+    line-height: 1;
 }
 
 .live-map-popup-open:hover {
-    text-decoration: none;
+    border-color: var(--aura-accent-color);
+    background: color-mix(in oklab, var(--aura-accent-color) 20%, transparent);
+}
+
+.live-map-popup-open:focus-visible {
+    outline: 2px solid var(--aura-accent-color);
+    outline-offset: 2px;
 }
 
 /*
