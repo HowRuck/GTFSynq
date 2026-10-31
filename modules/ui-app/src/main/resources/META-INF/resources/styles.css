@@ -19,6 +19,40 @@ html {
   --aura-surface-level: -0.5;
 }
 
+/*
+ * Scrollbars follow the active theme instead of the browser default. A transparent track lets the
+ * surface behind it show through, so a grid or the trip timeline keeps its own background, while
+ * the thumb uses the theme's secondary text colour and therefore flips with light/dark mode.
+ *
+ * scrollbar-color is inherited, so it also reaches scroll containers inside component shadow roots.
+ * The WebKit rules cover the page and light-DOM scrollers in browsers without scrollbar-color.
+ */
+html {
+  scrollbar-color: var(--vaadin-text-color-secondary) transparent;
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 0.65rem;
+  height: 0.65rem;
+}
+
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--vaadin-text-color-secondary);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--vaadin-text-color);
+}
+
 :is(vaadin-button, vaadin-menu-bar-button, vaadin-upload-button),
 vaadin-tabs,
 vaadin-checkbox,
