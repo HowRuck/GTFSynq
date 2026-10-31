@@ -47,7 +47,7 @@
       "source": "quarkusio/skills",
       "sourceType": "github",
       "skillPath": "skills/migrate-spring-to-quarkus/SKILL.md",
-      "computedHash": "4611b0fd670d7710806f7909040e94010c23c0830f7fc3fb58f538dccce08915"
+      "computedHash": "380740dd4e0ce52eadc88d8de39c3c246a6719d0a4d50825c4a23f5551c272a7"
     },
     "pgvector-semantic-search": {
       "source": "timescale/pg-aiguide",
@@ -113,7 +113,7 @@
       "source": "vaadin/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/vaadin-frontend-design/SKILL.md",
-      "computedHash": "81f3cbb7a334dff07df74d69f24663d482029f6a0165a4b927016f42531d573d"
+      "computedHash": "b5422faf32fd597d4ad330956ea51fb9d6872a3a7affa6a4607a8935fec5f505"
     }
   }
 }
