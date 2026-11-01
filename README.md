@@ -325,6 +325,7 @@ Responsible for getting data out of Kafka and into PostgreSQL/TimescaleDB:
 - GTFS static feed validation (fetch from object storage, verify the digest, stream-validate)
 - GTFS static feed persistence (stream the validated archive into the `static_*` tables)
 - deduplication
+- stop-sequence completion for feeds that publish only `stop_id`
 - batch persistence
 - Flyway migrations
 - JDBC-based repository writes
@@ -447,6 +448,10 @@ persisted, so rows only reach the database once they are known good:
    which walks each entry once, checks row-level rules with YAVI, and answers referential
    questions - duplicate primary keys, `trips.route_id`, `stop_times.trip_id`/`stop_id`, and
    per-trip `stop_sequence` ordering - from hashed id indexes.
+   `routes.route_type` accepts the standard values (`0-7`, `11`, `12`) and the extended
+   Hierarchical Vehicle Type families (`100-117`, `200-209`, `300`, `400-405`, `500-503`, `600`,
+   `700-717`, `800`, `900-906`, `1000-1021`, `1100-1114`, `1200`, `1300-1307`, `1400-1402`,
+   `1500-1507`, `1700-1702`); real feeds such as HSL publish those instead of the base codes.
 4. The outcome is reported as metrics and logs; an invalid feed is not handed on for
    persistence, so the last good revision stays in place.
 
@@ -522,6 +527,77 @@ to it, `store-app` reads them back - so one set of deployment values serves both
 | `bucket` | `gtfsynq-static` | Bucket holding the archives; created on first upload when missing, and only used as a fallback on the read path, which prefers the bucket named by the event |
 | `access-key` / `secret-key` | empty | Static credentials; when empty the AWS default credentials chain is used |
 | `path-style-access` | `true` | Address buckets as `endpoint/bucket`, as local S3 services require (`quarkus.s3.path-style-access`) |
+
+## Realtime Trip Update Ingestion
+
+The realtime path is independent of the static one: a source may configure either side, and a
+realtime feed is never blocked by a static revision that is missing or late.
+
+1. `ingest-app` polls every configured `gtfs.sources.<id>.realtime-config.urls` entry on its
+   `poll-interval-seconds` (60s by default), parses the protobuf natively and keeps entities whose
+   bytes changed since the previous poll.
+2. Each changed entity is published to `gtfs-trip-updates`, keyed by feed id, as an envelope of the
+   original `FeedEntity` bytes plus its type and timestamp.
+3. `store-app` consumes the topic in batches. Deduplication compares each stop update against the
+   previous one held in the off-heap store: a stop is kept when its metadata (ids, scheduled times,
+   schedule relationship) changed, or when its arrival or departure delay moved by more than
+   sixty seconds.
+4. Kept updates enter an in-memory buffer that flushes every `gtfsynq.sink.flush-interval` (10s),
+   and early when the buffer reaches `gtfsynq.sink.max-buffer-size` (20,000). One flush writes the
+   trip descriptor, the append-only history (`rt_stop_time_updates_ht`) and the current-state
+   tables (`rt_trip_updates_hot`, `rt_stop_time_updates_hot`) on one connection. Hot rows are
+   pruned after `gtfsynq.retention.hours` (1h) by a job that runs every
+   `gtfsynq.retention.rate` (15m); the history hypertable is compressed after one day.
+
+### Stop sequence completion
+
+GTFS Realtime allows a `StopTimeUpdate` to carry either `stop_sequence` or `stop_id`, and some large
+producers publish only the latter - SNCF's trip updates carry none at all, HSL's carry it on a
+handful of updates. The hot table is keyed by `(trip_update_id, stop_sequence)`, so those rows used
+to be dropped before they reached the database: the trip appeared in the console with no stop
+timeline, no delay and no map marker.
+
+`StopSequenceResolver` fills the sequence in at flush time, off the Kafka consumer thread, applying
+three rules in order:
+
+1. a published sequence is kept as is;
+2. otherwise the stop is matched against the trip's `static_stop_times` rows, walking the message in
+   order with a cursor so a loop route that visits the same stop twice resolves to successive
+   visits;
+3. if any stop of the trip cannot be matched - an `ADDED` trip, a frequency-based descriptor without
+   a `trip_id`, or a static revision that is not loaded - the whole message is renumbered 1..n in
+   message order, which keeps the rows unique and ordered.
+
+Only updates with a missing sequence trigger a lookup, and it is one query per feed per flush
+(`trip_id = ANY(...)` against the `(feed_id, trip_id, stop_sequence)` primary key). Feeds that
+publish sequences - `ovapi`, `gtfs-de` - never touch the static table. A failed lookup fails the
+flush and is retried, because writing approximate sequences for a trip the static schedule does
+describe would overwrite rows that deduplication may never rewrite.
+
+Two related changes keep such a feed coherent: the deduplication key of a stop is now the sequence
+plus the stop id when one is published, and the stop id alone when not (the absent sequence used to
+put every stop of a trip on one `:null` key), and the trip descriptor is carried through an
+otherwise deduplicated update so the resolver can identify the trip.
+
+Resolution is cheap: on the SNCF snapshot (971 trip updates, 8,760 stop updates) it takes about
+1.2 ms per full batch (~0.13 µs per row) and holds roughly 1 MB of static stop records while it
+runs. The cost that does change is write volume - stop-time rows now exist for these feeds, and an
+unchanged descriptor is rewritten alongside a changed stop - so the history table grows where it
+used to stay empty. Resolution time lands in the existing `gtfs.sink.map.duration` timer; the flush
+phases are already timed under `gtfs.sink.*`.
+
+Known limitation: deduplication compares delays, and absolute `time` values are excluded from the
+metadata hash. A producer that publishes only `time` and no `delay` (HSL) therefore writes a stop
+once, and later prediction changes are considered unchanged. Fixing that means comparing absolute
+times when no delay is present, at the cost of more history rows for those feeds.
+
+| Property | Default | Purpose |
+|---|---|---|
+| `gtfsynq.sink.enabled` | `true` | Master switch for buffered trip-update persistence |
+| `gtfsynq.sink.flush-interval` | `10s` | How often the buffer is drained and written |
+| `gtfsynq.sink.max-buffer-size` | `20000` | Buffered updates that trigger an early flush |
+| `gtfsynq.retention.hours` | `1h` | Age after which a hot row is pruned |
+| `gtfsynq.retention.rate` | `15m` | How often the pruning job runs |
 
 ## Configuration
 
