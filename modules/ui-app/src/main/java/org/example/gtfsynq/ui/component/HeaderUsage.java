@@ -3,8 +3,13 @@ package org.example.gtfsynq.ui.component;
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.icon.VaadinIcon;
+import com.vaadin.flow.component.menubar.MenuBar;
+import com.vaadin.flow.component.menubar.MenuBarVariant;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
+import com.vaadin.flow.component.orderedlayout.FlexComponent.JustifyContentMode;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
+import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -22,21 +27,21 @@ import org.example.gtfsynq.ui.client.MetricsClient.Series;
 import org.example.gtfsynq.ui.format.UiFormat;
 
 /**
- * Compact CPU, memory and database usage in the navbar.
+ * Compact CPU, memory and database usage behind a navbar menu.
  *
  * <p>Values come from VictoriaMetrics, the same source as the metrics view, because that is the
  * only place where every app's JVM metrics and the Postgres/Podman exporter metrics meet. The
  * queries aggregate the whole stack: CPU is the sum of each Java process's share of one core,
- * memory is the sum of their heap usage, and the database row shows active connections, database
- * size and the TimescaleDB container's own CPU and memory. The header hides itself when no metrics
+ * memory is the sum of their heap usage, and the database rows show active connections, database
+ * size and the TimescaleDB container's own CPU and memory. The trigger hides itself when no metrics
  * URL is configured, so a deployment without the monitoring stack does not show a permanent
  * placeholder.
  */
-public class HeaderUsage extends HorizontalLayout {
+public class HeaderUsage extends MenuBar {
 
     /**
      * One range query for every displayed value. {@code label_set} gives each aggregate a stable
-     * series name, so a single request can populate the whole header instead of six round trips.
+     * series name, so a single request can populate the whole menu instead of six round trips.
      * The container metrics are joined with {@code podman_container_info} because the exporter only
      * puts the container name on the info metric by default.
      */
@@ -86,36 +91,40 @@ public class HeaderUsage extends HorizontalLayout {
     public HeaderUsage(MetricsClient metrics) {
         this.metrics = metrics;
 
-        addClassName("app-usage");
-        setPadding(false);
-        setSpacing(false);
-        setAlignItems(Alignment.CENTER);
-        add(
+        addThemeVariants(MenuBarVariant.TERTIARY, MenuBarVariant.SMALL);
+        setWidth("auto");
+
+        var content = new VerticalLayout(
                 item("app.usage.cpu", "app.usage.cpu.title", appCpu),
                 item("app.usage.memory", "app.usage.memory.title", appMemory),
                 item("app.usage.db.connections", "app.usage.db.connections.title", dbConnections),
                 item("app.usage.db.size", "app.usage.db.size.title", dbSize),
                 item("app.usage.db.cpu", "app.usage.db.cpu.title", dbCpu),
                 item("app.usage.db.memory", "app.usage.db.memory.title", dbMemory));
+        content.setPadding(false);
+        content.setSpacing(false);
+
+        var trigger = addItem(VaadinIcon.DASHBOARD.create());
+        trigger.setAriaLabel(getTranslation("app.usage.title"));
+        trigger.setTooltipText(getTranslation("app.usage.title"));
+        trigger.getSubMenu().addComponent(content);
+
         setVisible(false);
     }
 
     private static Span value() {
-        var value = new Span("—");
-        value.addClassName("app-usage-value");
-        return value;
+        return new Span("—");
     }
 
-    private Span item(String labelKey, String titleKey, Span value) {
-        var item = new Span();
-        item.addClassName("app-usage-item");
-        item.setTitle(getTranslation(titleKey));
-
-        var label = new Span(getTranslation(labelKey));
-        label.addClassName("app-usage-label");
-
-        item.add(label, value);
-        return item;
+    private HorizontalLayout item(String labelKey, String titleKey, Span value) {
+        var row = new HorizontalLayout(new Span(getTranslation(labelKey)), value);
+        row.setWidthFull();
+        row.setPadding(false);
+        row.setSpacing(false);
+        row.setAlignItems(Alignment.BASELINE);
+        row.setJustifyContentMode(JustifyContentMode.BETWEEN);
+        row.getElement().setAttribute("title", getTranslation(titleKey));
+        return row;
     }
 
     @Override
