@@ -161,6 +161,17 @@ gtfs:
         urls: https://proxy.transport.data.gouv.fr/resource/sncf-gtfs-rt-trip-updates
         poll-interval-seconds: 60
 
+    # Polish long-distance rail (PKP PLK, published by PolishTrainsGTFS). The realtime feed is
+    # sequence-only: every stop update carries stop_sequence and almost none carries stop_id, so
+    # the store fills the id from static_stop_times; without that the trips have no stop name and
+    # no position on the map.
+    polish-trains:
+      static-config:
+        url: https://mkuran.pl/gtfs/polish_trains.zip
+      realtime-config:
+        urls: https://mkuran.pl/gtfs/polish_trains/updates.pb
+        poll-interval-seconds: 60
+
 # ---- Tests ---------------------------------------------------------------
 # Polling is exercised in production; the context test must not run feeds, and the
 # Micrometer Kafka binder eagerly creates the producer, so it is disabled too.
