@@ -158,7 +158,7 @@ gtfs:
       static-config:
         url: https://eu.ftp.opendatasoft.com/sncf/plandata/Export_OpenData_SNCF_GTFS_NewTripId.zip
       realtime-config:
-        urls: https://proxy.transport.data.gouv.fr/resource/sncf-gtfs-rt-trip-updates,https://proxy.transport.data.gouv.fr/resource/sncf-gtfs-rt-service-alerts
+        urls: https://proxy.transport.data.gouv.fr/resource/sncf-gtfs-rt-trip-updates
         poll-interval-seconds: 60
 
 # ---- Tests ---------------------------------------------------------------
