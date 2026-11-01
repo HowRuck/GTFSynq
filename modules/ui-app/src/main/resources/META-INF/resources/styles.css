@@ -100,6 +100,35 @@ vaadin-grid::part(delay-severe) {
 }
 
 /*
+ * System usage popover: the trigger is an icon-only button and the panel is a compact
+ * two-column list. Tabular figures keep the values from shifting as they refresh.
+ */
+.usage-panel {
+    min-width: 15rem;
+    padding-block: var(--vaadin-padding-xs);
+}
+
+.usage-row {
+    padding-block: var(--vaadin-padding-xs);
+    border-bottom: 1px solid var(--vaadin-border-color);
+    white-space: nowrap;
+}
+
+.usage-row:last-child {
+    border-bottom: none;
+}
+
+.usage-label {
+    color: var(--vaadin-text-color-secondary);
+    font-size: var(--aura-font-size-s);
+}
+
+.usage-value {
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--aura-font-weight-semibold);
+}
+
+/*
  * Live map popup: the cluster and point markers are drawn by MapLibre on the canvas, so only the
  * popup needs styling here. It follows the theme's text colours.
  */

@@ -2,10 +2,11 @@ package org.example.gtfsynq.ui.component;
 
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.DetachEvent;
+import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.contextmenu.ContextMenu;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
-import com.vaadin.flow.component.menubar.MenuBar;
-import com.vaadin.flow.component.menubar.MenuBarVariant;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.JustifyContentMode;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
@@ -27,7 +28,7 @@ import org.example.gtfsynq.ui.client.MetricsClient.Series;
 import org.example.gtfsynq.ui.format.UiFormat;
 
 /**
- * Compact CPU, memory and database usage behind a navbar menu.
+ * Compact CPU, memory and database usage behind a navbar button.
  *
  * <p>Values come from VictoriaMetrics, the same source as the metrics view, because that is the
  * only place where every app's JVM metrics and the Postgres/Podman exporter metrics meet. The
@@ -37,7 +38,7 @@ import org.example.gtfsynq.ui.format.UiFormat;
  * URL is configured, so a deployment without the monitoring stack does not show a permanent
  * placeholder.
  */
-public class HeaderUsage extends MenuBar {
+public class HeaderUsage extends Button {
 
     /**
      * One range query for every displayed value. {@code label_set} gives each aggregate a stable
@@ -70,6 +71,8 @@ public class HeaderUsage extends MenuBar {
 
     private final MetricsClient metrics;
 
+    private final ContextMenu menu;
+
     private final Span appCpu = value();
 
     private final Span appMemory = value();
@@ -91,8 +94,10 @@ public class HeaderUsage extends MenuBar {
     public HeaderUsage(MetricsClient metrics) {
         this.metrics = metrics;
 
-        addThemeVariants(MenuBarVariant.TERTIARY, MenuBarVariant.SMALL);
-        setWidth("auto");
+        setIcon(VaadinIcon.DASHBOARD.create());
+        addThemeVariants(ButtonVariant.TERTIARY, ButtonVariant.SMALL);
+        setAriaLabel(getTranslation("app.usage.title"));
+        setTooltipText(getTranslation("app.usage.title"));
 
         var content = new VerticalLayout(
                 item("app.usage.cpu", "app.usage.cpu.title", appCpu),
@@ -101,23 +106,28 @@ public class HeaderUsage extends MenuBar {
                 item("app.usage.db.size", "app.usage.db.size.title", dbSize),
                 item("app.usage.db.cpu", "app.usage.db.cpu.title", dbCpu),
                 item("app.usage.db.memory", "app.usage.db.memory.title", dbMemory));
+        content.addClassName("usage-panel");
         content.setPadding(false);
         content.setSpacing(false);
 
-        var trigger = addItem(VaadinIcon.DASHBOARD.create());
-        trigger.setAriaLabel(getTranslation("app.usage.title"));
-        trigger.setTooltipText(getTranslation("app.usage.title"));
-        trigger.getSubMenu().addComponent(content);
+        menu = new ContextMenu(this);
+        menu.setOpenOnClick(true);
+        menu.addComponent(content);
 
         setVisible(false);
     }
 
     private static Span value() {
-        return new Span("—");
+        var value = new Span("—");
+        value.addClassName("usage-value");
+        return value;
     }
 
     private HorizontalLayout item(String labelKey, String titleKey, Span value) {
-        var row = new HorizontalLayout(new Span(getTranslation(labelKey)), value);
+        var label = new Span(getTranslation(labelKey));
+        label.addClassName("usage-label");
+        var row = new HorizontalLayout(label, value);
+        row.addClassName("usage-row");
         row.setWidthFull();
         row.setPadding(false);
         row.setSpacing(false);
@@ -145,6 +155,7 @@ public class HeaderUsage extends MenuBar {
     @Override
     protected void onDetach(DetachEvent detachEvent) {
         attached = false;
+        menu.close();
         if (refresh != null) {
             refresh.cancel(false);
             refresh = null;

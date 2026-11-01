@@ -4,10 +4,11 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.badge.Badge;
+import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.contextmenu.ContextMenu;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
-import com.vaadin.flow.component.menubar.MenuBar;
-import com.vaadin.flow.component.menubar.MenuBarVariant;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.tabs.Tab;
@@ -76,27 +77,34 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
     }
 
     /**
-     * Lets the user override the browser's language. The control is a single globe icon so it stays
-     * quiet next to the navigation; the menu lists the bundled languages. The choice is stored on
-     * the session and the page is reloaded so every label built by the current UI is rebuilt in the
-     * new locale.
+     * Lets the user override the browser's language. The trigger is an icon-only button so it stays
+     * quiet next to the navigation; the context menu lists the bundled languages and marks the one
+     * in use. The choice is stored on the session and the page is reloaded so every label built by
+     * the current UI is rebuilt in the new locale.
      */
     private Component languageSwitcher() {
-        var menu = new MenuBar();
-        menu.addThemeVariants(MenuBarVariant.TERTIARY, MenuBarVariant.SMALL);
-        menu.setWidth("auto");
+        var button = new Button();
+        button.setIcon(VaadinIcon.GLOBE.create());
+        button.addThemeVariants(ButtonVariant.TERTIARY, ButtonVariant.SMALL);
+        button.setAriaLabel(getTranslation("language.label"));
+        button.setTooltipText(getTranslation("language.label"));
 
-        var item = menu.addItem(VaadinIcon.GLOBE.create());
-        item.setAriaLabel(getTranslation("language.label"));
-        item.setTooltipText(getTranslation("language.label"));
+        var menu = new ContextMenu(button);
+        menu.setOpenOnClick(true);
 
+        var current = VaadinSession.getCurrent().getLocale();
         for (var locale : LANGUAGES) {
-            item.getSubMenu().addItem(locale.getDisplayLanguage(locale), event -> {
+            var item = menu.addItem(locale.getDisplayLanguage(locale), event -> {
+                if (locale.equals(VaadinSession.getCurrent().getLocale())) {
+                    return;
+                }
                 VaadinSession.getCurrent().setLocale(locale);
                 UI.getCurrent().getPage().reload();
             });
+            item.setCheckable(true);
+            item.setChecked(locale.equals(current));
         }
-        return menu;
+        return button;
     }
 
     /**
