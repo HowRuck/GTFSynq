@@ -114,6 +114,44 @@ public record TripStopTimeUpdateDto(
     }
 
     /**
+     * Returns a copy with a different stop sequence, recomputing the metadata hash.
+     *
+     * <p>Used when a feed omits {@code stop_sequence}: the sequence is resolved against the static
+     * schedule (or the message order) before the row is written, and the hash has to describe the
+     * row that is actually stored.
+     *
+     * @param sequence the sequence to store
+     * @return this instance when the sequence already matches, otherwise a resolved copy
+     */
+    public TripStopTimeUpdateDto withStopSequence(@NonNull Integer sequence) {
+        if (sequence.equals(stopSequence)) {
+            return this;
+        }
+        return new TripStopTimeUpdateDto(
+                tripKey,
+                feedId,
+                feedTs,
+                sequence,
+                stopId,
+                arrivalTime,
+                arrivalDelay,
+                scheduledArrivalTime,
+                departureTime,
+                departureDelay,
+                scheduledDepartureTime,
+                scheduleRelationship,
+                assignedStopId,
+                hashMetaFields(
+                        feedId,
+                        sequence,
+                        stopId,
+                        scheduledArrivalTime,
+                        scheduledDepartureTime,
+                        scheduleRelationship,
+                        assignedStopId));
+    }
+
+    /**
      * Hashes the meta fields of a TripStopTimeUpdateDto
      *
      * @param feedId The feed ID

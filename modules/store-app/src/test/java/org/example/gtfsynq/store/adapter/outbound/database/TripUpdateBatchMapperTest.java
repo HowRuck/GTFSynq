@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import org.example.gtfsynq.shared.model.dto.TripDescriptorDto;
 import org.example.gtfsynq.shared.model.dto.TripStopTimeUpdateDto;
 import org.example.gtfsynq.shared.model.dto.TripUpdateDto;
@@ -15,7 +16,7 @@ class TripUpdateBatchMapperTest {
     private static final Instant EARLIER = Instant.parse("2026-10-24T12:00:00Z");
     private static final Instant LATER = Instant.parse("2026-10-24T12:00:10Z");
 
-    private final TripUpdateBatchMapper mapper = new TripUpdateBatchMapper();
+    private final TripUpdateBatchMapper mapper = new TripUpdateBatchMapper(new StopSequenceResolver(keys -> Map.of()));
 
     /**
      * The deduplication service nulls the descriptor when only a stop changed. That trip used to be
@@ -46,6 +47,19 @@ class TripUpdateBatchMapperTest {
         assertEquals(LATER, rows.hotTripRows().getFirst().feedTs(), "the latest feed timestamp wins");
     }
 
+    @Test
+    void fillsInMissingStopSequencesBeforeWritingRows() {
+        var resolvedMapper = new TripUpdateBatchMapper(new StopSequenceResolver(keys -> Map.of(
+                new StopSequenceResolver.TripKey("feed", "trip"),
+                List.of(new StopSequenceResolver.StaticStopTime("stop", 3)))));
+
+        var rows = resolvedMapper.map(
+                List.of(new TripUpdateDto(descriptor(42L, EARLIER), List.of(stop(42L, null, EARLIER)))));
+
+        assertEquals(1, rows.hotStopTimes().size(), "an update without a sequence must still be written");
+        assertEquals(3, rows.hotStopTimes().getFirst().stopSequence().intValue());
+    }
+
     private static List<Long> hotTripIds(TripUpdateRows rows) {
         return rows.hotTripRows().stream()
                 .map(TripUpdateRows.HotTripRow::tripUpdateId)
@@ -56,7 +70,7 @@ class TripUpdateBatchMapperTest {
         return new TripDescriptorDto(id, "entity-" + id, "feed", feedTs, "trip", "route", 0, null, null, (short) 0, 7L);
     }
 
-    private static TripStopTimeUpdateDto stop(long tripKey, int stopSequence, Instant feedTs) {
+    private static TripStopTimeUpdateDto stop(long tripKey, Integer stopSequence, Instant feedTs) {
         return new TripStopTimeUpdateDto(
                 tripKey, "feed", feedTs, stopSequence, "stop", null, null, null, null, null, null, null, null, 9L);
     }

@@ -8,9 +8,11 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
 import org.example.gtfsynq.shared.model.FeedEntityWithMetadata;
 import org.example.gtfsynq.shared.model.dto.TripUpdateDto;
+import org.example.gtfsynq.store.adapter.outbound.database.StopSequenceResolver;
 import org.example.gtfsynq.store.adapter.outbound.database.TripUpdateBatchMapper;
 import org.example.gtfsynq.store.adapter.outbound.database.TripUpdateRepository;
 import org.example.gtfsynq.store.adapter.outbound.database.TripUpdateRows;
@@ -27,7 +29,7 @@ class GtfsTripUpdateSinkTest {
 
     private final GtfsTripUpdateSink sink = new GtfsTripUpdateSink(
             repository,
-            new TripUpdateBatchMapper(),
+            new TripUpdateBatchMapper(new StopSequenceResolver(keys -> Map.of())),
             new PassthroughDeduplication(),
             new GtfsSinkMetrics(new SimpleMeterRegistry()),
             true,

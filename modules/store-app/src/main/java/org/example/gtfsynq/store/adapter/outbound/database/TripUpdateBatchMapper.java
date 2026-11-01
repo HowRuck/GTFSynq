@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.example.gtfsynq.shared.model.dto.TripDescriptorDto;
 import org.example.gtfsynq.shared.model.dto.TripStopTimeUpdateDto;
 import org.example.gtfsynq.shared.model.dto.TripUpdateDto;
@@ -20,6 +21,11 @@ import org.example.gtfsynq.store.adapter.outbound.database.TripUpdateRows.HotTri
  * plain batch executor and makes the rule an explicit, named decision. The resulting list sizes are
  * the counts the sink reports as written rows.
  *
+ * <p>Stop sequences are completed first: the hot table is keyed by {@code (trip, stop_sequence)},
+ * and a feed that publishes only {@code stop_id} would otherwise contribute no stop-time rows at
+ * all. {@link StopSequenceResolver} fills them from the static schedule, or from message order when
+ * the trip cannot be matched.
+ *
  * <p>Collapsing is not optional: {@code reWriteBatchedInserts} merges a batch into a single
  * multi-row INSERT, and PostgreSQL rejects such a statement if it targets the same conflict key
  * twice. The history table uses {@code DO NOTHING} and tolerates duplicates, so it is left
@@ -29,7 +35,10 @@ import org.example.gtfsynq.store.adapter.outbound.database.TripUpdateRows.HotTri
  * a single pass that also feeds the shared current-state trip accumulator.
  */
 @ApplicationScoped
+@RequiredArgsConstructor
 public class TripUpdateBatchMapper {
+
+    private final StopSequenceResolver stopSequences;
 
     /**
      * Shapes a batch into the row streams for each target table.
@@ -38,10 +47,11 @@ public class TripUpdateBatchMapper {
      * @return the row streams to persist, never {@code null}
      */
     public TripUpdateRows map(List<TripUpdateDto> batch) {
-        var descriptors = new ArrayList<TripDescriptorDto>(batch.size());
-        var stopTimes = new ArrayList<TripStopTimeUpdateDto>(stopTimeRowCount(batch));
+        var sequenced = stopSequences.resolve(batch);
+        var descriptors = new ArrayList<TripDescriptorDto>(sequenced.size());
+        var stopTimes = new ArrayList<TripStopTimeUpdateDto>(stopTimeRowCount(sequenced));
 
-        for (var dto : batch) {
+        for (var dto : sequenced) {
             if (dto.tripDescriptor() != null) {
                 descriptors.add(dto.tripDescriptor());
             }

@@ -35,8 +35,10 @@ public class DatabaseDeduplicationService {
      * </ol>
      *
      * @param feedEntity the trip update to clean
-     * @return a new {@code TripUpdateDto} with duplicate stop time updates removed,
-     *         or {@code null} for unchanged tripDescriptor/stopTimeUpdates
+     * @return a new {@code TripUpdateDto} with duplicate stop time updates removed, or {@code null}
+     *         when neither the descriptor nor any stop-time update changed. The descriptor is always
+     *         carried through, even when unchanged, because batch mapping needs the trip id to
+     *         resolve stop sequences a feed may not publish.
      */
     public TripUpdateDto cleanState(TripUpdateDto feedEntity) {
         var tripDescriptor = feedEntity.tripDescriptor();
@@ -55,8 +57,10 @@ public class DatabaseDeduplicationService {
                 feedEntity.stopTimeUpdates().size());
 
         for (var stopUpdate : feedEntity.stopTimeUpdates()) {
-            // Create a unique key for this stop in the trip
-            var keyBytes = (tripKey + ":" + stopUpdate.stopSequence()).getBytes(StandardCharsets.UTF_8);
+            // Identify the stop within the trip. stop_sequence is preferred, but feeds are allowed
+            // to publish only stop_id, and keying those on the absent sequence put every stop of
+            // the trip on the same ":null" key.
+            var keyBytes = (tripKey + ":" + stopIdentity(stopUpdate)).getBytes(StandardCharsets.UTF_8);
             var keyHash = FeedHashing.hashBytes(keyBytes);
 
             // Get the metadata hash (excluding delays) for comparison
@@ -100,9 +104,20 @@ public class DatabaseDeduplicationService {
             return null;
         }
 
-        // Return a new TripUpdateDto, using null for unchanged components
-        return new TripUpdateDto(
-                tripDescriptorChanged ? tripDescriptor : null,
-                changedStopTimeUpdates.isEmpty() ? null : changedStopTimeUpdates);
+        // Return a new TripUpdateDto, using null for unchanged components. The descriptor is kept
+        // even when unchanged: the batch mapper resolves missing stop sequences against the static
+        // schedule, and a trip id is what ties a stop update back to its trip.
+        return new TripUpdateDto(tripDescriptor, changedStopTimeUpdates.isEmpty() ? null : changedStopTimeUpdates);
+    }
+
+    /**
+     * Identity of one stop visit inside a trip: the published sequence when there is one, otherwise
+     * the stop id. A trip that visits the same stop twice and publishes no sequence cannot be told
+     * apart from its message alone, so both visits share a key; that only costs an update, since the
+     * write itself is an idempotent upsert.
+     */
+    private static String stopIdentity(TripStopTimeUpdateDto update) {
+        var stopId = update.stopId() == null ? "" : update.stopId();
+        return update.stopSequence() != null ? update.stopSequence() + ":" + stopId : "stop:" + stopId;
     }
 }
