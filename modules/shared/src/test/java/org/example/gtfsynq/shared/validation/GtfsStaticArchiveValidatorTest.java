@@ -238,6 +238,68 @@ class GtfsStaticArchiveValidatorTest {
     }
 
     @Test
+    void extendedRouteTypesAreAccepted() throws Exception {
+        // HSL ships Hierarchical Vehicle Type codes: suburban rail and the bus/tram families.
+        var path = archive(
+                "agency.txt",
+                AGENCY,
+                "stops.txt",
+                STOPS,
+                "routes.txt",
+                """
+                route_id,route_short_name,route_type
+                R1,1,3
+                R109,109,109
+                R701,701,701
+                R702,702,702
+                R704,704,704
+                R900,900,900
+                """,
+                "trips.txt",
+                SINGLE_TRIP,
+                "stop_times.txt",
+                """
+                trip_id,arrival_time,departure_time,stop_id,stop_sequence
+                trip1,08:00:00,08:00:00,S1,1
+                """,
+                "calendar.txt",
+                CALENDAR);
+        var report = new GtfsStaticArchiveValidator().validate(path);
+        assertTrue(report.valid(), () -> report.toString());
+        Files.deleteIfExists(path);
+    }
+
+    @Test
+    void undefinedRouteTypeIsReported() throws Exception {
+        var path = archive(
+                "agency.txt",
+                AGENCY,
+                "stops.txt",
+                STOPS,
+                "routes.txt",
+                """
+                route_id,route_short_name,route_type
+                R1,1,9999
+                """,
+                "trips.txt",
+                SINGLE_TRIP,
+                "stop_times.txt",
+                """
+                trip_id,arrival_time,departure_time,stop_id,stop_sequence
+                trip1,08:00:00,08:00:00,S1,1
+                """,
+                "calendar.txt",
+                CALENDAR);
+        var report = new GtfsStaticArchiveValidator().validate(path);
+        assertFalse(report.valid());
+        var routes = report.files().get("routes.txt");
+        assertTrue(
+                routes.samples().stream().anyMatch(v -> v.field().equals("route_type")),
+                () -> routes.samples().toString());
+        Files.deleteIfExists(path);
+    }
+
+    @Test
     void interleavedDecreaseIsDetected() throws Exception {
         // trip1 appears in two non-contiguous runs; a single cursor would miss the decrease.
         var path = archive(feed(TWO_TRIPS, """

@@ -43,6 +43,9 @@ public final class GtfsStaticValidators {
 
     private static final Set<String> ROUTE_TYPES = Set.of("0", "1", "2", "3", "4", "5", "6", "7", "11", "12");
 
+    private static final String ROUTE_TYPE_MESSAGE =
+            "\"{0}\" must be a GTFS route type (0-7, 11, 12) or an extended HVT route type";
+
     private static final Set<String> CONTINUOUS_PICKUP_DROP_OFF = Set.of("0", "1", "2", "3");
 
     private static final Set<String> DIRECTION_IDS = Set.of("0", "1");
@@ -133,7 +136,11 @@ public final class GtfsStaticValidators {
 
     static final Validator<RouteRow> ROUTE = ValidatorBuilder.<RouteRow>of()
             ._string(RouteRow::routeId, "route_id", c -> c.notBlank())
-            ._string(RouteRow::routeType, "route_type", c -> oneOf(c.notBlank(), ROUTE_TYPES))
+            ._string(
+                    RouteRow::routeType,
+                    "route_type",
+                    c -> c.notBlank()
+                            .predicate(GtfsStaticValidators::isRouteType, "gtfs.routeType", ROUTE_TYPE_MESSAGE))
             ._string(
                     RouteRow::routeUrl,
                     "route_url",
@@ -268,5 +275,43 @@ public final class GtfsStaticValidators {
         } catch (NumberFormatException _) {
             return false;
         }
+    }
+
+    /**
+     * Accepts the standard {@code route_type} values and the extended Hierarchical Vehicle Type
+     * (HVT) codes that many producers ship - HSL, for one, uses 109, 701, 702, 704 and 900.
+     *
+     * <p>The extended values are the families published for the GTFS route-type extension, so a
+     * mistyped code such as {@code 9999} is still rejected rather than silently accepted.
+     */
+    private static boolean isRouteType(String value) {
+        if (value == null) {
+            return false;
+        }
+        if (ROUTE_TYPES.contains(value)) {
+            return true;
+        }
+        int type;
+        try {
+            type = Integer.parseInt(value);
+        } catch (NumberFormatException _) {
+            return false;
+        }
+        return (type >= 100 && type <= 117)
+                || (type >= 200 && type <= 209)
+                || type == 300
+                || (type >= 400 && type <= 405)
+                || (type >= 500 && type <= 503)
+                || type == 600
+                || (type >= 700 && type <= 717)
+                || type == 800
+                || (type >= 900 && type <= 906)
+                || (type >= 1000 && type <= 1021)
+                || (type >= 1100 && type <= 1114)
+                || type == 1200
+                || (type >= 1300 && type <= 1307)
+                || (type >= 1400 && type <= 1402)
+                || (type >= 1500 && type <= 1507)
+                || (type >= 1700 && type <= 1702);
     }
 }
