@@ -62,6 +62,15 @@ const COLOUR_HALO = 'rgba(255, 255, 255, 0.9)';
 const DEFAULT_CENTER: [number, number] = [10.45, 51.16];
 const DEFAULT_ZOOM = 5;
 
+/** Longest popup label shown before it is elided; matches the table's id limit. */
+const MAX_POPUP_LABEL_LENGTH = 32;
+
+function elideLabel(value: string): string {
+  return value.length <= MAX_POPUP_LABEL_LENGTH
+    ? value
+    : `${value.slice(0, MAX_POPUP_LABEL_LENGTH - 1)}…`;
+}
+
 function delayClass(delay: number | null): MarkerProperties['delayClass'] {
   if (delay === null) {
     return 'unknown';
@@ -476,7 +485,9 @@ class LiveMap extends HTMLElement {
     const wrapper = document.createElement('div');
     wrapper.className = 'live-map-popup';
     const title = document.createElement('strong');
-    title.textContent = properties.label;
+    title.textContent = elideLabel(properties.label);
+    // The elided id stays readable in full on hover; the popup must not grow to fit it.
+    title.title = properties.label;
     wrapper.appendChild(title);
     if (properties.detail) {
       const detail = document.createElement('div');

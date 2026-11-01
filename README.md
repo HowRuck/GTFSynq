@@ -249,8 +249,9 @@ Behaviour shared by the tables:
   cluster's number matches the markers that become visible when zooming in. The
   popup also says how long ago the trip reached that stop and offers a link that
   opens the trip's detail pane. Trip, route and stop labels prefer their static
-  names and fall back to ids when no matching static name is available; long labels
-  are shortened to 32 characters with the full value in a tooltip. Each trip row also
+  names and fall back to ids when no matching static name is available; long ids
+  are shortened to 32 characters, with the full value in a tooltip, in the tables,
+  map popups and the detail header. Each trip row also
   shows the agency of its route and its current delay, taken from the last stop that
   reports one.
 - Selecting a trip from the table or from a map popup opens the same full-height

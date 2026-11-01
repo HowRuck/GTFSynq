@@ -105,6 +105,7 @@ vaadin-grid::part(delay-severe) {
  */
 .live-map-popup {
     max-width: 16rem;
+    overflow-wrap: anywhere;
     font-size: 0.95em;
     line-height: 1.35;
 }

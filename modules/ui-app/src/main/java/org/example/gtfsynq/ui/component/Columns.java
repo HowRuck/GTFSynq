@@ -53,7 +53,7 @@ public final class Columns {
 
     public static void routes(Grid<Route> grid) {
         grid.addColumn(Route::getFeedId).setHeader(grid.getTranslation("column.feed"));
-        grid.addColumn(Route::getRouteId)
+        grid.addComponentColumn(route -> label(route.getRouteId()))
                 .setHeader(grid.getTranslation("column.routeId"))
                 .setKey("routeId")
                 .setSortProperty("routeId")
@@ -78,7 +78,7 @@ public final class Columns {
 
     public static void stops(Grid<Stop> grid) {
         grid.addColumn(Stop::getFeedId).setHeader(grid.getTranslation("column.feed"));
-        grid.addColumn(Stop::getStopId)
+        grid.addComponentColumn(stop -> label(stop.getStopId()))
                 .setHeader(grid.getTranslation("column.stopId"))
                 .setKey("stopId")
                 .setSortProperty("stopId")
@@ -103,17 +103,17 @@ public final class Columns {
 
     public static void trips(Grid<Trip> grid) {
         grid.addColumn(Trip::getFeedId).setHeader(grid.getTranslation("column.feed"));
-        grid.addColumn(Trip::getTripId)
+        grid.addComponentColumn(trip -> label(trip.getTripId()))
                 .setHeader(grid.getTranslation("column.tripId"))
                 .setKey("tripId")
                 .setSortProperty("tripId")
                 .setSortable(true);
-        grid.addColumn(Trip::getRouteId)
+        grid.addComponentColumn(trip -> label(trip.getRouteId()))
                 .setHeader(grid.getTranslation("column.routeId"))
                 .setKey("routeId")
                 .setSortProperty("routeId")
                 .setSortable(true);
-        grid.addColumn(Trip::getServiceId)
+        grid.addComponentColumn(trip -> label(trip.getServiceId()))
                 .setHeader(grid.getTranslation("column.serviceId"))
                 .setKey("serviceId")
                 .setSortProperty("serviceId")

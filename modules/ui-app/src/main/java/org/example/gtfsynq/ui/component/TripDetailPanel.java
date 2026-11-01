@@ -222,7 +222,9 @@ public class TripDetailPanel extends VerticalLayout {
     }
 
     private void updateHeader(TripUpdate trip) {
-        title.setText(UiFormat.text(Columns.tripName(trip)));
+        var tripName = Columns.tripName(trip);
+        title.setText(UiFormat.elideId(tripName));
+        title.setTitle(UiFormat.text(tripName));
 
         var parts = new ArrayList<String>();
         if (trip.hasRouteType()) {
@@ -232,7 +234,9 @@ public class TripDetailPanel extends VerticalLayout {
         if (trip.hasAgencyName()) {
             parts.add(trip.getAgencyName());
         }
-        subtitle.setText(String.join(" · ", parts));
+        var subtitleText = String.join(" · ", parts);
+        subtitle.setText(UiFormat.elideId(subtitleText));
+        subtitle.setTitle(UiFormat.text(subtitleText));
 
         feed.setText(trip.getFeedId());
 

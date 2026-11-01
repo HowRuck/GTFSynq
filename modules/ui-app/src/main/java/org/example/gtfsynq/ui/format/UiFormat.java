@@ -147,13 +147,24 @@ public final class UiFormat {
      * column, marking the cut with an ellipsis. Callers keep the full value in the cell tooltip.
      */
     public static String elideId(String value) {
+        return elide(value, MAX_ID_LENGTH);
+    }
+
+    /**
+     * Shortens text to {@code maxLength} characters, marking the cut with an ellipsis.
+     *
+     * @param value text to shorten
+     * @param maxLength longest acceptable value, at least 2
+     * @return the value unchanged when short enough, otherwise its head plus {@code …}
+     */
+    public static String elide(String value, int maxLength) {
         if (value == null || value.isBlank()) {
             return NOT_AVAILABLE;
         }
-        if (value.length() <= MAX_ID_LENGTH) {
+        if (value.length() <= maxLength) {
             return value;
         }
-        return value.substring(0, MAX_ID_LENGTH - 1) + "…";
+        return value.substring(0, maxLength - 1) + "…";
     }
 
     public static String coordinate(double value) {

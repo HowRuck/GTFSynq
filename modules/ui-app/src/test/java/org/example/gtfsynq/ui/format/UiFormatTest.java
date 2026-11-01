@@ -29,6 +29,13 @@ class UiFormatTest {
     }
 
     @Test
+    void elidesTextToTheRequestedLength() {
+        assertEquals("OCESN…", UiFormat.elide("OCESN96514F1187_F:TER", 6));
+        assertEquals("K1+", UiFormat.elide("K1+", 6));
+        assertEquals("N/A", UiFormat.elide(null, 6));
+    }
+
+    @Test
     void rendersTimestampsInCentralEuropeanSummerTime() {
         assertEquals("2026-07-01 12:00:00", UiFormat.dateTime(timestamp("2026-07-01T10:00:00Z")));
         assertEquals("12:00:00", UiFormat.time(timestamp("2026-07-01T10:00:00Z")));
