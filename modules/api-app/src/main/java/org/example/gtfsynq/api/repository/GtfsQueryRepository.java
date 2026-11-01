@@ -75,10 +75,33 @@ public class GtfsQueryRepository {
                    t.trip_short_name, r.route_short_name, r.route_long_name, r.route_type, a.agency_name,
                    (SELECT count(*) FROM rt_stop_time_updates_hot s
                     WHERE s.trip_update_id = h.trip_update_id) AS stop_time_update_count,
-                   (SELECT COALESCE(s.arrival_delay, s.departure_delay)
+                   (SELECT COALESCE(
+                               COALESCE(s.arrival_delay, s.departure_delay),
+                               -- A feed that publishes a prediction and no delay (PKP PLK) still
+                               -- implies one: the difference between that time and the static plan
+                               -- for the same stop. The plan is a local time of day, so it needs
+                               -- the service date and the agency's zone before it can be compared.
+                               CASE
+                                   WHEN s.arrival_time IS NOT NULL AND st.arrival_time IS NOT NULL
+                                   THEN EXTRACT(EPOCH FROM (s.arrival_time
+                                            - ((m.start_date + st.arrival_time
+                                                + make_interval(days => COALESCE(st.arrival_time_overflow_days, 0)))
+                                               AT TIME ZONE a.agency_timezone)))::int
+                                   WHEN s.departure_time IS NOT NULL AND st.departure_time IS NOT NULL
+                                   THEN EXTRACT(EPOCH FROM (s.departure_time
+                                            - ((m.start_date + st.departure_time
+                                                + make_interval(days => COALESCE(st.departure_time_overflow_days, 0)))
+                                               AT TIME ZONE a.agency_timezone)))::int
+                               END)
                     FROM rt_stop_time_updates_hot s
+                    LEFT JOIN static_stop_times st
+                           ON st.feed_id = s.feed_id
+                          AND st.trip_id = m.trip_id
+                          AND st.stop_sequence = s.stop_sequence
                     WHERE s.trip_update_id = h.trip_update_id
-                      AND COALESCE(s.arrival_delay, s.departure_delay) IS NOT NULL
+                      AND (COALESCE(s.arrival_delay, s.departure_delay) IS NOT NULL
+                           OR s.arrival_time IS NOT NULL
+                           OR s.departure_time IS NOT NULL)
                     -- The last stop that reports a delay, not the first: the lowest stop
                     -- sequence is often a stale value for a stop the trip has already passed.
                     ORDER BY s.stop_sequence DESC
@@ -524,9 +547,26 @@ public class GtfsQueryRepository {
                 LEFT JOIN static_trips t ON t.feed_id = h.feed_id AND t.trip_id = m.trip_id
                 LEFT JOIN static_routes r
                        ON r.feed_id = h.feed_id AND r.route_id = COALESCE(t.route_id, m.route_id)
+                LEFT JOIN static_agency a
+                       ON a.feed_id = h.feed_id AND a.agency_id = COALESCE(r.agency_id, '')
                 LEFT JOIN LATERAL (
                     SELECT COALESCE(s.assigned_stop_id, s.stop_id) AS stop_id,
-                           COALESCE(s.arrival_delay, s.departure_delay) AS stop_delay,
+                           COALESCE(
+                               COALESCE(s.arrival_delay, s.departure_delay),
+                               -- Same implied delay as the table: a prediction minus the plan for
+                               -- the same stop, for a feed that publishes no delay of its own.
+                               CASE
+                                   WHEN s.arrival_time IS NOT NULL AND st.arrival_time IS NOT NULL
+                                   THEN EXTRACT(EPOCH FROM (s.arrival_time
+                                            - ((m.start_date + st.arrival_time
+                                                + make_interval(days => COALESCE(st.arrival_time_overflow_days, 0)))
+                                               AT TIME ZONE a.agency_timezone)))::int
+                                   WHEN s.departure_time IS NOT NULL AND st.departure_time IS NOT NULL
+                                   THEN EXTRACT(EPOCH FROM (s.departure_time
+                                            - ((m.start_date + st.departure_time
+                                                + make_interval(days => COALESCE(st.departure_time_overflow_days, 0)))
+                                               AT TIME ZONE a.agency_timezone)))::int
+                               END) AS stop_delay,
                            COALESCE(
                                s.arrival_time,
                                s.departure_time,
@@ -536,6 +576,10 @@ public class GtfsQueryRepository {
                                s.scheduled_departure_time) AS stop_time,
                            s.stop_sequence
                     FROM rt_stop_time_updates_hot s
+                    LEFT JOIN static_stop_times st
+                           ON st.feed_id = s.feed_id
+                          AND st.trip_id = m.trip_id
+                          AND st.stop_sequence = s.stop_sequence
                     WHERE s.trip_update_id = h.trip_update_id
                       AND (COALESCE(
                                s.arrival_time,

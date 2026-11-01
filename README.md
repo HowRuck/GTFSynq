@@ -612,6 +612,14 @@ is rewritten, so its hot row stays fresh and the map follows the vehicle. The co
 delay path pays nothing - a time-only feed writes each stop again whenever its prediction moves, so
 its history grows with its update rate rather than staying flat.
 
+A feed that publishes a prediction and no delay still shows one where the plan is known: the live
+table, the map markers and the trip detail derive it as `time - static_stop_times` for the same
+stop, using the descriptor's `start_date` and the agency's timezone (and the overflow days of a
+GTFS time that passes midnight). The derivation happens on read, so the stored row keeps `NULL` in
+the delay columns and stays a faithful copy of what the producer sent; a feed whose stops cannot be
+tied to a static trip - HSL, whose descriptors carry no `trip_id` - is left without a derived delay,
+and a published delay always wins over the derived one.
+
 | Property | Default | Purpose |
 |---|---|---|
 | `gtfsynq.sink.enabled` | `true` | Master switch for buffered trip-update persistence |
