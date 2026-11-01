@@ -37,7 +37,7 @@ jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
 
 # Jakarta EE APIs (provided by Quarkus at runtime)
 jakarta-inject-api = { module = "jakarta.inject:jakarta.inject-api", version.ref = "jakarta-inject" }
-jakarta-enterprise-cdi-api = { module = "jakarta.cdi:jakarta.cdi-api", version.ref = "jakarta-cdi" }
+jakarta-cdi-api = { module = "jakarta.cdi:jakarta.cdi-api", version.ref = "jakarta-cdi" }
 microprofile-config-api = { module = "org.eclipse.microprofile.config:microprofile-config-api", version.ref = "microprofile-config" }
 
 # Quarkus platform and extensions
