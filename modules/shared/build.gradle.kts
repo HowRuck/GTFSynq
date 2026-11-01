@@ -16,7 +16,7 @@ dependencies {
 
     // Provided by the Quarkus applications that consume this library.
     compileOnly(libs.jakarta.inject.api)
-    compileOnly(libs.jakarta.enterprise.cdi.api)
+    compileOnly(libs.jakarta.cdi.api)
     compileOnly(libs.microprofile.config.api)
     compileOnly(libs.slf4j.api)
 
