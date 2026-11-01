@@ -5,10 +5,13 @@ import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.quarkus.runtime.ShutdownEvent;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Singleton;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +20,7 @@ import org.example.gtfsynq.ingest.adapter.inbound.http.GtfsStaticFeedDownloader;
 import org.example.gtfsynq.ingest.adapter.inbound.http.GtfsStaticFeedDownloader.DownloadedStaticFeed;
 import org.example.gtfsynq.ingest.adapter.inbound.http.StaticFeedDownload;
 import org.example.gtfsynq.ingest.adapter.inbound.http.StaticFeedDownloadException;
+import org.example.gtfsynq.ingest.adapter.inbound.http.StaticFeedRateLimitedException;
 import org.example.gtfsynq.ingest.adapter.outbound.kafka.GtfsStaticFeedKafkaProducer;
 import org.example.gtfsynq.ingest.adapter.outbound.storage.S3StaticFeedStorage;
 import org.example.gtfsynq.ingest.config.S3StorageProperties;
@@ -30,11 +34,18 @@ import software.amazon.awssdk.core.exception.SdkException;
  * Runs the static feed ingestion pipeline for a single source: revalidate the archive against
  * the HTTP validators of the previous poll, store it in object storage and publish an ingestion
  * event when it changed
+ * <p>
+ * A {@code 429 Too Many Requests} answer is not a failure: the feed is skipped until the origin's
+ * {@code Retry-After} elapses (or for fifteen minutes when it sent none), so a throttled feed does
+ * not log an error and hammer the origin on every static poll.
  */
 @Singleton
 @Slf4j
 @RequiredArgsConstructor
 public class GtfsStaticIngestionAsyncService {
+
+    /** Wait applied to a 429 that carries no usable Retry-After. */
+    private static final Duration DEFAULT_RATE_LIMIT_BACKOFF = Duration.ofMinutes(15);
 
     private final GtfsStaticFeedDownloader staticFeedDownloader;
     private final S3StaticFeedStorage staticFeedStorage;
@@ -42,6 +53,9 @@ public class GtfsStaticIngestionAsyncService {
     private final StaticFeedValidatorCache validatorCache;
     private final StaticFeedMetrics metrics;
     private final S3StorageProperties storageProperties;
+
+    /** Feeds an origin asked us to back off from, keyed by feed id. */
+    private final Map<String, Instant> rateLimitedUntil = new ConcurrentHashMap<>();
 
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
@@ -68,6 +82,13 @@ public class GtfsStaticIngestionAsyncService {
 
     @WithSpan
     void ingestOne(String feedId, String sourceUrl) {
+        var deferredUntil = deferredUntil(feedId);
+        if (deferredUntil != null) {
+            metrics.recordOutcome(feedId, Outcome.RATE_LIMITED);
+            log.debug("Static feed {} is rate limited until {}, skipping this poll", feedId, deferredUntil);
+            return;
+        }
+
         var knownValidators = validatorCache.get(feedId, sourceUrl);
         var downloadStart = System.nanoTime();
 
@@ -90,6 +111,15 @@ public class GtfsStaticIngestionAsyncService {
                 case StaticFeedDownload.Downloaded downloaded ->
                     handleDownloaded(feedId, sourceUrl, downloaded.feed(), System.nanoTime() - downloadStart);
             }
+        } catch (StaticFeedRateLimitedException e) {
+            // A 429 is the origin asking us to slow down, not an operational failure: no stack
+            // trace, and the feed is skipped until Retry-After (or a conservative default).
+            var delay = e.retryAfter() == null ? DEFAULT_RATE_LIMIT_BACKOFF : e.retryAfter();
+            var until = Instant.now().plus(delay);
+            rateLimitedUntil.put(feedId, until);
+            metrics.recordDownloadFailure(feedId, System.nanoTime() - downloadStart);
+            metrics.recordOutcome(feedId, Outcome.RATE_LIMITED);
+            log.warn("Static feed {} ({}) is rate limited (HTTP 429); next attempt after {}", feedId, sourceUrl, until);
         } catch (StaticFeedDownloadException e) {
             metrics.recordDownloadFailure(feedId, System.nanoTime() - downloadStart);
             metrics.recordOutcome(feedId, Outcome.FAILED);
@@ -98,6 +128,22 @@ public class GtfsStaticIngestionAsyncService {
             metrics.recordOutcome(feedId, Outcome.FAILED);
             log.error("Unexpected error ingesting static feed {} ({})", feedId, sourceUrl, e);
         }
+    }
+
+    /**
+     * Instant until which the origin asked us not to retry, or {@code null} when the feed may be
+     * polled now. Expired entries are dropped while checking, so the map only holds active limits.
+     */
+    private Instant deferredUntil(String feedId) {
+        var until = rateLimitedUntil.get(feedId);
+        if (until == null) {
+            return null;
+        }
+        if (Instant.now().isBefore(until)) {
+            return until;
+        }
+        rateLimitedUntil.remove(feedId, until);
+        return null;
     }
 
     private void handleDownloaded(String feedId, String sourceUrl, DownloadedStaticFeed feed, long downloadNanos) {

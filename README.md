@@ -436,6 +436,12 @@ object themselves. A poll answered with `304` is counted separately in
 `gtfs.static.download.not_modified{feed=...}`; both that and a content match after a full
 download are reported as the `unchanged` ingestion outcome.
 
+An origin that answers `429 Too Many Requests` pauses that feed instead of failing it: the
+`Retry-After` value (seconds or an HTTP date) is honoured, with fifteen minutes as the fallback
+when the header is absent, and the feed is skipped until then. The pause is logged once as a
+warning without a stack trace and counted as the `rate_limited` ingestion outcome, so a
+deliberate throttle stays distinguishable from a broken feed.
+
 ## Static Feed Validation
 
 `store-app` consumes `gtfs-static-feeds` and validates each revision before anything is

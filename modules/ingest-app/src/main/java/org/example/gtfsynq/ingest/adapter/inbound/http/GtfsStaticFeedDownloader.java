@@ -15,6 +15,10 @@ import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.HexFormat;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +37,10 @@ import org.example.gtfsynq.shared.util.SizeFormat;
  * made conditional. An origin that recognises the validator answers {@code 304 Not Modified}
  * and no archive is transferred at all, which is what makes a five-minute poll of an unchanged
  * feed nearly free.
+ *
+ * <p>A {@code 429 Too Many Requests} answer is reported as {@link StaticFeedRateLimitedException}
+ * carrying the origin's {@code Retry-After}, so the caller can back off instead of treating a
+ * deliberate throttle as a failure.
  */
 @ApplicationScoped
 @Slf4j
@@ -53,7 +61,11 @@ public class GtfsStaticFeedDownloader {
 
     private static final String LAST_MODIFIED = "Last-Modified";
 
+    private static final String RETRY_AFTER = "Retry-After";
+
     private static final int NOT_MODIFIED = 304;
+
+    private static final int TOO_MANY_REQUESTS = 429;
 
     private final HttpClient httpClient;
     private final HttpTimeouts httpTimeouts;
@@ -90,6 +102,15 @@ public class GtfsStaticFeedDownloader {
                             merged.lastModified());
 
                     return new StaticFeedDownload.NotModified(merged);
+                }
+
+                if (statusCode == TOO_MANY_REQUESTS) {
+                    // Not an error: the origin is asking us to slow down. The caller decides how
+                    // long to wait, using Retry-After when the origin sent one.
+                    throw new StaticFeedRateLimitedException(
+                            "Rate limited (HTTP 429) while downloading static feed " + feedId + " from " + sourceUrl,
+                            parseRetryAfter(
+                                    response.headers().firstValue(RETRY_AFTER).orElse(null)));
                 }
 
                 if (statusCode < 200 || statusCode >= 300) {
@@ -207,6 +228,31 @@ public class GtfsStaticFeedDownloader {
         return new StaticFeedValidators(
                 response.headers().firstValue(ETAG).orElse(null),
                 response.headers().firstValue(LAST_MODIFIED).orElse(null));
+    }
+
+    /**
+     * Parses a {@code Retry-After} header, which the HTTP specification allows as either a number
+     * of seconds or an HTTP date.
+     *
+     * @param value header value, or {@code null}
+     * @return the delay requested by the origin, or {@code null} when absent or unparsable
+     */
+    static Duration parseRetryAfter(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        var trimmed = value.trim();
+        try {
+            return Duration.ofSeconds(Math.max(0, Long.parseLong(trimmed)));
+        } catch (NumberFormatException _) {
+            // Not an integer; the specification also allows an HTTP date.
+        }
+        try {
+            var at = OffsetDateTime.parse(trimmed, DateTimeFormatter.RFC_1123_DATE_TIME);
+            return Duration.between(Instant.now(), at.toInstant());
+        } catch (DateTimeParseException _) {
+            return null;
+        }
     }
 
     private void discard(Path file) {

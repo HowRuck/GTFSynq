@@ -16,6 +16,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.time.Duration;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.HexFormat;
 import java.util.concurrent.atomic.AtomicReference;
 import org.example.gtfsynq.ingest.config.HttpTimeouts;
@@ -58,6 +61,11 @@ class GtfsStaticFeedDownloaderTest {
         server.createContext("/not-modified", exchange -> {
             exchange.getResponseHeaders().add("ETag", ETAG);
             exchange.sendResponseHeaders(304, -1);
+            exchange.close();
+        });
+        server.createContext("/rate-limited", exchange -> {
+            exchange.getResponseHeaders().add("Retry-After", "120");
+            exchange.sendResponseHeaders(429, -1);
             exchange.close();
         });
         server.start();
@@ -147,6 +155,29 @@ class GtfsStaticFeedDownloaderTest {
         assertThrows(
                 StaticFeedDownloadException.class,
                 () -> downloader.download("gtfs-test", baseUrl + "/error", StaticFeedValidators.none()));
+    }
+
+    @Test
+    void reportsRateLimitingWithTheRequestedDelay() {
+        var limited = assertThrows(
+                StaticFeedRateLimitedException.class,
+                () -> downloader.download("gtfs-test", baseUrl + "/rate-limited", StaticFeedValidators.none()));
+
+        assertEquals(Duration.ofSeconds(120), limited.retryAfter());
+    }
+
+    @Test
+    void parsesRetryAfterAsSecondsOrHttpDate() {
+        assertEquals(Duration.ofSeconds(120), GtfsStaticFeedDownloader.parseRetryAfter("120"));
+        assertEquals(Duration.ZERO, GtfsStaticFeedDownloader.parseRetryAfter("-5"));
+        assertNull(GtfsStaticFeedDownloader.parseRetryAfter(null));
+        assertNull(GtfsStaticFeedDownloader.parseRetryAfter(""));
+        assertNull(GtfsStaticFeedDownloader.parseRetryAfter("soon"));
+
+        var at = OffsetDateTime.now(ZoneOffset.UTC).plusSeconds(90).format(DateTimeFormatter.RFC_1123_DATE_TIME);
+        var parsed = GtfsStaticFeedDownloader.parseRetryAfter(at);
+        assertNotNull(parsed);
+        assertTrue(parsed.toSeconds() >= 80 && parsed.toSeconds() <= 90, () -> "parsed " + parsed);
     }
 
     @Test

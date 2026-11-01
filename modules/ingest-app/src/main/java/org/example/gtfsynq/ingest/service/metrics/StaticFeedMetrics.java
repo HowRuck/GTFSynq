@@ -39,6 +39,11 @@ public class StaticFeedMetrics {
         /** The feed could not be downloaded, stored or published. */
         FAILED,
         /**
+         * The origin answered {@code 429 Too Many Requests}. The feed is skipped until its
+         * {@code Retry-After} elapses, or for a conservative default when none was sent.
+         */
+        RATE_LIMITED,
+        /**
          * The attempt outlived {@code gtfsynq.static-feed-timeout-seconds}. The underlying
          * download is not interrupted, so its own outcome may be recorded much later, or
          * never if it hangs.
