@@ -54,6 +54,9 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
     private final TripDetailPanel detail = new TripDetailPanel();
     private final Div loadingOverlay;
 
+    // Optional is the MicroProfile Config way to read a property that may be absent: an empty
+    // value in application.yaml counts as absent for a plain String injection.
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     @ConfigProperty(name = "gtfsynq.ui.map.transport-overlay-url")
     Optional<String> transportOverlayUrl;
 

@@ -122,7 +122,7 @@ public class LazyGrid<T> extends Grid<T> {
                 : order.getDirection() == SortDirection.DESCENDING;
 
         var size = Math.max(query.getLimit(), 1);
-        var page = (int) (query.getOffset() / size);
+        var page = query.getOffset() / size;
 
         try {
             var items = loader.load(new PageQuery(

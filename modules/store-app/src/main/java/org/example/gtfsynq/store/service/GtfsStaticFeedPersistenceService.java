@@ -66,7 +66,7 @@ public class GtfsStaticFeedPersistenceService {
         log.info(
                 "Persisting static feed {} revision {} from {}",
                 event.getFeedId(),
-                event.getSha256() == null || event.getSha256().length() <= 12
+                event.getSha256().length() <= 12
                         ? event.getSha256()
                         : event.getSha256().substring(0, 12),
                 event.getObjectKey());

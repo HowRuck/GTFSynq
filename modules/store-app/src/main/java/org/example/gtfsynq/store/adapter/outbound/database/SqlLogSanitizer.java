@@ -2,6 +2,7 @@ package org.example.gtfsynq.store.adapter.outbound.database;
 
 import java.sql.BatchUpdateException;
 import java.sql.SQLException;
+import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -50,9 +51,10 @@ final class SqlLogSanitizer {
             sanitizedCause = sanitize(causeSql);
         }
 
-        var message = truncateSqlEcho(e.getMessage());
+        var originalMessage = e.getMessage();
+        var message = truncateSqlEcho(originalMessage);
 
-        if (message == e.getMessage() && sanitizedCause == cause && sanitizedNext == next) {
+        if (Objects.equals(message, originalMessage) && sanitizedCause == cause && sanitizedNext == next) {
             return e;
         }
 

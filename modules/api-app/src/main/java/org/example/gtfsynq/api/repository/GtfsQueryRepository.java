@@ -397,7 +397,6 @@ public class GtfsQueryRepository {
             parameters.add(routeType);
         }
 
-        String select = LIVE_TRIP_UPDATE_SELECT;
         // The agency condition reaches static_agency through the trip and route joins; only widen
         // the count query when that filter is actually in use.
         String count = hasText(agency) || hasText(route) || routeType != null ? """
@@ -415,7 +414,7 @@ public class GtfsQueryRepository {
         String order =
                 sortColumn(LIVE_SORTS, sort, "h.last_seen_at") + " " + direction(direction) + ", h.trip_update_id DESC";
         return page(
-                select,
+                LIVE_TRIP_UPDATE_SELECT,
                 count,
                 conditions,
                 parameters,
@@ -582,8 +581,7 @@ public class GtfsQueryRepository {
                         rs.getString("stop_name"),
                         nullableInt(rs, "current_delay"),
                         offsetDateTime(rs, "stop_time"));
-                var tripId = rs.getString("trip_id");
-                var keyId = tripId;
+                var keyId = rs.getString("trip_id");
                 if (keyId == null || keyId.isBlank()) {
                     // Some feeds publish frequency-based updates without a trip id; the entity id is
                     // then the only stable identifier across messages.

@@ -48,7 +48,6 @@ public class TripDetailPanel extends VerticalLayout {
     private final Span start = new Span();
     private final Span lastSeen = new Span();
     private final Span delay = new Span();
-    private final Button close = new Button(VaadinIcon.CLOSE.create());
 
     private final TripMap map = new TripMap();
     private final Div mapFrame = new Div(map);
@@ -64,6 +63,8 @@ public class TripDetailPanel extends VerticalLayout {
         setMinWidth("0");
         setMinHeight("0");
         addClassName("trip-detail");
+
+        var close = new Button(VaadinIcon.CLOSE.create());
 
         title.addClassName("trip-detail-title");
         subtitle.addClassName("trip-detail-subtitle");
@@ -231,7 +232,7 @@ public class TripDetailPanel extends VerticalLayout {
         if (trip.hasAgencyName()) {
             parts.add(trip.getAgencyName());
         }
-        subtitle.setText(String.join(" \u00b7 ", parts));
+        subtitle.setText(String.join(" · ", parts));
 
         feed.setText(trip.getFeedId());
 

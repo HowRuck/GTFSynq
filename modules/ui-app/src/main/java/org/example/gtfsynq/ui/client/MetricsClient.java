@@ -91,8 +91,8 @@ public class MetricsClient {
         } catch (JacksonException e) {
             throw new MetricsException("VictoriaMetrics returned malformed JSON", e);
         }
-        if (!"success".equals(root.path("status").asText())) {
-            var error = root.path("error").asText("query failed");
+        if (!"success".equals(root.path("status").asString())) {
+            var error = root.path("error").asString("query failed");
             throw new MetricsException("VictoriaMetrics query failed: " + error);
         }
 
@@ -102,12 +102,12 @@ public class MetricsClient {
             node.path("metric")
                     .properties()
                     .forEach(
-                            entry -> labels.put(entry.getKey(), entry.getValue().asText()));
+                            entry -> labels.put(entry.getKey(), entry.getValue().asString()));
 
             var points = new ArrayList<Point>();
             for (var value : node.path("values")) {
                 var timestamp = value.path(0);
-                var number = value.path(1).asText();
+                var number = value.path(1).asString();
                 if (!timestamp.isNumber() || number.isBlank()) {
                     continue;
                 }

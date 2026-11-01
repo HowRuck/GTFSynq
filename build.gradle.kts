@@ -1,3 +1,5 @@
+import java.io.File
+
 plugins {
     id("io.github.ben-manes.versions") version "0.66.0"
     alias(libs.plugins.spotless) apply false
@@ -22,9 +24,9 @@ val devInfra by tasks.registering(Exec::class) {
     group = "application"
     description = "Starts the local development infrastructure from docker-compose.dev.yaml."
 
-    val pathDirectories = System.getenv("PATH").orEmpty().split(java.io.File.pathSeparator)
+    val pathDirectories = System.getenv("PATH").orEmpty().split(File.pathSeparator)
     val composeCli = listOf("docker", "podman").firstOrNull { cli ->
-        pathDirectories.any { directory -> java.io.File(directory, cli).canExecute() }
+        pathDirectories.any { directory -> File(directory, cli).canExecute() }
     } ?: "docker"
 
     workingDir = layout.projectDirectory.asFile
