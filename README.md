@@ -559,16 +559,19 @@ realtime feed is never blocked by a static revision that is missing or late.
    pruned after `gtfsynq.retention.hours` (1h) by a job that runs every
    `gtfsynq.retention.rate` (15m); the history hypertable is compressed after one day.
 
-### Stop sequence completion
+### Stop identification
 
-GTFS Realtime allows a `StopTimeUpdate` to carry either `stop_sequence` or `stop_id`, and some large
-producers publish only the latter - SNCF's trip updates carry none at all, HSL's carry it on a
-handful of updates. The hot table is keyed by `(trip_update_id, stop_sequence)`, so those rows used
-to be dropped before they reached the database: the trip appeared in the console with no stop
-timeline, no delay and no map marker.
+GTFS Realtime allows a `StopTimeUpdate` to carry either `stop_sequence` or `stop_id`, and producers
+tend to publish only one of them: SNCF's trip updates carry no sequence at all, HSL's carry it on a
+handful of updates, and PKP PLK's long-distance feed carries sequences but almost no stop ids. Both
+directions need completing, because the hot table is keyed by `(trip_update_id, stop_sequence)`,
+while the stop name and the map position come from `stops.txt` through the stop id. A row missing
+its sequence used to be dropped before it reached the database - the trip appeared in the console
+with no stop timeline, no delay and no map marker - and a row missing its stop id still shows a
+stop timeline but cannot be placed on the map.
 
-`StopSequenceResolver` fills the sequence in at flush time, off the Kafka consumer thread, applying
-three rules in order:
+`StopSequenceResolver` completes both at flush time, off the Kafka consumer thread. Sequences are
+filled with three rules, applied in order:
 
 1. a published sequence is kept as is;
 2. otherwise the stop is matched against the trip's `static_stop_times` rows, walking the message in
@@ -578,11 +581,17 @@ three rules in order:
    a `trip_id`, or a static revision that is not loaded - the whole message is renumbered 1..n in
    message order, which keeps the rows unique and ordered.
 
-Only updates with a missing sequence trigger a lookup, and it is one query per feed per flush
+A missing stop id is filled afterwards, by looking the row's sequence up in the same static rows.
+That only happens when the sequences can be trusted - a published one, or one matched against the
+static schedule - because the numbers of rule 3 describe message order, not stops, and a lookup by
+them would name the wrong stop. A sequence the static schedule does not know is left unidentified
+rather than guessed at.
+
+Only updates with a missing identifier trigger a lookup, and it is one query per feed per flush
 (`trip_id = ANY(...)` against the `(feed_id, trip_id, stop_sequence)` primary key). Feeds that
-publish sequences - `ovapi`, `gtfs-de` - never touch the static table. A failed lookup fails the
-flush and is retried, because writing approximate sequences for a trip the static schedule does
-describe would overwrite rows that deduplication may never rewrite.
+publish both - `gtfs-de`, `ovapi` - never touch the static table. A failed lookup fails the flush
+and is retried, because writing approximate identifiers for a trip the static schedule does describe
+would overwrite rows that deduplication may never rewrite.
 
 Two related changes keep such a feed coherent: the deduplication key of a stop is now the sequence
 plus the stop id when one is published, and the stop id alone when not (the absent sequence used to

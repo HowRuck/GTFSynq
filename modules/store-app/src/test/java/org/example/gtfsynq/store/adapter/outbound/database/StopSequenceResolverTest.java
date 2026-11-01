@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -142,6 +143,49 @@ class StopSequenceResolverTest {
 
     private static List<StaticStopTime> stops(StaticStopTime... stops) {
         return List.of(stops);
+    }
+
+    @Test
+    void namesTheStopsOfASequenceOnlyFeed() {
+        // PKP PLK's long-distance feed publishes sequences and no stop ids; the map needs the ids.
+        var resolver = resolverReturning(stops(new StaticStopTime("A", 1), new StaticStopTime("B", 2)));
+
+        var resolved = resolver.resolve(List.of(update("trip", stop(1, null), stop(2, null))));
+
+        assertEquals(List.of(1, 2), sequences(resolved));
+        assertEquals(List.of("A", "B"), stopIds(resolved));
+    }
+
+    @Test
+    void looksUpATripThatOnlyNeedsStopIds() {
+        var seen = new java.util.HashSet<TripKey>();
+        var resolver = new StopSequenceResolver(keys -> {
+            seen.addAll(keys);
+            return Map.of(TRIP, stops(new StaticStopTime("A", 1)));
+        });
+
+        resolver.resolve(List.of(update("trip", stop(1, null))));
+
+        assertEquals(Set.of(TRIP), seen, "a sequence-only update still needs the static schedule");
+    }
+
+    @Test
+    void doesNotNameStopsFromSyntheticSequences() {
+        // The static trip numbers its stops 1 and 2, but both rows arrive unidentified, so the
+        // resolver falls back to message order. Looking those numbers up would name the wrong stops.
+        var resolver = resolverReturning(stops(new StaticStopTime("A", 1), new StaticStopTime("B", 2)));
+
+        var resolved = resolver.resolve(List.of(update("trip", stop(null, null), stop(null, null))));
+
+        assertEquals(List.of(1, 2), sequences(resolved));
+        assertEquals(Arrays.asList(null, null), stopIds(resolved));
+    }
+
+    private static List<String> stopIds(List<TripUpdateDto> updates) {
+        return updates.stream()
+                .flatMap(update -> update.stopTimeUpdates().stream())
+                .map(TripStopTimeUpdateDto::stopId)
+                .collect(Collectors.toList());
     }
 
     private static List<Integer> sequences(List<TripUpdateDto> updates) {

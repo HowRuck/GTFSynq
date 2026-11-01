@@ -2,6 +2,7 @@ package org.example.gtfsynq.shared.model.dto;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 import com.google.transit.realtime.GtfsRealtime.TripUpdate.StopTimeEvent;
 import com.google.transit.realtime.GtfsRealtime.TripUpdate.StopTimeUpdate;
@@ -46,6 +47,24 @@ class TripStopTimeUpdateDtoTest {
     @Test
     void aMissingTimeAndDelayLeavesTheHashAlone() {
         assertEquals(hashOf(null, null), hashOf(null, null));
+    }
+
+    @Test
+    void namingAStopDescribesTheStoredRow() {
+        var row = update(Instant.parse("2026-11-01T12:00:10Z"), null);
+
+        assertSame(row, row.withStopId("2413601"), "an unchanged stop id returns the same instance");
+
+        var named = row.withStopId("2411601");
+
+        assertEquals("2411601", named.stopId());
+        assertNotEquals(row.hash(), named.hash(), "the stop id is part of the stored row");
+        assertEquals(
+                named.hash(),
+                update(Instant.parse("2026-11-01T12:00:10Z"), null)
+                        .withStopId("2411601")
+                        .hash(),
+                "the same row must hash the same regardless of which instance named it");
     }
 
     @Test

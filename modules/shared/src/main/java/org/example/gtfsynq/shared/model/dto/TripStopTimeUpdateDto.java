@@ -160,6 +160,49 @@ public record TripStopTimeUpdateDto(
     }
 
     /**
+     * Returns a copy with a different stop id, recomputing the metadata hash.
+     *
+     * <p>Used for a feed that publishes only {@code stop_sequence}: the id of the stop at that
+     * sequence is read from the static schedule, because the position on the map and the stop name
+     * in the timeline both come from {@code stops.txt}, not from the sequence. A row the static
+     * schedule cannot identify is left without an id rather than guessed at.
+     *
+     * @param stopId the stop id to store
+     * @return this instance when the stop id already matches, otherwise a resolved copy
+     */
+    public TripStopTimeUpdateDto withStopId(@NonNull String stopId) {
+        if (stopId.equals(this.stopId)) {
+            return this;
+        }
+        return new TripStopTimeUpdateDto(
+                tripKey,
+                feedId,
+                feedTs,
+                stopSequence,
+                stopId,
+                arrivalTime,
+                arrivalDelay,
+                scheduledArrivalTime,
+                departureTime,
+                departureDelay,
+                scheduledDepartureTime,
+                scheduleRelationship,
+                assignedStopId,
+                hashMetaFields(
+                        feedId,
+                        stopSequence,
+                        stopId,
+                        arrivalTime,
+                        arrivalDelay,
+                        scheduledArrivalTime,
+                        departureTime,
+                        departureDelay,
+                        scheduledDepartureTime,
+                        scheduleRelationship,
+                        assignedStopId));
+    }
+
+    /**
      * Hashes the meta fields of a TripStopTimeUpdateDto
      *
      * @param feedId The feed ID
