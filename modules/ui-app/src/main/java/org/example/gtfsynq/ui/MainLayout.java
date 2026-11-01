@@ -88,7 +88,7 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
 
         var item = menu.addItem(VaadinIcon.GLOBE.create());
         item.setAriaLabel(getTranslation("language.label"));
-        menu.setTooltipText(item, getTranslation("language.label"));
+        item.setTooltipText(getTranslation("language.label"));
 
         for (var locale : LANGUAGES) {
             item.getSubMenu().addItem(locale.getDisplayLanguage(locale), event -> {
