@@ -1,7 +1,7 @@
 import java.io.File
 
 plugins {
-    id("io.github.ben-manes.versions") version "0.66.0"
+    id("io.github.ben-manes.versions") version "0.67.0"
     alias(libs.plugins.spotless) apply false
 }
 
@@ -32,4 +32,3 @@ val devInfra by tasks.registering(Exec::class) {
     workingDir = layout.projectDirectory.asFile
     commandLine(composeCli, "compose", "-f", "docker-compose.dev.yaml", "up", "-d")
 }
-
