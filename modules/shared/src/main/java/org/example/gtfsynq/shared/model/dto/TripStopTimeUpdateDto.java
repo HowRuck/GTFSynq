@@ -3,6 +3,7 @@ package org.example.gtfsynq.shared.model.dto;
 import com.google.transit.realtime.GtfsRealtime.TripUpdate.StopTimeUpdate;
 import com.google.transit.realtime.GtfsRealtime.TripUpdate.StopTimeUpdate.ScheduleRelationship;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import org.example.gtfsynq.shared.util.FeedHashing;
 import org.example.gtfsynq.shared.util.GtfsFeedFormatter;
 import org.jspecify.annotations.NonNull;
@@ -81,17 +82,20 @@ public record TripStopTimeUpdateDto(
 
         // Creates a hash of metadata fields.
         //
-        // Delays (and their associated arrival/departure times) are explicitly excluded
-        // from this hash to ensure stability during deduplication, as these values are
-        // compared separately against their previous values.
-        //
-        // This hashes everything in the object EXCEPT the delays and directly associated values in order to keep hash
-        // stable.
+        // Delays are excluded from this hash to ensure stability during deduplication, as they
+        // are compared separately against their previous values. An absolute arrival/departure
+        // time travels with its delay: a feed that publishes a delay is compared by delay, and
+        // its time would only duplicate that. A feed that publishes a time and no delay (HSL)
+        // has nothing else to compare, so its time is bucketed into the hash instead.
         var hash = hashMetaFields(
                 feedId,
                 stopSequence,
                 stopId,
+                arrivalTime,
+                arrivalDelay,
                 scheduledArrivalTime,
+                departureTime,
+                departureDelay,
                 scheduledDepartureTime,
                 scheduleRelationship,
                 assignedStopId);
@@ -145,7 +149,11 @@ public record TripStopTimeUpdateDto(
                         feedId,
                         sequence,
                         stopId,
+                        arrivalTime,
+                        arrivalDelay,
                         scheduledArrivalTime,
+                        departureTime,
+                        departureDelay,
                         scheduledDepartureTime,
                         scheduleRelationship,
                         assignedStopId));
@@ -157,7 +165,11 @@ public record TripStopTimeUpdateDto(
      * @param feedId The feed ID
      * @param stopSequence The stop sequence
      * @param stopId The stop ID
+     * @param arrivalTime The predicted arrival time
+     * @param arrivalDelay The arrival delay
      * @param scheduledArrivalTime The scheduled arrival time
+     * @param departureTime The predicted departure time
+     * @param departureDelay The departure delay
      * @param scheduledDepartureTime The scheduled departure time
      * @param scheduleRelationship The schedule relationship
      * @param assignedStopId The assigned stop ID
@@ -167,7 +179,11 @@ public record TripStopTimeUpdateDto(
             String feedId,
             Integer stopSequence,
             String stopId,
+            Instant arrivalTime,
+            Integer arrivalDelay,
             Instant scheduledArrivalTime,
+            Instant departureTime,
+            Integer departureDelay,
             Instant scheduledDepartureTime,
             ScheduleRelationship scheduleRelationship,
             String assignedStopId) {
@@ -175,10 +191,31 @@ public record TripStopTimeUpdateDto(
                 .putInteger(feedId.hashCode())
                 .putInteger(stopSequence)
                 .putString(stopId)
+                .putInstant(timeBucket(arrivalTime, arrivalDelay))
                 .putInstant(scheduledArrivalTime)
+                .putInstant(timeBucket(departureTime, departureDelay))
                 .putInstant(scheduledDepartureTime)
                 .putString(scheduleRelationship == null ? null : scheduleRelationship.name())
                 .putString(assignedStopId)
                 .hash();
+    }
+
+    /**
+     * The comparison value of a predicted time: the minute it falls in, but only when the feed
+     * publishes no delay for it.
+     *
+     * <p>Deduplication keeps a stop when its metadata changes or its delay moves by more than a
+     * minute. A feed that publishes only {@code time} (HSL) has neither, so without this bucket
+     * its predictions compare equal forever: the row is written once, ages out of the hot table,
+     * and is never rewritten. Bucketing to the minute gives those feeds the same sensitivity as
+     * the delay comparison, at the cost of one write per changed prediction rather than per
+     * sixty-second delay jump.
+     *
+     * @param time the predicted arrival or departure time, {@code null} when not published
+     * @param delay the delay for the same event, {@code null} when not published
+     * @return the minute bucket, or {@code null} when the time must not take part in the hash
+     */
+    private static Instant timeBucket(Instant time, Integer delay) {
+        return delay != null || time == null ? null : time.truncatedTo(ChronoUnit.MINUTES);
     }
 }

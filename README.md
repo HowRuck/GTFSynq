@@ -550,7 +550,8 @@ realtime feed is never blocked by a static revision that is missing or late.
 3. `store-app` consumes the topic in batches. Deduplication compares each stop update against the
    previous one held in the off-heap store: a stop is kept when its metadata (ids, scheduled times,
    schedule relationship) changed, or when its arrival or departure delay moved by more than
-   sixty seconds.
+   sixty seconds. A feed that publishes a `time` and no `delay` for an event (HSL) has that time
+   compared instead, bucketed to the minute, so its prediction changes still reach the database.
 4. Kept updates enter an in-memory buffer that flushes every `gtfsynq.sink.flush-interval` (10s),
    and early when the buffer reaches `gtfsynq.sink.max-buffer-size` (20,000). One flush writes the
    trip descriptor, the append-only history (`rt_stop_time_updates_ht`) and the current-state
@@ -595,10 +596,12 @@ unchanged descriptor is rewritten alongside a changed stop - so the history tabl
 used to stay empty. Resolution time lands in the existing `gtfs.sink.map.duration` timer; the flush
 phases are already timed under `gtfs.sink.*`.
 
-Known limitation: deduplication compares delays, and absolute `time` values are excluded from the
-metadata hash. A producer that publishes only `time` and no `delay` (HSL) therefore writes a stop
-once, and later prediction changes are considered unchanged. Fixing that means comparing absolute
-times when no delay is present, at the cost of more history rows for those feeds.
+Deduplication compares a delay when the feed publishes one, and the predicted time when it does
+not. The latter is bucketed to the minute, which gives a time-only producer (HSL) the same
+sixty-second sensitivity as the delay comparison: a stop whose prediction moves into another minute
+is rewritten, so its hot row stays fresh and the map follows the vehicle. The cost lands where the
+delay path pays nothing - a time-only feed writes each stop again whenever its prediction moves, so
+its history grows with its update rate rather than staying flat.
 
 | Property | Default | Purpose |
 |---|---|---|
