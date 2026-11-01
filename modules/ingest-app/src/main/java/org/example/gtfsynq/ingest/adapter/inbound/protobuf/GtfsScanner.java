@@ -38,7 +38,10 @@ public class GtfsScanner {
      * @throws IOException if an error occurs while reading from the stream
      */
     public static ScanResult scanEntity(CodedInputStream cis) throws IOException {
-        String stableId = null;
+        // The two ids are read independently because protobuf fields may come in either order,
+        // and only the caller knows which one a feed can offer.
+        String entityId = null;
+        String tripStableId = null;
         int entityType = -1;
 
         while (!cis.isAtEnd()) {
@@ -48,11 +51,11 @@ public class GtfsScanner {
             // Switch on the field number to determine how to read the value
             switch (fieldNumber) {
                 // Read the stable ID from the feed entity field
-                case FIELD_FEED_ENTITY -> stableId = cis.readString();
+                case FIELD_FEED_ENTITY -> entityId = cis.readString();
                 // Read the stable ID from the nested trip descriptor
                 case FIELD_TRIP_UPDATE, FIELD_VEHICLE_POSITION -> {
                     entityType = fieldNumber;
-                    stableId = parseNestedTripDescriptor(cis);
+                    tripStableId = parseNestedTripDescriptor(cis);
                 }
                 // Skip the alert field, stable ID is taken from the entity itself
                 case FIELD_ALERT -> {
@@ -63,7 +66,10 @@ public class GtfsScanner {
             }
         }
 
-        return new ScanResult(stableId, entityType);
+        // The trip descriptor is preferred so that a feed which renumbers its entities is still
+        // deduplicated by trip. A feed may omit trip_id entirely - HSL publishes none - and has
+        // only its entity id left; returning null there would skip every entity as invalid.
+        return new ScanResult(tripStableId != null ? tripStableId : entityId, entityType);
     }
 
     /**

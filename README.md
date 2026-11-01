@@ -542,7 +542,9 @@ realtime feed is never blocked by a static revision that is missing or late.
 
 1. `ingest-app` polls every configured `gtfs.sources.<id>.realtime-config.urls` entry on its
    `poll-interval-seconds` (60s by default), parses the protobuf natively and keeps entities whose
-   bytes changed since the previous poll.
+   bytes changed since the previous poll. The change-detection key is the entity's `trip_id` plus
+   `start_date`, falling back to the `FeedEntity` id for a feed that publishes no `trip_id` (HSL
+   does not): without that fallback every entity of such a feed reads as invalid and is dropped.
 2. Each changed entity is published to `gtfs-trip-updates`, keyed by feed id, as an envelope of the
    original `FeedEntity` bytes plus its type and timestamp.
 3. `store-app` consumes the topic in batches. Deduplication compares each stop update against the
