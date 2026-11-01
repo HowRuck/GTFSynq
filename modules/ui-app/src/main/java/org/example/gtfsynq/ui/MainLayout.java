@@ -4,11 +4,10 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.badge.Badge;
-import com.vaadin.flow.component.button.Button;
-import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.contextmenu.ContextMenu;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
+import com.vaadin.flow.component.menubar.MenuBar;
+import com.vaadin.flow.component.menubar.MenuBarVariant;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.tabs.Tab;
@@ -83,21 +82,21 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
      * new locale.
      */
     private Component languageSwitcher() {
-        var button = new Button(VaadinIcon.GLOBE.create());
-        button.addThemeVariants(ButtonVariant.TERTIARY, ButtonVariant.SMALL);
-        button.addClassName("app-language");
-        button.setAriaLabel(getTranslation("language.label"));
-        button.getElement().setAttribute("title", getTranslation("language.label"));
+        var menu = new MenuBar();
+        menu.addThemeVariants(MenuBarVariant.TERTIARY, MenuBarVariant.SMALL);
+        menu.setWidth("auto");
 
-        var menu = new ContextMenu(button);
-        menu.setOpenOnClick(true);
+        var item = menu.addItem(VaadinIcon.GLOBE.create());
+        item.setAriaLabel(getTranslation("language.label"));
+        menu.setTooltipText(item, getTranslation("language.label"));
+
         for (var locale : LANGUAGES) {
-            menu.addItem(locale.getDisplayLanguage(locale), event -> {
+            item.getSubMenu().addItem(locale.getDisplayLanguage(locale), event -> {
                 VaadinSession.getCurrent().setLocale(locale);
                 UI.getCurrent().getPage().reload();
             });
         }
-        return button;
+        return menu;
     }
 
     /**

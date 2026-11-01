@@ -99,11 +99,6 @@ vaadin-grid::part(delay-severe) {
     font-variant-numeric: tabular-nums;
 }
 
-/* Icon-only language selector: keep the globe narrow and quiet. */
-.app-language {
-    min-width: 2rem;
-    padding-inline: 0.3rem;
-}
 
 /*
  * Header resource usage. The values are aggregate JVM CPU and heap from VictoriaMetrics, kept
