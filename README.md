@@ -15,6 +15,11 @@
 
 GTFSynq is a modern Quarkus transit data platform for ingesting, processing, storing, and analyzing **GTFS-RT (General Transit Feed Specification - Real-Time)** feeds and **GTFS CSV** static feed data
 
+<div align="center">
+  <img src="docs/images/live-updates.webp" alt="GTFSynq console on the Live Trip Updates page: a clustered overview map of every positioned trip, the live trip table below it, and the detail pane with the selected trip's route map above its stop timeline" width="100%" />
+  <p><em>Live Trip Updates - every positioned trip on the overview map, the live table, and the detail pane with the selected trip's route map and stop timeline. Both panes are draggable.</em></p>
+</div>
+
 It is built with **Gradle**, runs on **Java 25**, and is designed to work with **Kafka** and **TimescaleDB** for real-time transit data processing and time-series storage
 
 ## Features
