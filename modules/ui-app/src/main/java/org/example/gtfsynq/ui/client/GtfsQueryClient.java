@@ -8,6 +8,7 @@ import jakarta.inject.Inject;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.example.gtfsynq.shared.protocol.query.AgencyNamesRequest;
 import org.example.gtfsynq.shared.protocol.query.FeedIdsRequest;
 import org.example.gtfsynq.shared.protocol.query.GtfsQueryServiceGrpc;
@@ -40,6 +41,15 @@ import org.example.gtfsynq.shared.protocol.query.TripsRequest;
 public class GtfsQueryClient {
 
     private static final long DEADLINE_SECONDS = 15;
+
+    /**
+     * Deadline for the marker query. It is the heaviest call - every positioned trip in one
+     * unpaged reply - so it gets a shorter budget than the paged queries: abandoning it and
+     * retrying on the next poll is better than leaving the map waiting. The statement timeout on
+     * the API side is 15 s, so this deadline fires first and the view still gets an answer.
+     */
+    @ConfigProperty(name = "gtfsynq.ui.map.deadline-seconds", defaultValue = "10")
+    long markerDeadlineSeconds = 10;
 
     @Inject
     @GrpcClient("gtfs-api")
@@ -164,8 +174,16 @@ public class GtfsQueryClient {
 
     /** Every live trip that has a position, for the map; unpaged on purpose. */
     public List<TripMarker> tripMarkers() {
-        return call(() ->
-                stub().listTripMarkers(TripMarkersRequest.getDefaultInstance()).getItemsList());
+        return call(
+                () -> stub(markerDeadlineSeconds)
+                        .listTripMarkers(TripMarkersRequest.getDefaultInstance())
+                        .getItemsList(),
+                markerDeadlineSeconds);
+    }
+
+    /** The deadline the map's marker query runs under, so the view can bound its loading state. */
+    public long markerDeadlineSeconds() {
+        return markerDeadlineSeconds;
     }
 
     /** Stops of one live trip: static schedule merged with the live stop time updates. */
@@ -177,7 +195,11 @@ public class GtfsQueryClient {
     }
 
     private GtfsQueryServiceGrpc.GtfsQueryServiceBlockingStub stub() {
-        return stub.withDeadlineAfter(DEADLINE_SECONDS, TimeUnit.SECONDS);
+        return stub(DEADLINE_SECONDS);
+    }
+
+    private GtfsQueryServiceGrpc.GtfsQueryServiceBlockingStub stub(long deadlineSeconds) {
+        return stub.withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS);
     }
 
     private static <T> PagedResult<T> page(List<T> items, PageInfo info) {
@@ -185,17 +207,21 @@ public class GtfsQueryClient {
     }
 
     private static <T> T call(Supplier<T> action) {
+        return call(action, DEADLINE_SECONDS);
+    }
+
+    private static <T> T call(Supplier<T> action, long deadlineSeconds) {
         try {
             return action.get();
         } catch (StatusRuntimeException e) {
-            throw new DataAccessException(friendlyMessage(e), e);
+            throw new DataAccessException(friendlyMessage(e, deadlineSeconds), e);
         }
     }
 
-    private static String friendlyMessage(StatusRuntimeException e) {
+    private static String friendlyMessage(StatusRuntimeException e, long deadlineSeconds) {
         return switch (e.getStatus().getCode()) {
             case UNAVAILABLE -> I18NProvider.translate("error.api.unavailable");
-            case DEADLINE_EXCEEDED -> I18NProvider.translate("error.api.deadline", DEADLINE_SECONDS);
+            case DEADLINE_EXCEEDED -> I18NProvider.translate("error.api.deadline", deadlineSeconds);
             case INVALID_ARGUMENT, NOT_FOUND, FAILED_PRECONDITION ->
                 description(e, I18NProvider.translate("error.api.rejected"));
             default -> I18NProvider.translate("error.api.status", e.getStatus().getCode());

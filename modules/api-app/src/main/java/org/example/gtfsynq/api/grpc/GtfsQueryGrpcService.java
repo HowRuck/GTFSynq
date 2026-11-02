@@ -7,6 +7,7 @@ import io.quarkus.grpc.GrpcService;
 import io.smallrye.common.annotation.Blocking;
 import jakarta.inject.Inject;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 import org.example.gtfsynq.api.repository.GtfsQueryRepository;
 import org.example.gtfsynq.shared.protocol.query.AgencyNamesReply;
@@ -52,13 +53,28 @@ public class GtfsQueryGrpcService extends GtfsQueryServiceGrpc.GtfsQueryServiceI
 
     private final GtfsQueryRepository repository;
 
+    /**
+     * Guards the marker refresh. The map query is the most expensive one, so a caller that finds the
+     * cache expired waits for the refresh already in flight (or keeps the stale snapshot) instead of
+     * running its own copy and pinning another pool connection.
+     */
+    private final ReentrantLock markerRefresh = new ReentrantLock();
+
+    private final long markerCacheNanos;
+
     private volatile TripMarkersReply cachedMarkers;
 
     private volatile long cachedMarkersAt;
 
     @Inject
     public GtfsQueryGrpcService(GtfsQueryRepository repository) {
+        this(repository, MARKER_CACHE_NANOS);
+    }
+
+    /** Visible for tests that need a shorter (or zero) cache window. */
+    GtfsQueryGrpcService(GtfsQueryRepository repository, long markerCacheNanos) {
         this.repository = repository;
+        this.markerCacheNanos = markerCacheNanos;
     }
 
     @Override
@@ -171,13 +187,44 @@ public class GtfsQueryGrpcService extends GtfsQueryServiceGrpc.GtfsQueryServiceI
     private TripMarkersReply tripMarkers() {
         var now = System.nanoTime();
         var cached = cachedMarkers;
-        if (cached != null && now - cachedMarkersAt < MARKER_CACHE_NANOS) {
+        if (isFresh(cached, now)) {
             return cached;
         }
-        var reply = GtfsQueryMapper.tripMarkersReply(repository.liveTripMarkers());
-        cachedMarkers = reply;
-        cachedMarkersAt = now;
-        return reply;
+
+        // A stale snapshot is better than every session waiting for its own copy of the query.
+        var locked = markerRefresh.tryLock();
+        if (!locked && cached != null) {
+            return cached;
+        }
+        if (!locked) {
+            // First load: wait for the refresh already in flight rather than starting a second one.
+            markerRefresh.lock();
+        }
+        try {
+            cached = cachedMarkers;
+            now = System.nanoTime();
+            if (isFresh(cached, now)) {
+                return cached;
+            }
+            try {
+                var reply = GtfsQueryMapper.tripMarkersReply(repository.liveTripMarkers());
+                cachedMarkers = reply;
+                cachedMarkersAt = now;
+                return reply;
+            } catch (RuntimeException e) {
+                // A slow or failed refresh must not blank the map: serve the last good snapshot.
+                if (cached != null) {
+                    return cached;
+                }
+                throw e;
+            }
+        } finally {
+            markerRefresh.unlock();
+        }
+    }
+
+    private boolean isFresh(TripMarkersReply reply, long now) {
+        return reply != null && now - cachedMarkersAt < markerCacheNanos;
     }
 
     @Override

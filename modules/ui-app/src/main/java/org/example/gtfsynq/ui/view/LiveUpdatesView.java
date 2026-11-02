@@ -28,6 +28,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.example.gtfsynq.shared.protocol.query.StopTimeUpdate;
 import org.example.gtfsynq.shared.protocol.query.TripMarker;
@@ -47,6 +50,13 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
 
     private static final int POLL_INTERVAL_MS = 60_000;
 
+    /**
+     * Runs the blocking backend loads. One virtual thread per load keeps a slow query from starving
+     * the others - and the other sessions - which the common ForkJoinPool does once a few
+     * multi-second gRPC calls are in flight.
+     */
+    private static final ExecutorService BACKGROUND_LOADS = Executors.newVirtualThreadPerTaskExecutor();
+
     private final GtfsQueryClient client;
     private final LiveUpdatesGrid table;
     private final LiveMap map = new LiveMap();
@@ -65,7 +75,10 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
 
     private Registration pollRegistration;
     private boolean attached;
-    private boolean markersLoading;
+    // Written by the watchdog's fallback path as well as the UI thread; a stuck load must never
+    // leave the guard set and block every later poll.
+    private volatile boolean markersLoading;
+    private long markerRequest;
     private boolean markersLoaded;
     private long lastMarkersFingerprint;
     private String lastMapError;
@@ -172,25 +185,28 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
      */
     private void openTripFromMap(long tripUpdateId) {
         var request = ++tripLookupRequest;
-        getUI().ifPresent(ui -> CompletableFuture.runAsync(() -> {
-            TripUpdate trip;
-            try {
-                trip = client.tripUpdate(tripUpdateId);
-            } catch (DataAccessException e) {
-                ui.access(() -> {
-                    if (request == tripLookupRequest && attached) {
-                        var message = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
-                        reportDetailError(message);
+        getUI().ifPresent(ui -> CompletableFuture.runAsync(
+                () -> {
+                    TripUpdate trip;
+                    try {
+                        trip = client.tripUpdate(tripUpdateId);
+                    } catch (DataAccessException e) {
+                        ui.access(() -> {
+                            if (request == tripLookupRequest && attached) {
+                                var message =
+                                        e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+                                reportDetailError(message);
+                            }
+                        });
+                        return;
                     }
-                });
-                return;
-            }
-            ui.access(() -> {
-                if (request == tripLookupRequest && attached) {
-                    showTrip(trip);
-                }
-            });
-        }));
+                    ui.access(() -> {
+                        if (request == tripLookupRequest && attached) {
+                            showTrip(trip);
+                        }
+                    });
+                },
+                BACKGROUND_LOADS));
     }
 
     private void showTrip(TripUpdate trip) {
@@ -243,37 +259,41 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
         if (showLoading) {
             detail.showLoading(trip);
         }
-        CompletableFuture.runAsync(() -> {
-            List<StopTimeUpdate> stops;
-            DataAccessException failure = null;
-            try {
-                stops = client.stopTimeUpdates(trip.getTripUpdateId());
-            } catch (DataAccessException e) {
-                failure = e;
-                stops = List.of();
-            }
-
-            var loaded = stops;
-            var error = failure;
-            ui.access(() -> {
-                if (request != detailRequest || !attached) {
-                    return;
-                }
-                if (error != null) {
-                    var message = error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage();
-                    if (showLoading || !detailLoaded) {
-                        detail.showError(trip, message);
-                    } else {
-                        // Keep the last good timeline on a failed poll; a notification is enough.
-                        reportDetailError(message);
+        CompletableFuture.runAsync(
+                () -> {
+                    List<StopTimeUpdate> stops;
+                    DataAccessException failure = null;
+                    try {
+                        stops = client.stopTimeUpdates(trip.getTripUpdateId());
+                    } catch (DataAccessException e) {
+                        failure = e;
+                        stops = List.of();
                     }
-                    return;
-                }
-                lastDetailError = null;
-                detailLoaded = true;
-                detail.showTrip(trip, loaded, Instant.now());
-            });
-        });
+
+                    var loaded = stops;
+                    var error = failure;
+                    ui.access(() -> {
+                        if (request != detailRequest || !attached) {
+                            return;
+                        }
+                        if (error != null) {
+                            var message = error.getMessage() == null
+                                    ? error.getClass().getSimpleName()
+                                    : error.getMessage();
+                            if (showLoading || !detailLoaded) {
+                                detail.showError(trip, message);
+                            } else {
+                                // Keep the last good timeline on a failed poll; a notification is enough.
+                                reportDetailError(message);
+                            }
+                            return;
+                        }
+                        lastDetailError = null;
+                        detailLoaded = true;
+                        detail.showTrip(trip, loaded, Instant.now());
+                    });
+                },
+                BACKGROUND_LOADS);
     }
 
     /**
@@ -283,6 +303,11 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
      * time, but the map is an overview of every live trip. A poll that arrives while the previous
      * load is still running is dropped instead of stacking requests.
      *
+     * <p>A load is bounded twice: by the client deadline on the gRPC call, and by a watchdog that
+     * releases the loading state if the call never reports back (a queued UI access, a lost worker).
+     * Without the watchdog a single stuck load would keep the map in its loading state and block
+     * every later poll, because the in-flight guard would never clear.
+     *
      * @param showLoading whether to show the map's loading state even after the first snapshot
      */
     private void loadMarkers(UI ui, boolean showLoading) {
@@ -290,42 +315,81 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
             return;
         }
         markersLoading = true;
+        var request = ++markerRequest;
         // Polls must not flicker the overlay; it stays for the initial load and manual refreshes.
         if (showLoading || !markersLoaded) {
             loadingOverlay.setVisible(true);
         }
-        CompletableFuture.runAsync(() -> {
-            List<TripMarker> markers;
-            DataAccessException failure = null;
-            try {
-                markers = client.tripMarkers();
-            } catch (DataAccessException e) {
-                failure = e;
-                markers = List.of();
-            }
 
-            var loaded = markers;
-            var error = failure;
-            ui.access(() -> {
-                markersLoading = false;
-                loadingOverlay.setVisible(false);
-                if (!attached) {
-                    return;
-                }
-                if (error != null) {
-                    // Keep the last good markers on screen rather than blanking the map.
-                    report(error);
-                    return;
-                }
-                var fingerprint = fingerprint(loaded);
-                if (!markersLoaded || fingerprint != lastMarkersFingerprint) {
-                    lastMarkersFingerprint = fingerprint;
-                    map.setMarkers(markers(loaded));
-                }
-                markersLoaded = true;
-                lastMapError = null;
-            });
-        });
+        CompletableFuture.runAsync(
+                        () -> {
+                            List<TripMarker> markers;
+                            DataAccessException failure = null;
+                            try {
+                                markers = client.tripMarkers();
+                            } catch (DataAccessException e) {
+                                failure = e;
+                                markers = List.of();
+                            } catch (RuntimeException e) {
+                                failure = new DataAccessException(e.getMessage(), e);
+                                markers = List.of();
+                            }
+
+                            var loaded = markers;
+                            var error = failure;
+                            ui.access(() -> finishMarkers(request, loaded, error));
+                        },
+                        BACKGROUND_LOADS)
+                .orTimeout(client.markerDeadlineSeconds() + 5, TimeUnit.SECONDS)
+                .whenComplete((ignored, failure) -> {
+                    if (failure == null) {
+                        return;
+                    }
+                    try {
+                        ui.access(() -> abandonMarkers(request));
+                    } catch (RuntimeException e) {
+                        // The session is gone; only the in-flight guard still needs releasing.
+                        markersLoading = false;
+                    }
+                });
+    }
+
+    private void finishMarkers(long request, List<TripMarker> loaded, DataAccessException error) {
+        if (request != markerRequest) {
+            return;
+        }
+        markersLoading = false;
+        loadingOverlay.setVisible(false);
+        if (!attached) {
+            return;
+        }
+        if (error != null) {
+            // Keep the last good markers on screen rather than blanking the map.
+            report(error);
+            return;
+        }
+        var fingerprint = fingerprint(loaded);
+        if (!markersLoaded || fingerprint != lastMarkersFingerprint) {
+            lastMarkersFingerprint = fingerprint;
+            map.setMarkers(markers(loaded));
+        }
+        markersLoaded = true;
+        lastMapError = null;
+    }
+
+    /**
+     * Gives up on a load that never reported back, so the map leaves its loading state and the next
+     * poll can try again. A late reply from the abandoned load is ignored by its request number.
+     */
+    private void abandonMarkers(long request) {
+        if (request != markerRequest) {
+            return;
+        }
+        markersLoading = false;
+        loadingOverlay.setVisible(false);
+        if (attached) {
+            report(new DataAccessException(getTranslation("error.api.deadline", client.markerDeadlineSeconds()), null));
+        }
     }
 
     /**

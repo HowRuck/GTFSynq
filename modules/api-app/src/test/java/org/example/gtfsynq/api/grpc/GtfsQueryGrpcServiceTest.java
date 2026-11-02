@@ -1,6 +1,7 @@
 package org.example.gtfsynq.api.grpc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.grpc.stub.StreamObserver;
 import java.time.OffsetDateTime;
@@ -23,12 +24,25 @@ class GtfsQueryGrpcServiceTest {
 
     @Test
     void servesTheMarkerSnapshotFromTheShortCache() {
-        var first = call();
-        var second = call();
+        var first = call(service);
+        var second = call(service);
 
         assertEquals(1, repository.calls, "a second poll within ten seconds must reuse the snapshot");
         assertEquals(1, first.getItemsCount());
         assertEquals("10", second.getItems(0).getRouteShortName());
+    }
+
+    @Test
+    void keepsTheLastSnapshotWhenARefreshFails() {
+        var uncached = new GtfsQueryGrpcService(repository, 0);
+        call(uncached);
+        repository.failing = true;
+
+        var reply = call(uncached);
+
+        assertEquals(1, reply.getItemsCount(), "a failed refresh must not blank the map");
+        assertEquals("10", reply.getItems(0).getRouteShortName());
+        assertTrue(repository.calls >= 2, "the second call did attempt a refresh");
     }
 
     @Test
@@ -56,6 +70,10 @@ class GtfsQueryGrpcServiceTest {
     }
 
     private TripMarkersReply call() {
+        return call(service);
+    }
+
+    private static TripMarkersReply call(GtfsQueryGrpcService service) {
         var replies = new ArrayList<TripMarkersReply>();
         service.listTripMarkers(TripMarkersRequest.getDefaultInstance(), new StreamObserver<TripMarkersReply>() {
             @Override
@@ -79,6 +97,8 @@ class GtfsQueryGrpcServiceTest {
 
         private int calls;
 
+        private boolean failing;
+
         private CountingRepository() {
             super(null);
         }
@@ -86,6 +106,9 @@ class GtfsQueryGrpcServiceTest {
         @Override
         public List<TripMarkerDto> liveTripMarkers() {
             calls++;
+            if (failing) {
+                throw new IllegalStateException("query timed out");
+            }
             return List.of(
                     new TripMarkerDto(7, 52.5, 13.4, "10", "Trip 1", "route-id", "trip-id", 3, "Central", 120, null));
         }

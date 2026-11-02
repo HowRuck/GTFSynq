@@ -79,6 +79,10 @@ gtfsynq:
       # opt-in. Leave the URL empty to disable; {z}/{x}/{y} are substituted by MapLibre.
       transport-overlay-url: ${GTFS_MAP_TRANSPORT_OVERLAY_URL:}
       transport-overlay-opacity: ${GTFS_MAP_TRANSPORT_OVERLAY_OPACITY:0.55}
+      # The marker query is the heaviest call - every positioned trip in one unpaged reply - so it
+      # gets a shorter deadline than the paged queries. The view abandons a call that exceeds it,
+      # keeps the last good markers on screen and retries on the next poll.
+      deadline-seconds: ${GTFS_MAP_DEADLINE_SECONDS:10}
     session-lock:
       # A lock wait or hold longer than this is logged at WARN with the stack that took the lock.
       warn-after: 10s
