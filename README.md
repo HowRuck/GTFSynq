@@ -239,11 +239,12 @@ Behaviour shared by the tables:
   between the map and the table can be dragged to resize them. The overview map
   plots one marker per live trip at the most advanced stop the trip has actually
   reached (a stop whose predicted time is not in the future), independently of the
-  table's filters and paging: it loads its own unpaged `ListTripMarkers` result
-  (cached for ten seconds, refreshed by one caller at a time, and served from the
-  last good snapshot if a refresh fails, so open sessions share one query and a slow
-  database cannot blank the map), clusters markers client-side and falls back to
-  raster tiles when the vector basemap is unreachable. Marker loads are bounded twice:
+  table's filters and paging: it loads its own unpaged `ListTripMarkers` result,
+  which the API computes in the background every `gtfsynq.api.markers.refresh-interval`
+  (30 s) and serves from memory, so a poll never waits for the query; a failed
+  refresh keeps the previous snapshot, and only a cold start waits once. It clusters
+  markers client-side and falls back to raster tiles when the vector basemap is
+  unreachable. Marker loads are bounded twice:
   the call has its own deadline (`gtfsynq.ui.map.deadline-seconds`, 10 s) and the view
   releases its loading state if no reply arrives within it, so one slow refresh cannot
   leave the map spinning or block the next poll. Marker snapshots travel as compact

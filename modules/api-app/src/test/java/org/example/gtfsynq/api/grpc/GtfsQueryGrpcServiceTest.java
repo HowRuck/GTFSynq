@@ -1,9 +1,9 @@
 package org.example.gtfsynq.api.grpc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.grpc.stub.StreamObserver;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,29 +20,17 @@ import org.junit.jupiter.api.Test;
 class GtfsQueryGrpcServiceTest {
 
     private final CountingRepository repository = new CountingRepository();
-    private final GtfsQueryGrpcService service = new GtfsQueryGrpcService(repository);
+    private final MarkerSnapshot markers = new MarkerSnapshot(repository, Duration.ofSeconds(10));
+    private final GtfsQueryGrpcService service = new GtfsQueryGrpcService(repository, markers);
 
     @Test
-    void servesTheMarkerSnapshotFromTheShortCache() {
+    void servesTheMarkerSnapshotFromTheCache() {
         var first = call(service);
         var second = call(service);
 
         assertEquals(1, repository.calls, "a second poll within ten seconds must reuse the snapshot");
         assertEquals(1, first.getItemsCount());
         assertEquals("10", second.getItems(0).getRouteShortName());
-    }
-
-    @Test
-    void keepsTheLastSnapshotWhenARefreshFails() {
-        var uncached = new GtfsQueryGrpcService(repository, 0);
-        call(uncached);
-        repository.failing = true;
-
-        var reply = call(uncached);
-
-        assertEquals(1, reply.getItemsCount(), "a failed refresh must not blank the map");
-        assertEquals("10", reply.getItems(0).getRouteShortName());
-        assertTrue(repository.calls >= 2, "the second call did attempt a refresh");
     }
 
     @Test
@@ -93,13 +81,13 @@ class GtfsQueryGrpcServiceTest {
     }
 
     /** Counts queries; only the marker query is exercised by this test. */
-    private static final class CountingRepository extends GtfsQueryRepository {
+    static final class CountingRepository extends GtfsQueryRepository {
 
-        private int calls;
+        int calls;
 
-        private boolean failing;
+        boolean failing;
 
-        private CountingRepository() {
+        CountingRepository() {
             super(null);
         }
 
