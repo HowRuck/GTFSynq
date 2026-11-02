@@ -76,6 +76,10 @@ class TripMap extends HTMLElement {
       center: DEFAULT_CENTER,
       zoom: DEFAULT_ZOOM,
       attributionControl: { compact: true },
+      // The element owns the resize loop below. MapLibre's own tracker throttles at 50 ms and
+      // would resize the same container a second time, so a splitter drag would pay for two
+      // canvas reallocations per movement.
+      trackResize: false,
     });
     this.map = map;
     map.addControl(new NavigationControl({ showCompass: false }), 'top-right');
@@ -103,6 +107,9 @@ class TripMap extends HTMLElement {
       }
       map.resize();
       this.applyFit();
+      // resize() reallocates the drawing buffer, which clears the canvas. Without an immediate
+      // redraw the cleared frame can reach the screen during a splitter drag, which is the flash.
+      map.redraw();
     });
     this.resizeObserver.observe(this);
 

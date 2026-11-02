@@ -127,6 +127,10 @@ class LiveMap extends HTMLElement {
       center: DEFAULT_CENTER,
       zoom: DEFAULT_ZOOM,
       attributionControl: { compact: true },
+      // The element owns the resize loop below. MapLibre's own tracker throttles at 50 ms and
+      // would resize the same container a second time, so a splitter drag would pay for two
+      // canvas reallocations per movement.
+      trackResize: false,
     });
     this.map = map;
     map.addControl(new NavigationControl({ showCompass: false }), 'top-right');
@@ -170,6 +174,9 @@ class LiveMap extends HTMLElement {
       // that could not be applied yet (for example while the container was still 0x0) is completed
       // here. Refitting on every splitter tick made the map jump and flicker while dragging.
       this.applyFit();
+      // resize() reallocates the drawing buffer, which clears the canvas. Without an immediate
+      // redraw the cleared frame can reach the screen during a splitter drag, which is the flash.
+      map.redraw();
     });
     this.resizeObserver.observe(this);
 
