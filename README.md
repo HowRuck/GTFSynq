@@ -264,7 +264,8 @@ Behaviour shared by the tables:
   like the horizontal one between the map and the table, and remembers the width the
   user dragged it to. The pane has a small map at the top with the trip's path through its
   stops and a pin on the current stop, followed by a scrollable timeline of every
-  stop. Reached stops are green, the current stop carries a pin and a badge, upcoming
+  stop; a second draggable splitter divides those two, so the route can be made taller
+  at the cost of the stop list and the other way round. Reached stops are green, the current stop carries a pin and a badge, upcoming
   stops are muted, skipped stops are marked, and schedule-filled stops are labelled
   as such. Stop times and delays come from the merged static/live stop list, loaded
   off the UI thread so the session lock is never held while the backend answers.

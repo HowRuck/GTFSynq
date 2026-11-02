@@ -300,11 +300,20 @@ vaadin-grid::part(active-trip first-column-cell) {
 }
 
 .trip-detail-map {
-    flex: 0 0 auto;
-    height: clamp(10rem, 22vh, 16rem);
+    /* The map fills its pane of the map/timeline split; the pane is what the user resizes. */
+    height: 100%;
     border: 1px solid var(--vaadin-border-color);
     border-radius: var(--vaadin-radius-m);
     overflow: hidden;
+}
+
+.trip-detail-map-area,
+.trip-detail-timeline-area {
+    min-height: 0;
+}
+
+.trip-detail-no-position {
+    padding: 0.5rem 0;
 }
 
 .trip-detail-no-position,

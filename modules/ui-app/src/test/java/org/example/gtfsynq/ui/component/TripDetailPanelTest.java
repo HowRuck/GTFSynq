@@ -9,7 +9,9 @@ import com.google.protobuf.Timestamp;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
 import java.time.Instant;
+import java.util.ArrayDeque;
 import java.util.List;
+import java.util.NoSuchElementException;
 import org.example.gtfsynq.shared.protocol.query.StopTimeUpdate;
 import org.example.gtfsynq.shared.protocol.query.TripUpdate;
 import org.junit.jupiter.api.Test;
@@ -88,21 +90,30 @@ class TripDetailPanelTest {
             panel.showLoading(trip);
 
             assertTrue(child(panel, "trip-detail-loading").isVisible(), "the loading indicator fills the pane");
+            assertFalse(child(panel, "trip-detail-split").isVisible(), "the map/timeline split waits for the data");
             assertFalse(child(panel, "trip-detail-timeline").isVisible(), "the timeline waits for the stop times");
 
             panel.showTrip(trip, List.of(), NOW);
 
             assertFalse(child(panel, "trip-detail-loading").isVisible());
+            assertTrue(child(panel, "trip-detail-split").isVisible(), "the map and the timeline share the pane");
             assertTrue(child(panel, "trip-detail-timeline").isVisible());
         } finally {
             UI.setCurrent(null);
         }
     }
 
-    private static Component child(TripDetailPanel panel, String className) {
-        return panel.getChildren()
-                .filter(component -> component.hasClassName(className))
-                .findFirst()
-                .orElseThrow();
+    /** The first descendant with the class: the split now nests the timeline below the map. */
+    private static Component child(Component root, String className) {
+        var pending = new ArrayDeque<Component>();
+        pending.add(root);
+        while (!pending.isEmpty()) {
+            var current = pending.remove();
+            if (current.hasClassName(className)) {
+                return current;
+            }
+            current.getChildren().forEach(pending::add);
+        }
+        throw new NoSuchElementException(className);
     }
 }

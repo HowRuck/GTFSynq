@@ -20,6 +20,7 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.Scroller;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.progressbar.ProgressBar;
+import com.vaadin.flow.component.splitlayout.SplitLayout;
 import com.vaadin.flow.shared.Registration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -51,9 +52,12 @@ public class TripDetailPanel extends VerticalLayout {
 
     private final TripMap map = new TripMap();
     private final Div mapFrame = new Div(map);
+    private final Div mapArea = new Div();
     private final Span noPosition = new Span();
     private final VerticalLayout timeline = new VerticalLayout();
     private final Scroller scroller = new Scroller(timeline, Scroller.ScrollDirection.VERTICAL);
+    private final VerticalLayout timelineArea = new VerticalLayout();
+    private final SplitLayout split = new SplitLayout(mapArea, timelineArea);
     private final HorizontalLayout loading = new HorizontalLayout();
     private final Span error = new Span();
     private long renderedTripId = Long.MIN_VALUE;
@@ -98,6 +102,11 @@ public class TripDetailPanel extends VerticalLayout {
         noPosition.addClassName("trip-detail-no-position");
         noPosition.setText(getTranslation("live.detail.noPosition"));
 
+        mapArea.setSizeFull();
+        mapArea.setMinHeight("0");
+        mapArea.addClassName("trip-detail-map-area");
+        mapArea.add(mapFrame, noPosition);
+
         stopsHeading.setText(getTranslation("live.detail.stops"));
         var stopsTitle = new HorizontalLayout(stopsHeading, stopsCount);
         stopsTitle.setPadding(false);
@@ -128,10 +137,29 @@ public class TripDetailPanel extends VerticalLayout {
         error.addClassName("trip-detail-error");
         error.setVisible(false);
 
-        add(header, metadata, mapFrame, noPosition, stopsTitle, loading, error, scroller);
-        // Whichever of the two is visible fills the space below the header; the other is display:none.
+        // The map and the timeline share the pane below the header, with a draggable splitter
+        // between them - the same gesture as the overview split above, so the route can be made
+        // taller at the cost of the stop list and the other way round.
+        timelineArea.setPadding(false);
+        timelineArea.setSpacing(false);
+        timelineArea.setSizeFull();
+        timelineArea.setMinHeight("0");
+        timelineArea.addClassName("trip-detail-timeline-area");
+        timelineArea.add(stopsTitle, scroller);
+        timelineArea.setFlexGrow(1, scroller);
+
+        split.setOrientation(SplitLayout.Orientation.VERTICAL);
+        split.setSizeFull();
+        split.setMinHeight("0");
+        split.setSplitterPosition(40);
+        split.addClassName("trip-detail-split");
+        split.setVisible(false);
+
+        add(header, metadata, split, loading, error);
+        // The split fills the pane once there is a trip; the loading and error states stand in for
+        // it, so whichever of the three is visible takes the space below the header.
+        setFlexGrow(1, split);
         setFlexGrow(1, loading);
-        setFlexGrow(1, scroller);
         setVisible(false);
     }
 
@@ -148,6 +176,7 @@ public class TripDetailPanel extends VerticalLayout {
         stopsCount.setText("");
         stopsHeading.setVisible(false);
         error.setVisible(false);
+        split.setVisible(false);
         loading.setVisible(true);
     }
 
@@ -163,6 +192,7 @@ public class TripDetailPanel extends VerticalLayout {
         stopsHeading.setVisible(false);
         stopsCount.setText("");
         loading.setVisible(false);
+        split.setVisible(false);
         error.setText(getTranslation("live.detail.error", message));
         error.setVisible(true);
     }
@@ -177,6 +207,7 @@ public class TripDetailPanel extends VerticalLayout {
         updateHeader(withCurrentDelay(trip, stops));
         loading.setVisible(false);
         error.setVisible(false);
+        split.setVisible(true);
         stopsHeading.setVisible(true);
 
         var currentIndex = currentIndex(stops, now);
