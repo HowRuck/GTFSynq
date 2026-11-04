@@ -56,6 +56,8 @@ export abstract class BasemapElement extends HTMLElement {
   private customStyleUrl?: string;
   /** The current subject still has to be framed; applied once the container has a real size. */
   private fitPending = false;
+  /** Whether the view was framed at least once; containment skips only apply afterwards. */
+  private hasFitted = false;
 
   /** Positions ([lat, lon]) of the current subject, used to frame the view. */
   protected abstract subjectPositions(): [number, number][];
@@ -97,6 +99,7 @@ export abstract class BasemapElement extends HTMLElement {
     this.map?.remove();
     this.map = undefined;
     this.styleLoaded = false;
+    this.hasFitted = false;
   }
 
   /** Overrides the basemap style, for example to point at a self-hosted tile server. */
@@ -240,11 +243,29 @@ export abstract class BasemapElement extends HTMLElement {
     const options = this.fitOptions();
 
     if (positions.length === 1) {
-      map.jumpTo({ center: [positions[0][1], positions[0][0]], zoom: options.singleSubjectZoom });
+      const center: [number, number] = [positions[0][1], positions[0][0]];
+      // After the first framing, a poll that leaves the subject in view must not move the camera:
+      // every jumpTo is a camera move and a full re-render.
+      if (this.hasFitted && map.getBounds().contains(center)) {
+        return;
+      }
+      this.hasFitted = true;
+      map.jumpTo({ center, zoom: options.singleSubjectZoom });
       return;
     }
+
     const bounds = new LngLatBounds();
     positions.forEach((position) => bounds.extend([position[1], position[0]]));
+
+    // While following, every changed poll re-fits even when the current view already contains all
+    // markers. Skip the fit then: each fitBounds is a camera move and a full re-render. The corner
+    // check fails for bounds crossing the antimeridian, which then simply fits as before.
+    const view = map.getBounds();
+    if (this.hasFitted && view.contains(bounds.getSouthWest()) && view.contains(bounds.getNorthEast())) {
+      return;
+    }
+
+    this.hasFitted = true;
     map.fitBounds(bounds, { padding: options.padding, maxZoom: options.maxZoom, duration: 0 });
   }
 }
