@@ -1,14 +1,7 @@
-import { LngLatBounds, Map as MapLibreMap, NavigationControl, Popup } from 'maplibre-gl';
-import type { GeoJSONSource } from 'maplibre-gl';
-import {
-  BASEMAP_SOURCE_IDS,
-  FALLBACK_AFTER_ERRORS,
-  STYLE_LOAD_TIMEOUT_MS,
-  pointCoordinates,
-  popupOffset,
-  rasterFallbackStyle,
-  styleFor,
-} from './map-basemap';
+import { Map as MapLibreMap, Popup } from 'maplibre-gl';
+import type { GeoJSONSource, PointLike } from 'maplibre-gl';
+import { BasemapElement, parseJsonArray, type FitOptions } from './basemap-element';
+import { pointCoordinates, popupOffset } from './map-basemap';
 
 /**
  * One trip position as a compact tuple:
@@ -29,6 +22,17 @@ interface MarkerProperties {
   tripUpdateId: string;
 }
 
+interface MarkerFeature {
+  type: 'Feature';
+  geometry: { type: 'Point'; coordinates: [number, number] };
+  properties: MarkerProperties;
+}
+
+interface MarkerFeatureCollection {
+  type: 'FeatureCollection';
+  features: MarkerFeature[];
+}
+
 const SOURCE_ID = 'live-trips';
 const CLUSTER_LAYER = 'live-trips-clusters';
 const CLUSTER_COUNT_LAYER = 'live-trips-cluster-count';
@@ -37,7 +41,7 @@ const POINT_LAYER = 'live-trips-points';
 /** Optional raster overlay blended over the vector basemap (e.g. Thunderforest Transport). */
 const TRANSPORT_SOURCE = 'transport-overlay';
 const TRANSPORT_LAYER = 'transport-overlay';
-const TRANSPORT_ATTRIBUTION = '\u00a9 OpenStreetMap contributors, Thunderforest';
+const TRANSPORT_ATTRIBUTION = '© OpenStreetMap contributors, Thunderforest';
 
 /**
  * Map-space tuning, in CSS-free map units: pixels below the cluster radius are merged. Clustering
@@ -60,11 +64,24 @@ const COLOUR_UNKNOWN = '#9ca3af';
 const COLOUR_CLUSTER = '#ff8904';
 const COLOUR_HALO = 'rgba(255, 255, 255, 0.9)';
 
-const DEFAULT_CENTER: [number, number] = [10.45, 51.16];
-const DEFAULT_ZOOM = 5;
-
 /** Longest popup label shown before it is elided; matches the table's id limit. */
 const MAX_POPUP_LABEL_LENGTH = 32;
+
+function isLiveMapMarker(value: unknown): value is LiveMapMarker {
+  if (!Array.isArray(value) || value.length !== 7) {
+    return false;
+  }
+  const [lat, lon, label, detail, delay, reachedMinutesAgo, tripUpdateId] = value;
+  return (
+    typeof lat === 'number' &&
+    typeof lon === 'number' &&
+    typeof label === 'string' &&
+    typeof detail === 'string' &&
+    (delay === null || typeof delay === 'number') &&
+    (reachedMinutesAgo === null || typeof reachedMinutesAgo === 'number') &&
+    typeof tripUpdateId === 'string'
+  );
+}
 
 function elideLabel(value: string): string {
   return value.length <= MAX_POPUP_LABEL_LENGTH
@@ -88,6 +105,20 @@ function delayClass(delay: number | null): MarkerProperties['delayClass'] {
   return 'on-time';
 }
 
+function markerFeature(marker: LiveMapMarker): MarkerFeature {
+  return {
+    type: 'Feature',
+    geometry: { type: 'Point', coordinates: [marker[1], marker[0]] },
+    properties: {
+      label: marker[2],
+      detail: marker[3],
+      delayClass: delayClass(marker[4]),
+      reachedMinutesAgo: marker[5],
+      tripUpdateId: marker[6],
+    },
+  };
+}
+
 /**
  * MapLibre wrapper for the live updates view.
  *
@@ -98,129 +129,51 @@ function delayClass(delay: number | null): MarkerProperties['delayClass'] {
  * markers, so a city full of trips stays one readable cluster instead of overlapping pins; the map
  * itself is created once and a poll only replaces the source data.
  */
-class LiveMap extends HTMLElement {
-  private map?: MapLibreMap;
+class LiveMap extends BasemapElement {
   private markerData: LiveMapMarker[] = [];
-  private resizeObserver?: ResizeObserver;
-  private themeObserver?: MutationObserver;
   private followMarkers = true;
-  private customStyleUrl?: string;
-  private basemapFailures = 0;
-  private usingFallback = false;
-  private styleLoaded = false;
-  private fallbackTimer?: number;
   private markersAt = Date.now();
-  /** The current markers still have to be framed; applied once the container has a real size. */
-  private fitPending = false;
   private reachedJustNowText = 'Reached just now';
   private reachedMinutesFormat = 'Reached {0} min ago';
   private openTripLabel = 'Open trip';
   private transportUrl?: string;
   private transportOpacity = 0.55;
 
-  connectedCallback(): void {
-    if (this.map) {
-      return;
-    }
-    const map = new MapLibreMap({
-      container: this,
-      style: this.currentStyle(),
-      center: DEFAULT_CENTER,
-      zoom: DEFAULT_ZOOM,
-      attributionControl: { compact: true },
-      // The element owns the resize loop below. MapLibre's own tracker throttles at 50 ms and
-      // would resize the same container a second time, so a splitter drag would pay for two
-      // canvas reallocations per movement.
-      trackResize: false,
-    });
-    this.map = map;
-    map.addControl(new NavigationControl({ showCompass: false }), 'top-right');
+  protected subjectPositions(): [number, number][] {
+    return this.positionedMarkers().map((marker): [number, number] => [marker[0], marker[1]]);
+  }
 
+  protected fitOptions(): FitOptions {
+    return { singleSubjectZoom: 12, padding: 48, maxZoom: 12 };
+  }
+
+  protected shouldFollowSubject(): boolean {
+    return this.followMarkers;
+  }
+
+  protected onMapCreated(map: MapLibreMap): void {
     // Stop following the markers once the user pans or zooms; a poll must not yank the view back.
     map.on('dragstart', () => {
       this.followMarkers = false;
     });
+
     map.on('zoomstart', (event) => {
       if ((event as { originalEvent?: Event }).originalEvent) {
         this.followMarkers = false;
       }
     });
 
-    // Fires on the first load and again after every setStyle, so the source and layers survive a
-    // light/dark switch.
-    map.on('style.load', () => {
-      this.styleLoaded = true;
-      window.clearTimeout(this.fallbackTimer);
-      this.updateSource();
-    });
-    // A basemap that cannot be fetched leaves an empty map with no explanation; log the failure and
-    // switch to raster tiles instead of staying blank.
-    map.on('error', (event) => this.onMapError(event));
-    this.fallbackTimer = window.setTimeout(() => {
-      if (!this.styleLoaded) {
-        this.useFallback('the basemap style did not load in time');
-      }
-    }, STYLE_LOAD_TIMEOUT_MS);
-    this.onClick();
-    this.onHover();
-
-    this.resizeObserver = new ResizeObserver(() => {
-      // A splitter can report a zero-sized step mid-drag; resizing the canvas to 0x0 and back is
-      // what makes it flash, and the next non-zero callback sizes it correctly anyway.
-      if (this.clientWidth === 0 || this.clientHeight === 0) {
-        return;
-      }
-      map.resize();
-      // Resizing changes the viewport, not the subject: keep the user's current view. Only a fit
-      // that could not be applied yet (for example while the container was still 0x0) is completed
-      // here. Refitting on every splitter tick made the map jump and flicker while dragging.
-      this.applyFit();
-      // resize() reallocates the drawing buffer, which clears the canvas. Without an immediate
-      // redraw the cleared frame can reach the screen during a splitter drag, which is the flash.
-      map.redraw();
-    });
-    this.resizeObserver.observe(this);
-
-    // Vaadin flips the `theme` attribute on <html> when the user switches colour scheme.
-    this.themeObserver = new MutationObserver(() => {
-      if (!this.usingFallback) {
-        this.styleLoaded = false;
-        map.setStyle(this.currentStyle());
-      }
-    });
-    this.themeObserver.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['theme'],
-    });
+    map.on('click', (event) => this.onMapClick(map, event.point));
+    this.registerHoverCursor(map);
   }
 
-  disconnectedCallback(): void {
-    window.clearTimeout(this.fallbackTimer);
-    this.resizeObserver?.disconnect();
-    this.resizeObserver = undefined;
-    this.themeObserver?.disconnect();
-    this.themeObserver = undefined;
-    this.map?.remove();
-    this.map = undefined;
-    this.styleLoaded = false;
-  }
-
-  /** Overrides the basemap style, for example to point at a self-hosted tile server. */
-  set styleUrl(url: string) {
-    this.customStyleUrl = url || undefined;
-    if (this.map && !this.usingFallback) {
-      this.styleLoaded = false;
-      this.map.setStyle(this.currentStyle());
-    }
+  protected onStyleLoaded(): void {
+    this.updateSource();
   }
 
   /** Replaces the markers; assigned by Flow as a JSON string. */
   set markers(json: string) {
-    try {
-      this.markerData = JSON.parse(json || '[]') as LiveMapMarker[];
-    } catch {
-      this.markerData = [];
-    }
+    this.markerData = parseJsonArray(json, isLiveMapMarker, 'live-map');
     // The popup ages the "reached N min ago" text from the moment this snapshot arrived.
     this.markersAt = Date.now();
     this.updateSource();
@@ -256,30 +209,18 @@ class LiveMap extends HTMLElement {
     }
   }
 
-  private currentStyle(): string {
-    return styleFor(this.customStyleUrl);
-  }
-
-  private onMapError(event: unknown): void {
-    const failure = event as { error?: Error; sourceId?: string };
-    console.warn('[live-map]', failure.error ?? event);
-    if (failure.sourceId && BASEMAP_SOURCE_IDS.includes(failure.sourceId)) {
-      this.basemapFailures += 1;
-      if (this.basemapFailures >= FALLBACK_AFTER_ERRORS) {
-        this.useFallback('the basemap tiles failed to load');
-      }
-    }
-  }
-
-  private useFallback(reason: string): void {
+  private updateSource(): void {
     const map = this.map;
-    if (!map || this.usingFallback) {
+    // Our own flag, not map.isStyleLoaded(): during the style.load event the map can still report
+    // an unloaded style, which would skip installing the sources for good on a first render.
+    if (!map || !this.styleLoaded) {
       return;
     }
-    this.usingFallback = true;
-    this.styleLoaded = false;
-    console.warn(`[live-map] ${reason}; switching to raster OpenStreetMap tiles`);
-    map.setStyle(rasterFallbackStyle());
+    this.syncTransportOverlay();
+    this.installLayers();
+
+    (map.getSource(SOURCE_ID) as GeoJSONSource | undefined)?.setData(this.featureCollection());
+    this.requestFit();
   }
 
   private installLayers(): void {
@@ -287,15 +228,26 @@ class LiveMap extends HTMLElement {
     if (!map) {
       return;
     }
-    if (!map.getSource(SOURCE_ID)) {
-      map.addSource(SOURCE_ID, {
-        type: 'geojson',
-        data: this.featureCollection(),
-        cluster: true,
-        clusterMaxZoom: CLUSTER_MAX_ZOOM,
-        clusterRadius: CLUSTER_RADIUS,
-      });
+    this.ensureMarkerSource(map);
+    this.installClusterLayers(map);
+
+    this.installPointLayer(map);
+  }
+
+  private ensureMarkerSource(map: MapLibreMap): void {
+    if (map.getSource(SOURCE_ID)) {
+      return;
     }
+    map.addSource(SOURCE_ID, {
+      type: 'geojson',
+      data: this.featureCollection(),
+      cluster: true,
+      clusterMaxZoom: CLUSTER_MAX_ZOOM,
+      clusterRadius: CLUSTER_RADIUS,
+    });
+  }
+
+  private installClusterLayers(map: MapLibreMap): void {
     if (!map.getLayer(CLUSTER_LAYER)) {
       map.addLayer({
         id: CLUSTER_LAYER,
@@ -326,46 +278,36 @@ class LiveMap extends HTMLElement {
         paint: { 'text-color': '#ffffff' },
       });
     }
-    if (!map.getLayer(POINT_LAYER)) {
-      map.addLayer({
-        id: POINT_LAYER,
-        type: 'circle',
-        source: SOURCE_ID,
-        filter: ['!', ['has', 'point_count']],
-        paint: {
-          'circle-color': [
-            'match',
-            ['get', 'delayClass'],
-            'early',
-            COLOUR_EARLY,
-            'on-time',
-            COLOUR_ON_TIME,
-            'late',
-            COLOUR_LATE,
-            'severe',
-            COLOUR_SEVERE,
-            COLOUR_UNKNOWN,
-          ],
-          'circle-radius': 6,
-          'circle-stroke-width': 2,
-          'circle-stroke-color': COLOUR_HALO,
-        },
-      });
-    }
   }
 
-  private updateSource(): void {
-    const map = this.map;
-    // Our own flag, not map.isStyleLoaded(): during the style.load event the map can still report
-    // an unloaded style, which would skip installing the sources for good on a first render.
-    if (!map || !this.styleLoaded) {
+  private installPointLayer(map: MapLibreMap): void {
+    if (map.getLayer(POINT_LAYER)) {
       return;
     }
-    this.syncTransportOverlay();
-    this.installLayers();
-    const source = map.getSource(SOURCE_ID) as GeoJSONSource | undefined;
-    source?.setData(this.featureCollection());
-    this.fitMarkers();
+    map.addLayer({
+      id: POINT_LAYER,
+      type: 'circle',
+      source: SOURCE_ID,
+      filter: ['!', ['has', 'point_count']],
+      paint: {
+        'circle-color': [
+          'match',
+          ['get', 'delayClass'],
+          'early',
+          COLOUR_EARLY,
+          'on-time',
+          COLOUR_ON_TIME,
+          'late',
+          COLOUR_LATE,
+          'severe',
+          COLOUR_SEVERE,
+          COLOUR_UNKNOWN,
+        ],
+        'circle-radius': 6,
+        'circle-stroke-width': 2,
+        'circle-stroke-color': COLOUR_HALO,
+      },
+    });
   }
 
   /**
@@ -377,24 +319,35 @@ class LiveMap extends HTMLElement {
     if (!map || !this.styleLoaded) {
       return;
     }
-    if (!this.transportUrl) {
-      if (map.getLayer(TRANSPORT_LAYER)) {
-        map.removeLayer(TRANSPORT_LAYER);
-      }
-      if (map.getSource(TRANSPORT_SOURCE)) {
-        map.removeSource(TRANSPORT_SOURCE);
-      }
+    const url = this.transportUrl;
+    if (!url) {
+      this.removeTransportOverlay(map);
       return;
     }
+
+    this.addTransportOverlay(map, url);
+  }
+
+  private removeTransportOverlay(map: MapLibreMap): void {
+    if (map.getLayer(TRANSPORT_LAYER)) {
+      map.removeLayer(TRANSPORT_LAYER);
+    }
+    if (map.getSource(TRANSPORT_SOURCE)) {
+      map.removeSource(TRANSPORT_SOURCE);
+    }
+  }
+
+  private addTransportOverlay(map: MapLibreMap, url: string): void {
     if (!map.getSource(TRANSPORT_SOURCE)) {
       map.addSource(TRANSPORT_SOURCE, {
         type: 'raster',
-        tiles: [this.transportUrl],
+        tiles: [url],
         tileSize: 256,
         maxzoom: 19,
         attribution: TRANSPORT_ATTRIBUTION,
       });
     }
+
     if (!map.getLayer(TRANSPORT_LAYER)) {
       const before = map.getLayer(CLUSTER_LAYER) ? CLUSTER_LAYER : undefined;
       map.addLayer(
@@ -406,84 +359,75 @@ class LiveMap extends HTMLElement {
         },
         before,
       );
-    } else {
-      map.setPaintProperty(TRANSPORT_LAYER, 'raster-opacity', this.transportOpacity);
+      return;
     }
+    map.setPaintProperty(TRANSPORT_LAYER, 'raster-opacity', this.transportOpacity);
   }
 
-  private featureCollection(): {
-    type: 'FeatureCollection';
-    features: Array<{
-      type: 'Feature';
-      geometry: { type: 'Point'; coordinates: [number, number] };
-      properties: MarkerProperties;
-    }>;
-  } {
+  private featureCollection(): MarkerFeatureCollection {
     return {
       type: 'FeatureCollection',
-      features: this.markerData
-        .filter((marker) => Number.isFinite(marker[0]) && Number.isFinite(marker[1]))
-        .map((marker) => ({
-          type: 'Feature',
-          geometry: { type: 'Point', coordinates: [marker[1], marker[0]] },
-          properties: {
-            label: marker[2],
-            detail: marker[3],
-            delayClass: delayClass(marker[4]),
-            reachedMinutesAgo: marker[5],
-            tripUpdateId: marker[6],
-          },
-        })),
+      features: this.positionedMarkers().map(markerFeature),
     };
   }
 
+  private positionedMarkers(): LiveMapMarker[] {
+    return this.markerData.filter(
+      (marker) => Number.isFinite(marker[0]) && Number.isFinite(marker[1]),
+    );
+  }
+
   /** Expands clusters on click and shows the trip details of a single point. */
-  private onClick(): void {
-    const map = this.map;
-    if (!map) {
+  private onMapClick(map: MapLibreMap, point: PointLike): void {
+    if (this.expandCluster(map, point)) {
       return;
     }
-    map.on('click', (event) => {
-      if (map.getLayer(CLUSTER_LAYER)) {
-        const cluster = map.queryRenderedFeatures(event.point, { layers: [CLUSTER_LAYER] })[0];
-        if (cluster) {
-          const clusterId = Number(cluster.properties?.cluster_id);
-          const coordinates = pointCoordinates(cluster.geometry);
-          const source = map.getSource(SOURCE_ID) as GeoJSONSource | undefined;
-          if (coordinates) {
-            source
-              ?.getClusterExpansionZoom(clusterId)
-              .then((zoom) => map.easeTo({ center: coordinates, zoom }))
-              .catch(() => undefined);
-          }
-          return;
-        }
-      }
-      if (!map.getLayer(POINT_LAYER)) {
-        return;
-      }
-      const point = map.queryRenderedFeatures(event.point, { layers: [POINT_LAYER] })[0];
-      if (!point) {
-        return;
-      }
-      const properties = point.properties as MarkerProperties;
-      const coordinates = pointCoordinates(point.geometry);
-      if (!coordinates) {
-        return;
-      }
-      new Popup({ offset: popupOffset(), closeButton: false })
-        .setLngLat(coordinates)
-        .setDOMContent(this.popupContent(properties))
-        .addTo(map);
-    });
+    this.openPointPopup(map, point);
+  }
+
+  /** Expands a cluster when the click hit one; returns whether it did. */
+  private expandCluster(map: MapLibreMap, point: PointLike): boolean {
+    if (!map.getLayer(CLUSTER_LAYER)) {
+      return false;
+    }
+    const cluster = map.queryRenderedFeatures(point, { layers: [CLUSTER_LAYER] })[0];
+    if (!cluster) {
+      return false;
+    }
+    const clusterId = Number(cluster.properties?.cluster_id);
+    const coordinates = pointCoordinates(cluster.geometry);
+    const source = map.getSource(SOURCE_ID) as GeoJSONSource | undefined;
+
+    if (coordinates) {
+      source
+        ?.getClusterExpansionZoom(clusterId)
+        .then((zoom) => map.easeTo({ center: coordinates, zoom }))
+        .catch(() => undefined);
+    }
+    return true;
+  }
+
+  private openPointPopup(map: MapLibreMap, point: PointLike): void {
+    if (!map.getLayer(POINT_LAYER)) {
+      return;
+    }
+    const feature = map.queryRenderedFeatures(point, { layers: [POINT_LAYER] })[0];
+    if (!feature) {
+      return;
+    }
+    const coordinates = pointCoordinates(feature.geometry);
+    if (!coordinates) {
+      return;
+    }
+    const properties = feature.properties as MarkerProperties;
+    new Popup({ offset: popupOffset(), closeButton: false })
+      .setLngLat(coordinates)
+      .setDOMContent(this.popupContent(properties))
+      .addTo(map);
   }
 
   /** Turns the pointer into a hand over anything clickable. */
-  private onHover(): void {
-    const map = this.map;
-    if (!map) {
-      return;
-    }
+  private registerHoverCursor(map: MapLibreMap): void {
     for (const layer of [CLUSTER_LAYER, POINT_LAYER]) {
       map.on('mouseenter', layer, () => {
         map.getCanvas().style.cursor = 'pointer';
@@ -497,87 +441,68 @@ class LiveMap extends HTMLElement {
   private popupContent(properties: MarkerProperties): HTMLElement {
     const wrapper = document.createElement('div');
     wrapper.className = 'live-map-popup';
-    const title = document.createElement('strong');
-    title.textContent = elideLabel(properties.label);
-    // The elided id stays readable in full on hover; the popup must not grow to fit it.
-    title.title = properties.label;
-    wrapper.appendChild(title);
+    wrapper.appendChild(this.popupTitle(properties.label));
+
     if (properties.detail) {
-      const detail = document.createElement('div');
-      detail.textContent = properties.detail;
-      wrapper.appendChild(detail);
+      wrapper.appendChild(this.popupDetail(properties.detail));
     }
+
     if (typeof properties.reachedMinutesAgo === 'number') {
-      const minutes =
-        properties.reachedMinutesAgo + Math.floor((Date.now() - this.markersAt) / 60_000);
-      const reached = document.createElement('div');
-      reached.className = 'live-map-popup-reached';
-      reached.textContent =
-        minutes <= 0
-          ? this.reachedJustNowText
-          : this.reachedMinutesFormat.replace('{0}', String(minutes));
-      wrapper.appendChild(reached);
+      wrapper.appendChild(this.popupReached(properties.reachedMinutesAgo));
     }
+
     if (properties.tripUpdateId && properties.tripUpdateId !== '0') {
-      const open = document.createElement('button');
-      open.type = 'button';
-      open.className = 'live-map-popup-open';
-      open.textContent = this.openTripLabel;
-      open.addEventListener('click', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        this.dispatchEvent(
-          new CustomEvent('trip-open', {
-            detail: properties.tripUpdateId,
-            bubbles: true,
-            composed: true,
-          }),
-        );
-      });
-      wrapper.appendChild(open);
+      wrapper.appendChild(this.popupOpenButton(properties.tripUpdateId));
     }
+
     return wrapper;
   }
 
-  /**
-   * Requests a fit to the current markers while the user has not taken over the map.
-   *
-   * <p>Safe to call before the map is laid out: a container without a usable size leaves the fit
-   * pending, and the ResizeObserver applies it once the map has real space. Unlike a fit on every
-   * resize, this keeps a splitter drag from re-zooming the map continuously.
-   */
-  private fitMarkers(): void {
-    this.fitPending = this.positionedMarkers().length > 0;
-    this.applyFit();
+  private popupTitle(label: string): HTMLElement {
+    const title = document.createElement('strong');
+    title.textContent = elideLabel(label);
+    // The elided id stays readable in full on hover; the popup must not grow to fit it.
+    title.title = label;
+    return title;
   }
 
-  private applyFit(): void {
-    const map = this.map;
-    if (!map || !this.styleLoaded || !this.followMarkers || !this.fitPending) {
-      return;
-    }
-    if (this.clientWidth === 0 || this.clientHeight === 0) {
-      return;
-    }
-    const positioned = this.positionedMarkers();
-    if (positioned.length === 0) {
-      this.fitPending = false;
-      return;
-    }
-    this.fitPending = false;
-    if (positioned.length === 1) {
-      map.jumpTo({ center: [positioned[0][1], positioned[0][0]], zoom: 12 });
-      return;
-    }
-    const bounds = new LngLatBounds();
-    positioned.forEach((marker) => bounds.extend([marker[1], marker[0]]));
-    map.fitBounds(bounds, { padding: 48, maxZoom: 12, duration: 0 });
+  private popupDetail(detail: string): HTMLElement {
+    const element = document.createElement('div');
+    element.textContent = detail;
+    return element;
   }
 
-  private positionedMarkers(): LiveMapMarker[] {
-    return this.markerData.filter(
-      (marker) => Number.isFinite(marker[0]) && Number.isFinite(marker[1]),
-    );
+  private popupReached(reachedMinutesAgo: number): HTMLElement {
+    // The popup ages the "reached N min ago" text from the moment this snapshot arrived.
+    const minutes = reachedMinutesAgo + Math.floor((Date.now() - this.markersAt) / 60_000);
+
+    const reached = document.createElement('div');
+    reached.className = 'live-map-popup-reached';
+    reached.textContent =
+      minutes <= 0
+        ? this.reachedJustNowText
+        : this.reachedMinutesFormat.replace('{0}', String(minutes));
+    return reached;
+  }
+
+  private popupOpenButton(tripUpdateId: string): HTMLElement {
+    const open = document.createElement('button');
+    open.type = 'button';
+    open.className = 'live-map-popup-open';
+    open.textContent = this.openTripLabel;
+
+    open.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      this.dispatchEvent(
+        new CustomEvent('trip-open', {
+          detail: tripUpdateId,
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    });
+    return open;
   }
 }
 
