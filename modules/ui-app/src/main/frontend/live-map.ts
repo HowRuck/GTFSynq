@@ -1,6 +1,6 @@
 import { Map as MapLibreMap, Popup } from 'maplibre-gl';
 import type { GeoJSONSource, PointLike } from 'maplibre-gl';
-import { BasemapElement, parseJsonArray, type FitOptions } from './basemap-element';
+import { BasemapElement, parseJsonPayload, type FitOptions } from './basemap-element';
 import { pointCoordinates, popupOffset } from './map-basemap';
 
 /**
@@ -105,18 +105,41 @@ function delayClass(delay: number | null): MarkerProperties['delayClass'] {
   return 'on-time';
 }
 
-function markerFeature(marker: LiveMapMarker): MarkerFeature {
-  return {
-    type: 'Feature',
-    geometry: { type: 'Point', coordinates: [marker[1], marker[0]] },
-    properties: {
-      label: marker[2],
-      detail: marker[3],
-      delayClass: delayClass(marker[4]),
-      reachedMinutesAgo: marker[5],
-      tripUpdateId: marker[6],
-    },
-  };
+/**
+ * Parses the pushed marker array and builds the GeoJSON features in a single pass over the parsed
+ * entries. At tens of thousands of trips a separate guard pass plus a feature-build pass would
+ * double the main-thread work per poll, so the guard, the finite-coordinate check and the feature
+ * build all happen in this one loop. Entries that fail any of them are skipped.
+ */
+function parseMarkerFeatures(json: string): MarkerFeature[] {
+  const parsed = parseJsonPayload(json, 'live-map');
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+
+  const features: MarkerFeature[] = [];
+  for (const entry of parsed) {
+    if (!isLiveMapMarker(entry)) {
+      continue;
+    }
+    const [lat, lon, label, detail, delay, reachedMinutesAgo, tripUpdateId] = entry;
+    // MapLibre cannot render non-finite coordinates; skip them here instead of in a second pass.
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+      continue;
+    }
+    features.push({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [lon, lat] },
+      properties: {
+        label,
+        detail,
+        delayClass: delayClass(delay),
+        reachedMinutesAgo,
+        tripUpdateId,
+      },
+    });
+  }
+  return features;
 }
 
 /**
@@ -130,7 +153,7 @@ function markerFeature(marker: LiveMapMarker): MarkerFeature {
  * itself is created once and a poll only replaces the source data.
  */
 class LiveMap extends BasemapElement {
-  private markerData: LiveMapMarker[] = [];
+  private markerFeatures: MarkerFeature[] = [];
   private followMarkers = true;
   private markersAt = Date.now();
   private reachedJustNowText = 'Reached just now';
@@ -140,7 +163,10 @@ class LiveMap extends BasemapElement {
   private transportOpacity = 0.55;
 
   protected subjectPositions(): [number, number][] {
-    return this.positionedMarkers().map((marker): [number, number] => [marker[0], marker[1]]);
+    return this.markerFeatures.map((feature): [number, number] => {
+      const [lon, lat] = feature.geometry.coordinates;
+      return [lat, lon];
+    });
   }
 
   protected fitOptions(): FitOptions {
@@ -173,7 +199,7 @@ class LiveMap extends BasemapElement {
 
   /** Replaces the markers; assigned by Flow as a JSON string. */
   set markers(json: string) {
-    this.markerData = parseJsonArray(json, isLiveMapMarker, 'live-map');
+    this.markerFeatures = parseMarkerFeatures(json);
     // The popup ages the "reached N min ago" text from the moment this snapshot arrived.
     this.markersAt = Date.now();
     this.updateSource();
@@ -367,14 +393,8 @@ class LiveMap extends BasemapElement {
   private featureCollection(): MarkerFeatureCollection {
     return {
       type: 'FeatureCollection',
-      features: this.positionedMarkers().map(markerFeature),
+      features: this.markerFeatures,
     };
-  }
-
-  private positionedMarkers(): LiveMapMarker[] {
-    return this.markerData.filter(
-      (marker) => Number.isFinite(marker[0]) && Number.isFinite(marker[1]),
-    );
   }
 
   /** Expands clusters on click and shows the trip details of a single point. */

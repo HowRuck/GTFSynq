@@ -19,25 +19,32 @@ export interface FitOptions {
 }
 
 /**
- * Parses a JSON array pushed by Flow, keeping only entries the guard accepts. JSON.parse returns
- * any, so the payload is narrowed through the guard instead of a cast; a malformed payload is
- * logged and treated as empty rather than silently dropped.
+ * Parses a JSON payload pushed by Flow. JSON.parse returns any, so callers narrow the result
+ * through a guard instead of a cast; a malformed payload is logged and treated as empty rather
+ * than silently dropped.
+ */
+export function parseJsonPayload(json: string, elementName: string): unknown {
+  try {
+    return JSON.parse(json || '[]');
+  } catch (error) {
+    console.warn(`[${elementName}] ignoring malformed payload`, error);
+    return [];
+  }
+}
+
+/**
+ * Parses a JSON array pushed by Flow, keeping only entries the guard accepts.
  */
 export function parseJsonArray<T>(
   json: string,
   isEntry: (value: unknown) => value is T,
   elementName: string,
 ): T[] {
-  try {
-    const parsed: unknown = JSON.parse(json || '[]');
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-    return parsed.filter(isEntry);
-  } catch (error) {
-    console.warn(`[${elementName}] ignoring malformed payload`, error);
+  const parsed = parseJsonPayload(json, elementName);
+  if (!Array.isArray(parsed)) {
     return [];
   }
+  return parsed.filter(isEntry);
 }
 
 /**
