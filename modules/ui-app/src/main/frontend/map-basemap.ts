@@ -1,4 +1,5 @@
 import { setWorkerUrl } from 'maplibre-gl';
+import type { Map as MapLibreMap, MapGeoJSONFeature } from 'maplibre-gl';
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 
 // MapLibre derives its worker URL from its own module location. Once the library is bundled that
@@ -29,11 +30,17 @@ export function styleFor(customStyleUrl?: string): string {
 }
 
 /**
+ * The object form of a MapLibre style, derived from setStyle's own signature so the fallback style
+ * is checked against exactly what the map accepts.
+ */
+type StyleObject = Exclude<Parameters<MapLibreMap['setStyle']>[0], string | null>;
+
+/**
  * The raster fallback used when the vector basemap cannot be loaded: one source, no glyphs, no
  * sprite, so it renders even where the OpenFreeMap CDN is unreachable. OpenStreetMap's tile usage
  * policy allows this light use, and the attribution is embedded in the style.
  */
-export function rasterFallbackStyle(): Record<string, unknown> {
+export function rasterFallbackStyle(): StyleObject {
   return {
     version: 8,
     sources: {
@@ -51,6 +58,19 @@ export function rasterFallbackStyle(): Record<string, unknown> {
       { id: 'osm', type: 'raster', source: 'osm' },
     ],
   };
+}
+
+/**
+ * Narrows a queried feature's geometry to a [lng, lat] pair. queryRenderedFeatures returns the
+ * generic Geometry union, and only a Point carries coordinates.
+ */
+export function pointCoordinates(
+  geometry: MapGeoJSONFeature['geometry'],
+): [number, number] | undefined {
+  if (geometry.type !== 'Point' || geometry.coordinates.length < 2) {
+    return undefined;
+  }
+  return [geometry.coordinates[0], geometry.coordinates[1]];
 }
 
 /** Popup offset in the map's pixel space, derived from the root font size rather than hard-coded. */

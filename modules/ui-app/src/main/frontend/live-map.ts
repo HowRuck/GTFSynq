@@ -4,6 +4,7 @@ import {
   BASEMAP_SOURCE_IDS,
   FALLBACK_AFTER_ERRORS,
   STYLE_LOAD_TIMEOUT_MS,
+  pointCoordinates,
   popupOffset,
   rasterFallbackStyle,
   styleFor,
@@ -278,7 +279,7 @@ class LiveMap extends HTMLElement {
     this.usingFallback = true;
     this.styleLoaded = false;
     console.warn(`[live-map] ${reason}; switching to raster OpenStreetMap tiles`);
-    map.setStyle(rasterFallbackStyle() as never);
+    map.setStyle(rasterFallbackStyle());
   }
 
   private installLayers(): void {
@@ -446,14 +447,15 @@ class LiveMap extends HTMLElement {
       if (map.getLayer(CLUSTER_LAYER)) {
         const cluster = map.queryRenderedFeatures(event.point, { layers: [CLUSTER_LAYER] })[0];
         if (cluster) {
-          const clusterId = cluster.properties?.cluster_id as number;
-          const coordinates = (cluster.geometry as unknown as { coordinates: [number, number] })
-            .coordinates;
+          const clusterId = Number(cluster.properties?.cluster_id);
+          const coordinates = pointCoordinates(cluster.geometry);
           const source = map.getSource(SOURCE_ID) as GeoJSONSource | undefined;
-          source
-            ?.getClusterExpansionZoom(clusterId)
-            .then((zoom) => map.easeTo({ center: coordinates, zoom }))
-            .catch(() => undefined);
+          if (coordinates) {
+            source
+              ?.getClusterExpansionZoom(clusterId)
+              .then((zoom) => map.easeTo({ center: coordinates, zoom }))
+              .catch(() => undefined);
+          }
           return;
         }
       }
@@ -465,8 +467,12 @@ class LiveMap extends HTMLElement {
         return;
       }
       const properties = point.properties as MarkerProperties;
+      const coordinates = pointCoordinates(point.geometry);
+      if (!coordinates) {
+        return;
+      }
       new Popup({ offset: popupOffset(), closeButton: false })
-        .setLngLat((point.geometry as unknown as { coordinates: [number, number] }).coordinates)
+        .setLngLat(coordinates)
         .setDOMContent(this.popupContent(properties))
         .addTo(map);
     });

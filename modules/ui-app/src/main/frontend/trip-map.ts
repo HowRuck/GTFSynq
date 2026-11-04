@@ -5,6 +5,7 @@ import {
   BASEMAP_SOURCE_IDS,
   FALLBACK_AFTER_ERRORS,
   STYLE_LOAD_TIMEOUT_MS,
+  pointCoordinates,
   popupOffset,
   rasterFallbackStyle,
   styleFor,
@@ -167,7 +168,7 @@ class TripMap extends HTMLElement {
     this.usingFallback = true;
     this.styleLoaded = false;
     console.warn(`[trip-map] ${reason}; switching to raster OpenStreetMap tiles`);
-    map.setStyle(rasterFallbackStyle() as never);
+    map.setStyle(rasterFallbackStyle());
   }
 
   private positionedStops(): TripStop[] {
@@ -373,8 +374,12 @@ class TripMap extends HTMLElement {
       const title = document.createElement('strong');
       title.textContent = name;
       wrapper.appendChild(title);
+      const coordinates = pointCoordinates(feature.geometry);
+      if (!coordinates) {
+        return;
+      }
       new Popup({ offset: popupOffset(), closeButton: false })
-        .setLngLat((feature.geometry as unknown as { coordinates: [number, number] }).coordinates)
+        .setLngLat(coordinates)
         .setDOMContent(wrapper)
         .addTo(map);
     });
