@@ -103,6 +103,18 @@
       "skillPath": "skills/timescaledb-hyperfunctions/SKILL.md",
       "computedHash": "a1948017849e76277ca82e34744f9a4917a94d2e164a7c4ffcd3f347c89f8c9d"
     },
+    "typescript-clean-code-cookbook": {
+      "source": "cressie176/cressie176-claude-marketplace",
+      "sourceType": "github",
+      "skillPath": "plugins/typescript-clean-code-cookbook/skills/typescript-clean-code-cookbook/SKILL.md",
+      "computedHash": "82429e52f6e89650218d97461b1870dcb56356cf5a99f7b8742697f2792907ae"
+    },
+    "typescript-pragmatic-programmer": {
+      "source": "cressie176/cressie176-claude-marketplace",
+      "sourceType": "github",
+      "skillPath": "plugins/typescript-pragmatic-programmer/skills/typescript-pragmatic-programmer/SKILL.md",
+      "computedHash": "26f1e4b13df66d6f6520d744f065c82875f2459c3fc3e1e06357a36efca454bb"
+    },
     "vaadin-form-layout": {
       "source": "vaadin/agent-skills",
       "sourceType": "github",
