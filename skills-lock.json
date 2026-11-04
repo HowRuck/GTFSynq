@@ -47,7 +47,7 @@
       "source": "quarkusio/skills",
       "sourceType": "github",
       "skillPath": "skills/migrate-spring-to-quarkus/SKILL.md",
-      "computedHash": "380740dd4e0ce52eadc88d8de39c3c246a6719d0a4d50825c4a23f5551c272a7"
+      "computedHash": "fb844ebbdf7e224610eb2af3204348c24af454079e61f341238ecc815f2c465b"
     },
     "pgvector-semantic-search": {
       "source": "timescale/pg-aiguide",
