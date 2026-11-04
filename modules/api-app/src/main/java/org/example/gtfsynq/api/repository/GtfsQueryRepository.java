@@ -119,6 +119,8 @@ public class GtfsQueryRepository {
             -- The most advanced stop with static coordinates: the best available position for
             -- a trip that only publishes stop time predictions. Index-only on the hot table's
             -- primary key and a primary-key lookup on static_stops, so it stays cheap per row.
+            -- Ignore rows left over from an older feed snapshot; the parent and its current stop
+            -- rows share the same transaction timestamp when they are refreshed.
             LEFT JOIN LATERAL (
                 SELECT st.stop_name, st.stop_lat, st.stop_lon
                 FROM static_stops st
@@ -127,6 +129,8 @@ public class GtfsQueryRepository {
                       SELECT COALESCE(s.assigned_stop_id, s.stop_id)
                       FROM rt_stop_time_updates_hot s
                       WHERE s.trip_update_id = h.trip_update_id
+                        -- Do not let a stale stop from an older snapshot become the map position.
+                        AND s.last_seen_at >= h.last_seen_at
                       ORDER BY s.stop_sequence DESC
                       LIMIT 1)
             ) latest ON TRUE
@@ -525,6 +529,7 @@ public class GtfsQueryRepository {
                            (SELECT COALESCE(s.arrival_delay, s.departure_delay)
                             FROM rt_stop_time_updates_hot s
                             WHERE s.trip_update_id = h.trip_update_id
+                              AND s.last_seen_at >= h.last_seen_at
                               AND COALESCE(s.arrival_delay, s.departure_delay) IS NOT NULL
                               AND (COALESCE(
                                        s.arrival_time,
@@ -581,6 +586,7 @@ public class GtfsQueryRepository {
                           AND st.trip_id = m.trip_id
                           AND st.stop_sequence = s.stop_sequence
                     WHERE s.trip_update_id = h.trip_update_id
+                      AND s.last_seen_at >= h.last_seen_at
                       AND (COALESCE(
                                s.arrival_time,
                                s.departure_time,
