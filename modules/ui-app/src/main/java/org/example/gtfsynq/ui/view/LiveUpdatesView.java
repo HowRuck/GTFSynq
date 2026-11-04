@@ -20,12 +20,14 @@ import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.shared.Registration;
 import jakarta.inject.Inject;
+import java.text.MessageFormat;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -38,7 +40,7 @@ import org.example.gtfsynq.shared.protocol.query.TripUpdate;
 import org.example.gtfsynq.ui.MainLayout;
 import org.example.gtfsynq.ui.client.DataAccessException;
 import org.example.gtfsynq.ui.client.GtfsQueryClient;
-import org.example.gtfsynq.ui.component.Columns;
+import org.example.gtfsynq.ui.component.Filters;
 import org.example.gtfsynq.ui.component.LiveMap;
 import org.example.gtfsynq.ui.component.LiveUpdatesGrid;
 import org.example.gtfsynq.ui.component.PageHeader;
@@ -320,6 +322,9 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
         if (showLoading || !markersLoaded) {
             loadingOverlay.setVisible(true);
         }
+        // Translations need the UI thread, so they are captured up front: the background task can
+        // then fingerprint, build and serialise the whole payload without touching the UI.
+        var texts = markerTexts();
 
         CompletableFuture.runAsync(
                         () -> {
@@ -337,7 +342,11 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
 
                             var loaded = markers;
                             var error = failure;
-                            ui.access(() -> finishMarkers(request, loaded, error));
+                            // At tens of thousands of trips the payload is megabytes; building it
+                            // here keeps the UI thread free for the rest of the session.
+                            var fingerprint = error == null ? fingerprint(loaded) : 0L;
+                            var json = error == null ? LiveMap.json(markers(loaded, texts)) : null;
+                            ui.access(() -> finishMarkers(request, fingerprint, json, error));
                         },
                         BACKGROUND_LOADS)
                 .orTimeout(client.markerDeadlineSeconds() + 5, TimeUnit.SECONDS)
@@ -354,7 +363,7 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
                 });
     }
 
-    private void finishMarkers(long request, List<TripMarker> loaded, DataAccessException error) {
+    private void finishMarkers(long request, long fingerprint, String markersJson, DataAccessException error) {
         if (request != markerRequest) {
             return;
         }
@@ -368,10 +377,9 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
             report(error);
             return;
         }
-        var fingerprint = fingerprint(loaded);
         if (!markersLoaded || fingerprint != lastMarkersFingerprint) {
             lastMarkersFingerprint = fingerprint;
-            map.setMarkers(markers(loaded));
+            map.setMarkersJson(markersJson);
         }
         markersLoaded = true;
         lastMapError = null;
@@ -401,6 +409,14 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
      * markers a user can actually see and click.
      */
     List<LiveMap.Marker> markers(List<TripMarker> markers) {
+        return markers(markers, markerTexts());
+    }
+
+    /**
+     * Same as {@link #markers(List)}, but with the translated strings supplied by the caller, so the
+     * payload can be built off the UI thread.
+     */
+    List<LiveMap.Marker> markers(List<TripMarker> markers, MarkerTexts texts) {
         var byPosition = new LinkedHashMap<Position, List<TripMarker>>();
         for (var marker : markers) {
             if (!Double.isFinite(marker.getLat()) || !Double.isFinite(marker.getLon())) {
@@ -419,7 +435,7 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
             for (var index = 0; index < group.size(); index++) {
                 var update = group.get(index);
                 var offset = group.size() == 1 ? Spread.NONE : spread(index, group.size(), update.getLat());
-                marker(update, update.getLat() + offset.lat(), update.getLon() + offset.lon(), now)
+                marker(update, update.getLat() + offset.lat(), update.getLon() + offset.lon(), now, texts)
                         .ifPresent(result::add);
             }
         }
@@ -450,17 +466,22 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
     }
 
     Optional<LiveMap.Marker> marker(TripMarker update) {
-        return marker(update, update.getLat(), update.getLon(), Instant.now());
+        return marker(update, markerTexts());
     }
 
-    private Optional<LiveMap.Marker> marker(TripMarker update, double lat, double lon, Instant now) {
+    /** Same as {@link #marker(TripMarker)}, but with the translated strings supplied by the caller. */
+    Optional<LiveMap.Marker> marker(TripMarker update, MarkerTexts texts) {
+        return marker(update, update.getLat(), update.getLon(), Instant.now(), texts);
+    }
+
+    private Optional<LiveMap.Marker> marker(TripMarker update, double lat, double lon, Instant now, MarkerTexts texts) {
         if (!Double.isFinite(lat) || !Double.isFinite(lon)) {
             return Optional.empty();
         }
-        var label = join(route(update), trip(update));
+        var label = join(route(update, texts.routeTypeLabels()), trip(update));
         var detail = join(
                 update.hasStopName() ? update.getStopName() : null,
-                update.hasDelaySeconds() ? getTranslation("live.map.delay", delay(update.getDelaySeconds())) : null);
+                update.hasDelaySeconds() ? formatDelay(texts.delayPattern(), delay(update.getDelaySeconds())) : null);
         Integer reachedMinutesAgo = null;
         if (update.hasReachedAt()) {
             var reachedAt = Instant.ofEpochSecond(
@@ -479,14 +500,33 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
     }
 
     /** Route part of the label: the route type names the mode, then the short name or id. */
-    private String route(TripMarker update) {
+    private static String route(TripMarker update, Map<Integer, String> routeTypeLabels) {
         var route = update.hasRouteShortName()
                 ? update.getRouteShortName()
                 : update.hasRouteId() ? update.getRouteId() : "";
         if (route.isEmpty() || !update.hasRouteType()) {
             return route;
         }
-        return Columns.routeTypeLabel(this, update.getRouteType()) + " " + route;
+        // Extended route types have no label in the bundle and fall back to the numeric code.
+        var label = routeTypeLabels.getOrDefault(update.getRouteType(), String.valueOf(update.getRouteType()));
+        return label + " " + route;
+    }
+
+    /**
+     * The translated strings the marker payload needs, captured on the UI thread so the background
+     * load can build the whole payload without touching the UI.
+     *
+     * @param routeTypeLabels GTFS route type to its translated label
+     * @param delayPattern MessageFormat pattern for the popup's delay text, with {0} for the seconds
+     */
+    record MarkerTexts(Map<Integer, String> routeTypeLabels, String delayPattern) {}
+
+    private MarkerTexts markerTexts() {
+        var labels = new LinkedHashMap<Integer, String>();
+        for (var type : Filters.ROUTE_TYPES) {
+            labels.put(type, getTranslation("filter.routeType." + type));
+        }
+        return new MarkerTexts(labels, getTranslation("live.map.delay", "{0}"));
     }
 
     private static String trip(TripMarker update) {
@@ -507,6 +547,15 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
 
     private static String delay(int seconds) {
         return seconds == 0 ? "0" : String.format("%+d", seconds);
+    }
+
+    /**
+     * Formats the delay into the popup pattern off the UI thread. A bundle pattern carries {0}; the
+     * no-provider fallback ("!{key}!") does not and is returned as-is, exactly as getTranslation
+     * would return it.
+     */
+    private static String formatDelay(String pattern, String delay) {
+        return pattern.contains("{0}") ? MessageFormat.format(pattern, delay) : pattern;
     }
 
     /**

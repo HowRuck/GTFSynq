@@ -137,7 +137,19 @@ public class LiveMap extends Component {
      * @param markers one marker per trip, an empty list clears the map
      */
     public void setMarkers(List<Marker> markers) {
-        getElement().setProperty("markers", json(markers));
+        setMarkersJson(json(markers));
+    }
+
+    /**
+     * Replaces the markers with a pre-serialised payload.
+     *
+     * <p>The view serialises off the UI thread — at tens of thousands of trips the JSON is
+     * megabytes — so it pushes the ready string instead of the marker list.
+     *
+     * @param json the payload produced by {@link #json(List)}
+     */
+    public void setMarkersJson(String json) {
+        getElement().setProperty("markers", json);
     }
 
     /**
@@ -149,8 +161,11 @@ public class LiveMap extends Component {
      * keys of an object costs more than the values themselves. The trip update id is written as a
      * quoted string because it can exceed JavaScript's safe integer range, and a rounded id would
      * make the popup link fetch a different row.
+     *
+     * <p>Public so the view can serialise off the UI thread and push the ready string via
+     * {@link #setMarkersJson(String)}.
      */
-    static String json(List<Marker> markers) {
+    public static String json(List<Marker> markers) {
         var json = new StringBuilder("[");
         for (var marker : markers) {
             if (!Double.isFinite(marker.lat()) || !Double.isFinite(marker.lon())) {

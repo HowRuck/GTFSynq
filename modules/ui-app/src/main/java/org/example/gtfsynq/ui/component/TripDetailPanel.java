@@ -61,6 +61,10 @@ public class TripDetailPanel extends VerticalLayout {
     private final HorizontalLayout loading = new HorizontalLayout();
     private final Span error = new Span();
     private long renderedTripId = Long.MIN_VALUE;
+    // Fingerprint of the stops the map and timeline last rendered; a poll that changes nothing skips
+    // the rebuild. The loading and error states clear the map, so they reset it too.
+    private long lastStopsFingerprint;
+    private boolean stopsRendered;
 
     public TripDetailPanel() {
         setSizeFull();
@@ -167,6 +171,7 @@ public class TripDetailPanel extends VerticalLayout {
     public void showLoading(TripUpdate trip) {
         setVisible(true);
         renderedTripId = Long.MIN_VALUE;
+        stopsRendered = false;
         updateHeader(trip);
         map.setStops(List.of());
         mapFrame.setVisible(false);
@@ -183,6 +188,7 @@ public class TripDetailPanel extends VerticalLayout {
     /** Shows the trip header and the failure that prevented its stop times from loading. */
     public void showError(TripUpdate trip, String message) {
         setVisible(true);
+        stopsRendered = false;
         updateHeader(trip);
         map.setStops(List.of());
         mapFrame.setVisible(false);
@@ -212,12 +218,14 @@ public class TripDetailPanel extends VerticalLayout {
 
         var currentIndex = currentIndex(stops, now);
         var mapStops = new ArrayList<TripMap.Stop>(stops.size());
-        timeline.removeAll();
+        var fingerprint = 1L;
 
         for (var index = 0; index < stops.size(); index++) {
             var stop = stops.get(index);
             var state = state(index, currentIndex);
-            timeline.add(stopRow(stop, state));
+            // Protobuf messages hash by value, so this covers everything the timeline and the map
+            // render: the stop's own fields plus its progress state.
+            fingerprint = 31 * fingerprint + stop.hashCode() + state.ordinal();
 
             if (stop.hasStopLat() && stop.hasStopLon()) {
                 mapStops.add(new TripMap.Stop(
@@ -225,25 +233,40 @@ public class TripDetailPanel extends VerticalLayout {
             }
         }
 
+        // A poll re-renders the same trip; only changed content is rebuilt and pushed, so a quiet
+        // poll costs no DOM or map work.
+        if (changedTrip || !stopsRendered || fingerprint != lastStopsFingerprint) {
+            lastStopsFingerprint = fingerprint;
+            stopsRendered = true;
+            renderStops(stops, currentIndex);
+            map.setStops(mapStops);
+        }
+
         // Show the frame before the stops arrive: the element fits the route as soon as it gets the
         // data, and a frame that is still hidden has no size to fit against.
         var hasPosition = !mapStops.isEmpty();
         mapFrame.setVisible(hasPosition);
         noPosition.setVisible(!hasPosition);
-        map.setStops(mapStops);
         stopsCount.setText(getTranslation("live.detail.stops.count", stops.size()));
+        scroller.setVisible(true);
+        // A poll updates the same trip; only a newly opened trip jumps back to its first stop.
+        if (changedTrip) {
+            scroller.scrollToTop();
+        }
+    }
+
+    private void renderStops(List<StopTimeUpdate> stops, int currentIndex) {
+        timeline.removeAll();
 
         if (stops.isEmpty()) {
             var empty = new Span(getTranslation("live.detail.empty"));
             empty.addClassName("trip-detail-empty");
             timeline.add(empty);
-            scroller.setVisible(true);
-        } else {
-            scroller.setVisible(true);
-            // A poll updates the same trip; only a newly opened trip jumps back to its first stop.
-            if (changedTrip) {
-                scroller.scrollToTop();
-            }
+            return;
+        }
+
+        for (var index = 0; index < stops.size(); index++) {
+            timeline.add(stopRow(stops.get(index), state(index, currentIndex)));
         }
     }
 
