@@ -28,6 +28,7 @@ public final class Filters {
     public static ComboBox<String> feed(GtfsQueryClient client, String placeholder, Consumer<String> onChange) {
         var feed = new ComboBox<String>();
         feed.setPlaceholder(placeholder);
+        feed.getElement().setAttribute("aria-label", placeholder);
         feed.setClearButtonVisible(true);
         feed.setAllowCustomValue(false);
         feed.setWidth("12rem");
@@ -53,6 +54,7 @@ public final class Filters {
     public static ComboBox<String> agency(GtfsQueryClient client, String placeholder, Consumer<String> onChange) {
         var agency = new ComboBox<String>();
         agency.setPlaceholder(placeholder);
+        agency.getElement().setAttribute("aria-label", placeholder);
         agency.setClearButtonVisible(true);
         agency.setAllowCustomValue(false);
         agency.setWidth("16rem");
@@ -76,6 +78,7 @@ public final class Filters {
     public static TextField search(String placeholder, Consumer<String> onChange) {
         var search = new TextField();
         search.setPlaceholder(placeholder);
+        search.getElement().setAttribute("aria-label", placeholder);
         search.setClearButtonVisible(true);
         search.setWidth("18rem");
         search.setValueChangeMode(ValueChangeMode.LAZY);
@@ -118,6 +121,7 @@ public final class Filters {
             String placeholder, String width, Map<Integer, String> options, Consumer<Integer> onChange) {
         var select = new ComboBox<Integer>();
         select.setPlaceholder(placeholder);
+        select.getElement().setAttribute("aria-label", placeholder);
         select.setClearButtonVisible(true);
         select.setAllowCustomValue(false);
         select.setWidth(width);

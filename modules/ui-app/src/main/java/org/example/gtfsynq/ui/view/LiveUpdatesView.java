@@ -138,6 +138,7 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
         table.setSizeFull();
         table.setMinHeight("12rem");
         table.addItemClickListener(event -> openTrip(event.getItem()));
+        table.setOpenTripHandler(this::openTrip);
 
         detail.addCloseListener(event -> closeTrip());
         Shortcuts.addShortcutListener(

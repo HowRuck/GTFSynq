@@ -1,11 +1,12 @@
 package org.example.gtfsynq.ui.component;
 
 import com.vaadin.flow.component.Component;
-import com.vaadin.flow.component.badge.Badge;
 import com.vaadin.flow.component.card.Card;
 import com.vaadin.flow.component.html.Anchor;
-import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
+import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import org.example.gtfsynq.shared.protocol.query.Route;
 import org.example.gtfsynq.shared.protocol.query.StaticFeed;
 import org.example.gtfsynq.ui.format.UiFormat;
@@ -15,16 +16,23 @@ public final class UiComponents {
 
     private UiComponents() {}
 
-    public static Badge badge(String text) {
-        return new Badge(text);
-    }
-
     public static Component routeColor(Route route) {
         if (!route.hasColor() || route.getColor().isBlank()) {
             return new Span(UiFormat.NOT_AVAILABLE);
         }
         var color = route.getColor().startsWith("#") ? route.getColor() : "#" + route.getColor();
-        return new Span(color);
+        var swatch = new Span();
+        swatch.addClassName("route-color-swatch");
+        swatch.getStyle().set("background-color", color);
+        swatch.getElement().setAttribute("aria-hidden", "true");
+
+        var cell = new HorizontalLayout(swatch, new Span(color));
+        cell.setPadding(false);
+        cell.setSpacing(false);
+        cell.setAlignItems(Alignment.CENTER);
+        cell.addClassName("route-color");
+        cell.getElement().setAttribute("title", color);
+        return cell;
     }
 
     public static Component sourceLink(StaticFeed feed) {
@@ -45,11 +53,17 @@ public final class UiComponents {
         return span;
     }
 
+    /** Overview KPI: a quiet label and a dominant, tabular value. */
     public static Card statCard(String label, String value) {
         var card = new Card();
-        card.setWidth("14rem");
-        card.setTitle(label);
-        card.add(new H3(value));
+        var title = new Span(label);
+        title.addClassName("stat-label");
+        var amount = new Span(value);
+        amount.addClassName("stat-value");
+        var content = new VerticalLayout(title, amount);
+        content.setPadding(false);
+        content.setSpacing(false);
+        card.add(content);
         return card;
     }
 

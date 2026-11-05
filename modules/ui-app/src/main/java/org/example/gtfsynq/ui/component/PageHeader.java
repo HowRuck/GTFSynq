@@ -1,7 +1,7 @@
 package org.example.gtfsynq.ui.component;
 
 import com.vaadin.flow.component.Component;
-import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.JustifyContentMode;
@@ -14,17 +14,24 @@ public final class PageHeader {
     private PageHeader() {}
 
     public static HorizontalLayout create(String title, String subtitle, Component... actions) {
-        var text = new VerticalLayout(new H2(title), new Span(subtitle));
+        var heading = new H1(title);
+        heading.addClassName("page-title");
+        var description = new Span(subtitle);
+        description.addClassName("page-subtitle");
+
+        var text = new VerticalLayout(heading, description);
         text.setPadding(false);
         text.setSpacing(false);
 
         var controls = new HorizontalLayout(actions);
         controls.setPadding(false);
+        controls.setWrap(true);
         controls.setAlignItems(Alignment.END);
         controls.setJustifyContentMode(JustifyContentMode.END);
 
         var header = new HorizontalLayout(text, controls);
         header.setPadding(false);
+        header.setWrap(true);
         header.setWidthFull();
         header.setAlignItems(Alignment.END);
         header.setJustifyContentMode(JustifyContentMode.BETWEEN);

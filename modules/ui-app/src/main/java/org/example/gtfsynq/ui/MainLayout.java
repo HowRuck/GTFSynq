@@ -15,6 +15,7 @@ import com.vaadin.flow.component.tabs.Tab;
 import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.flow.router.AfterNavigationEvent;
 import com.vaadin.flow.router.AfterNavigationObserver;
+import com.vaadin.flow.router.RouterLink;
 import com.vaadin.flow.server.VaadinSession;
 import jakarta.inject.Inject;
 import java.util.LinkedHashMap;
@@ -39,13 +40,13 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
     private final Tabs tabs = new Tabs();
     private final Map<Tab, NavItem> routes = new LinkedHashMap<>();
 
-    private Tab activeTab;
-
     @Inject
     public MainLayout(MetricsClient metrics) {
         setPrimarySection(Section.NAVBAR);
 
-        var brand = new HorizontalLayout(new Span(getTranslation("app.name")), new Badge(getTranslation("app.badge")));
+        var brandName = new RouterLink(getTranslation("app.name"), OverviewView.class);
+        brandName.addClassName("app-brand");
+        var brand = new HorizontalLayout(brandName, new Badge(getTranslation("app.badge")));
         brand.setPadding(false);
         brand.setAlignItems(Alignment.CENTER);
 
@@ -57,16 +58,8 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
         addTab(getTranslation("nav.live"), "live", LiveUpdatesView.class);
         addTab(getTranslation("nav.metrics"), "metrics", MetricsView.class);
 
-        tabs.addSelectedChangeListener(event -> {
-            var tab = event.getSelectedTab();
-            if (tab == null || tab == activeTab) {
-                return;
-            }
-            activeTab = tab;
-            UI.getCurrent().navigate(routes.get(tab).view());
-        });
-
         var navbar = new HorizontalLayout(brand, tabs, new HeaderUsage(metrics), languageSwitcher(), clock());
+        navbar.addClassName("app-navbar");
         navbar.setPadding(false);
         navbar.setWidthFull();
         navbar.setAlignItems(Alignment.CENTER);
@@ -114,6 +107,10 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
     private static Span clock() {
         var clock = new Span();
         clock.addClassName("app-clock");
+        // A timer role tells assistive technology this text changes on its own; it is not content
+        // the user is expected to read in sequence.
+        clock.getElement().setAttribute("role", "timer");
+        clock.getElement().setAttribute("aria-live", "off");
         clock.getElement().executeJs("""
                 const clock = this;
                 const formatter = new Intl.DateTimeFormat(undefined, {
@@ -129,9 +126,11 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
     }
 
     private void addTab(String label, String path, Class<? extends Component> view) {
-        var tab = new Tab(label);
+        var link = new RouterLink(label, view);
+        link.addClassName("nav-link");
+        var tab = new Tab(link);
         tabs.add(tab);
-        routes.put(tab, new NavItem(view, path));
+        routes.put(tab, new NavItem(path));
     }
 
     @Override
@@ -141,11 +140,8 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
                 .filter(entry -> entry.getValue().path().equals(path))
                 .map(Map.Entry::getKey)
                 .findFirst()
-                .ifPresent(tab -> {
-                    activeTab = tab;
-                    tabs.setSelectedTab(tab);
-                });
+                .ifPresent(tabs::setSelectedTab);
     }
 
-    private record NavItem(Class<? extends Component> view, String path) {}
+    private record NavItem(String path) {}
 }

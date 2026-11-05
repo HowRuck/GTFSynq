@@ -1,23 +1,9 @@
 /*
- * Aura theme configuration. Vaadin has no Java API for these tokens, so the
- * palette, font and sizing live here and apply on top of the Aura stylesheet.
- * Inter is loaded from Google Fonts; the delay colors at the bottom reuse the
- * theme's accessible text tokens.
+ * Application styles. The Aura palette and font live in aura-theme.css so the theme can be read
+ * on its own; this file only adds what Aura cannot express. The delay colors reuse the theme's
+ * accessible text tokens.
  */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
-
-html {
-  --aura-accent-color-dark: #FF8904;
-  --aura-accent-color-light: #FF8904;
-  --aura-background-color-dark: #1C1917;
-  --aura-background-color-light: #F4F4F0;
-  --aura-base-font-size: 13;
-  --aura-base-radius: 4;
-  --aura-contrast-level: 0.25;
-  --aura-font-family: 'Inter', var(--aura-font-family-system);
-  --aura-overlay-surface-opacity: 1;
-  --aura-surface-level: -0.5;
-}
+@import "aura-theme.css";
 
 /*
  * Scrollbars follow the active theme instead of the browser default. A transparent track lets the
@@ -53,17 +39,93 @@ html {
   background-color: var(--vaadin-text-color);
 }
 
-:is(vaadin-button, vaadin-menu-bar-button, vaadin-upload-button),
-vaadin-tabs,
-vaadin-checkbox,
-vaadin-radio-button {
+/*
+ * Buttons keep a quiet, neutral treatment by default; primary and tertiary keep their accent
+ * semantics. This was previously applied to tabs and form controls too, which stripped the accent
+ * from the selected tab and checked inputs.
+ */
+:is(vaadin-button, vaadin-menu-bar-button, vaadin-upload-button):not(
+    [theme~='primary'],
+    [theme~='tertiary']
+  ) {
   --aura-accent-color-light: var(--aura-neutral);
   --aura-accent-color-dark: var(--aura-neutral);
+  --vaadin-button-background: var(--vaadin-background-container);
+  --vaadin-button-border-color: transparent;
+  --vaadin-button-shadow: none;
 }
 
-vaadin-side-nav-item[current]::part(content) {
-  --vaadin-side-nav-item-background: var(--vaadin-background-container);
-  --vaadin-side-nav-item-border-color: transparent;
+/* The navigation links fill their tab so the whole tab label is a real link target. */
+.nav-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 100%;
+  block-size: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Brand and page headers: one dominant title, one quiet supporting line. */
+.app-brand {
+  color: var(--vaadin-text-color);
+  font-weight: var(--aura-font-weight-semibold);
+  text-decoration: none;
+}
+
+.page-title {
+  margin: 0;
+}
+
+.page-subtitle {
+  color: var(--vaadin-text-color-secondary);
+  font-size: var(--aura-font-size-s);
+}
+
+/*
+ * Overview KPI cards: the label is a small secondary line and the value carries the weight. The
+ * grid distributes the cards instead of leaving a ragged row of fixed-width cards.
+ */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: var(--vaadin-gap-m);
+  width: 100%;
+}
+
+.stat-label {
+  color: var(--vaadin-text-color-secondary);
+  font-size: var(--aura-font-size-s);
+}
+
+.stat-value {
+  font-size: var(--aura-font-size-xl);
+  font-weight: var(--aura-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Route color cell: a swatch is easier to scan than a hex string. */
+.route-color {
+  gap: var(--vaadin-gap-xs);
+}
+
+.route-color-swatch {
+  display: inline-block;
+  inline-size: 0.9em;
+  block-size: 0.9em;
+  border: 1px solid var(--vaadin-border-color);
+  border-radius: 50%;
+}
+
+/*
+ * The shell keeps every navigation and status control on one line on desktop. Below this width the
+ * clock and usage button would force the tab strip to scroll for no benefit, so they step aside.
+ */
+@media (max-width: 900px) {
+  .app-navbar .app-clock,
+  .app-navbar .app-usage {
+    display: none;
+  }
 }
 
 /*
@@ -154,15 +216,15 @@ vaadin-grid::part(delay-severe) {
 .live-map-popup-open {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    margin-top: 0.6rem;
-    padding: 0.3rem 0.65rem;
+    gap: var(--vaadin-gap-xs);
+    margin-top: var(--vaadin-gap-s);
+    padding: var(--vaadin-padding-xs) var(--vaadin-padding-s);
     border: 1px solid color-mix(in oklab, var(--aura-accent-color) 45%, var(--vaadin-border-color));
     border-radius: var(--vaadin-radius-m);
     background: color-mix(in oklab, var(--aura-accent-color) 12%, transparent);
     color: var(--vaadin-text-color);
     font: inherit;
-    font-size: 0.9em;
+    font-size: var(--aura-font-size-s);
     font-weight: var(--aura-font-weight-semibold);
     line-height: 1.2;
     text-align: left;
@@ -175,7 +237,7 @@ vaadin-grid::part(delay-severe) {
 
 .live-map-popup-open::after {
     content: '→';
-    color: var(--aura-accent-color);
+    color: var(--aura-accent-text-color);
     font-size: 1.1em;
     line-height: 1;
 }
@@ -208,14 +270,14 @@ vaadin-grid::part(delay-severe) {
 .live-map-loading-card {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.55rem 0.85rem;
-    border: 1px solid var(--vaadin-border-color, rgb(128 128 128 / 0.25));
+    gap: var(--vaadin-gap-s);
+    padding: var(--vaadin-padding-s) var(--vaadin-padding-m);
+    border: 1px solid var(--vaadin-border-color);
     border-radius: var(--vaadin-radius-m);
     background: var(--vaadin-background-color);
     color: var(--vaadin-text-color);
-    box-shadow: 0 1px 4px rgb(0 0 0 / 0.15);
-    font-size: 0.9rem;
+    box-shadow: var(--aura-shadow-xs);
+    font-size: var(--aura-font-size-s);
 }
 
 /*
@@ -404,7 +466,8 @@ vaadin-grid::part(active-trip first-column-cell) {
     inset: -0.45rem;
     border: 2px solid color-mix(in srgb, var(--aura-accent-color) 45%, transparent);
     border-radius: 50%;
-    animation: trip-timeline-pulse 2s ease-out infinite;
+    /* A single cue when the pane opens; perpetual motion in a data view is distracting. */
+    animation: trip-timeline-pulse 1.2s ease-out 2 forwards;
 }
 
 .trip-timeline-row.skipped .trip-timeline-marker {
@@ -482,11 +545,11 @@ vaadin-grid::part(active-trip first-column-cell) {
     font-weight: var(--aura-font-weight-semibold);
 }
 
-/* Current position pin drawn by the trip map; the SVG inherits the accent colour. */
+/* Current position pin drawn by the trip map; the SVG inherits the accent text colour. */
 .trip-map-current-marker {
-    color: var(--aura-accent-color);
-    filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.35));
-    animation: trip-map-current-bounce 1.8s ease-in-out infinite;
+    color: var(--aura-accent-text-color);
+    filter: drop-shadow(0 1px 2px var(--aura-shadow-color));
+    animation: trip-map-current-bounce 300ms ease-out;
 }
 
 @keyframes trip-map-current-bounce {
@@ -513,7 +576,7 @@ vaadin-grid::part(active-trip first-column-cell) {
 .metrics-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 28rem), 1fr));
-    gap: 1rem;
+    gap: var(--vaadin-gap-m);
     width: 100%;
     align-items: start;
 }

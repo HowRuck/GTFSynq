@@ -1,14 +1,18 @@
 package org.example.gtfsynq.ui.component;
 
 import com.vaadin.flow.component.UI;
+import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridSortOrder;
 import com.vaadin.flow.component.grid.GridVariant;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.textfield.TextFieldVariant;
 import com.vaadin.flow.data.provider.SortDirection;
 import com.vaadin.flow.data.value.ValueChangeMode;
+import com.vaadin.flow.function.SerializableConsumer;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -28,6 +32,7 @@ public class LiveUpdatesGrid extends Grid<TripUpdate> {
 
     private final LiveUpdatesDataProvider provider;
     private String activeTripKey;
+    private SerializableConsumer<TripUpdate> openTripHandler = trip -> {};
 
     public LiveUpdatesGrid(GtfsQueryClient client, String defaultSort, SortDirection defaultDirection) {
         provider = new LiveUpdatesDataProvider(client, defaultSort, defaultDirection, this::errorMessage);
@@ -42,6 +47,7 @@ public class LiveUpdatesGrid extends Grid<TripUpdate> {
         // Size each column to its content, then let the columns share any remaining width.
         // Resizable lets users widen a truncated column by dragging its header edge.
         getColumns().forEach(column -> column.setAutoWidth(true).setFlexGrow(1).setResizable(true));
+        openTripColumn();
 
         // The open trip stays marked while the polling view reloads the page underneath it.
         setPartNameGenerator(
@@ -117,6 +123,7 @@ public class LiveUpdatesGrid extends Grid<TripUpdate> {
     private TextField routeFilter() {
         var route = new TextField();
         route.setPlaceholder(getTranslation("filter.route.placeholder"));
+        route.getElement().setAttribute("aria-label", getTranslation("filter.route.placeholder"));
         route.setClearButtonVisible(true);
         route.setWidthFull();
         route.addThemeVariants(TextFieldVariant.SMALL);
@@ -129,6 +136,7 @@ public class LiveUpdatesGrid extends Grid<TripUpdate> {
     private <T> ComboBox<T> select(String placeholder, java.util.function.Consumer<T> onChange) {
         var select = new ComboBox<T>();
         select.setPlaceholder(placeholder);
+        select.getElement().setAttribute("aria-label", placeholder);
         select.setClearButtonVisible(true);
         select.setAllowCustomValue(false);
         select.setWidthFull();
@@ -157,6 +165,30 @@ public class LiveUpdatesGrid extends Grid<TripUpdate> {
         if (provider.setSearch(value)) {
             refresh();
         }
+    }
+
+    /** Sets the handler invoked by the per-row open button. */
+    public void setOpenTripHandler(SerializableConsumer<TripUpdate> handler) {
+        openTripHandler = handler;
+    }
+
+    /**
+     * Adds the keyboard- and screen-reader-friendly way to open a trip. Row clicks stay for mouse
+     * users; the button makes the same action reachable by tabbing through the grid.
+     */
+    private void openTripColumn() {
+        addComponentColumn(trip -> {
+                    var open = new Button(VaadinIcon.ARROW_RIGHT.create());
+                    open.addThemeVariants(ButtonVariant.TERTIARY, ButtonVariant.SMALL);
+                    open.setAriaLabel(getTranslation("live.map.openTrip"));
+                    open.setTooltipText(getTranslation("live.map.openTrip"));
+                    open.addClickListener(event -> openTripHandler.accept(trip));
+                    return open;
+                })
+                .setKey("open")
+                .setWidth("3.5rem")
+                .setFlexGrow(0)
+                .setResizable(false);
     }
 
     /**

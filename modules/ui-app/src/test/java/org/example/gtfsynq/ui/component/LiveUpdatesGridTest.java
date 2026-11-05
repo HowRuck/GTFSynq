@@ -75,14 +75,22 @@ class LiveUpdatesGridTest {
         try {
             var grid = new LiveUpdatesGrid(new GtfsQueryClient(), "lastSeenAt", SortDirection.DESCENDING);
 
-            assertEquals(10, grid.getColumns().size());
+            assertEquals(11, grid.getColumns().size());
             assertEquals("tripId", grid.getColumns().getFirst().getKey());
             assertNotNull(grid.getColumnByKey("lastSeenAt"));
             assertNotNull(grid.getColumnByKey("feedTs"));
             assertNotNull(grid.getColumnByKey("routeType"));
-            assertTrue(grid.getColumns().stream().allMatch(Grid.Column::isAutoWidth));
-            assertTrue(grid.getColumns().stream().allMatch(Grid.Column::isResizable));
-            assertTrue(grid.getColumns().stream().allMatch(column -> column.getFlexGrow() == 1));
+            assertNotNull(grid.getColumnByKey("open"));
+            var dataColumns = grid.getColumns().stream()
+                    .filter(column -> !"open".equals(column.getKey()))
+                    .toList();
+            assertTrue(dataColumns.stream().allMatch(Grid.Column::isAutoWidth));
+            assertTrue(dataColumns.stream().allMatch(Grid.Column::isResizable));
+            assertTrue(dataColumns.stream().allMatch(column -> column.getFlexGrow() == 1));
+            var open = grid.getColumnByKey("open");
+            assertFalse(open.isAutoWidth());
+            assertFalse(open.isResizable());
+            assertEquals(0, open.getFlexGrow());
             assertTrue(grid.getColumns().stream().allMatch(column -> column.getTextAlign() == ColumnTextAlign.START));
 
             var currentDelay = grid.getColumnByKey("currentDelay").getPartNameGenerator();
@@ -100,7 +108,7 @@ class LiveUpdatesGridTest {
             assertNotNull(filters.getCell(grid.getColumnByKey("routeType")).getComponent(), "route-type filter");
 
             var groups = grid.getHeaderRows().getFirst();
-            assertEquals(3, groups.getCells().size(), "one cell per column group");
+            assertEquals(4, groups.getCells().size(), "three groups plus the ungrouped open column");
             assertEquals(
                     grid.getTranslation("column.group.trip"),
                     groups.getCell(grid.getColumnByKey("tripId")).getText());

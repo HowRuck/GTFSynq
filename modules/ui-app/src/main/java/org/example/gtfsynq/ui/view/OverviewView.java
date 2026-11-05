@@ -2,7 +2,8 @@ package org.example.gtfsynq.ui.view;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
-import com.vaadin.flow.component.html.H3;
+import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.JustifyContentMode;
@@ -32,10 +33,8 @@ public class OverviewView extends VerticalLayout implements HasDynamicTitle {
     public OverviewView(GtfsQueryClient client) {
         setSizeFull();
 
-        var stats = new HorizontalLayout();
-        stats.setPadding(false);
-        stats.setWidthFull();
-        stats.setWrap(true);
+        var stats = new Div();
+        stats.addClassName("stat-grid");
         stats.add(statCards(
                 UiFormat.NOT_AVAILABLE,
                 UiFormat.NOT_AVAILABLE,
@@ -51,7 +50,7 @@ public class OverviewView extends VerticalLayout implements HasDynamicTitle {
                 Columns::feedSummary);
 
         var sectionHeader = new HorizontalLayout(
-                new H3(getTranslation("overview.section.revisions")),
+                new H2(getTranslation("overview.section.revisions")),
                 new RouterLink(getTranslation("overview.link.allFeeds"), FeedsView.class));
         sectionHeader.setPadding(false);
         sectionHeader.setWidthFull();
@@ -75,7 +74,7 @@ public class OverviewView extends VerticalLayout implements HasDynamicTitle {
      * Vaadin session lock until the backend answers. That delay also stalls the push handshake,
      * which then trips Vert.x's blocked-thread checker.
      */
-    private void loadStats(GtfsQueryClient client, HorizontalLayout stats) {
+    private void loadStats(GtfsQueryClient client, Div stats) {
         var ui = UI.getCurrent();
         if (ui == null) {
             return;

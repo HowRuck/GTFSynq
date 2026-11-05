@@ -26,16 +26,14 @@ public final class Columns {
     private Columns() {}
 
     public static void feedSummary(Grid<StaticFeed> grid) {
-        grid.addComponentColumn(feed -> UiComponents.badge(feed.getFeedId()))
-                .setHeader(grid.getTranslation("column.feed"));
+        grid.addColumn(feed -> UiFormat.text(feed.getFeedId())).setHeader(grid.getTranslation("column.feed"));
         grid.addColumn(feed -> UiFormat.shortHash(feed.getSha256())).setHeader(grid.getTranslation("column.sha256"));
         grid.addColumn(feed -> UiFormat.bytes(feed.getSizeBytes())).setHeader(grid.getTranslation("column.size"));
         grid.addColumn(feed -> UiFormat.dateTime(feed.getLoadedAt())).setHeader(grid.getTranslation("column.loaded"));
     }
 
     public static void feeds(Grid<StaticFeed> grid) {
-        grid.addComponentColumn(feed -> UiComponents.badge(feed.getFeedId()))
-                .setHeader(grid.getTranslation("column.feed"));
+        grid.addColumn(feed -> UiFormat.text(feed.getFeedId())).setHeader(grid.getTranslation("column.feed"));
         grid.addColumn(feed -> UiFormat.shortHash(feed.getSha256())).setHeader(grid.getTranslation("column.sha256"));
         grid.addColumn(feed -> UiFormat.bytes(feed.getSizeBytes())).setHeader(grid.getTranslation("column.size"));
         grid.addColumn(StaticFeed::getObjectKey).setHeader(grid.getTranslation("column.objectKey"));
@@ -136,7 +134,7 @@ public final class Columns {
                 .setSortProperty("tripId")
                 .setSortable(true);
 
-        grid.addComponentColumn(trip -> UiComponents.badge(trip.getFeedId()))
+        grid.addColumn(trip -> UiFormat.text(trip.getFeedId()))
                 .setHeader(grid.getTranslation("column.feed"))
                 .setKey("feed");
 

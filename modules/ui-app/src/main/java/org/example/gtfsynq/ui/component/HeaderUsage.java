@@ -96,6 +96,7 @@ public class HeaderUsage extends Button {
 
         setIcon(VaadinIcon.DASHBOARD.create());
         addThemeVariants(ButtonVariant.TERTIARY, ButtonVariant.SMALL);
+        addClassName("app-usage");
         setAriaLabel(getTranslation("app.usage.title"));
         setTooltipText(getTranslation("app.usage.title"));
 
