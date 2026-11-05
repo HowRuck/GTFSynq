@@ -7,6 +7,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.DateTimeException;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
@@ -19,6 +20,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.sql.DataSource;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.example.gtfsynq.api.dto.OverviewDto;
 import org.example.gtfsynq.api.dto.PageResponse;
 import org.example.gtfsynq.api.dto.RouteDto;
@@ -119,8 +121,9 @@ public class GtfsQueryRepository {
             -- The most advanced stop with static coordinates: the best available position for
             -- a trip that only publishes stop time predictions. Index-only on the hot table's
             -- primary key and a primary-key lookup on static_stops, so it stays cheap per row.
-            -- Ignore rows left over from an older feed snapshot; the parent and its current stop
-            -- rows share the same transaction timestamp when they are refreshed.
+            -- Every hot stop row is considered, not only the ones written by the latest flush:
+            -- deduplication keeps an unchanged stop out of later writes, so its last_seen_at is
+            -- older than the trip's even though it still describes the current trip.
             LEFT JOIN LATERAL (
                 SELECT st.stop_name, st.stop_lat, st.stop_lon
                 FROM static_stops st
@@ -129,8 +132,6 @@ public class GtfsQueryRepository {
                       SELECT COALESCE(s.assigned_stop_id, s.stop_id)
                       FROM rt_stop_time_updates_hot s
                       WHERE s.trip_update_id = h.trip_update_id
-                        -- Do not let a stale stop from an older snapshot become the map position.
-                        AND s.last_seen_at >= h.last_seen_at
                       ORDER BY s.stop_sequence DESC
                       LIMIT 1)
             ) latest ON TRUE
@@ -138,13 +139,19 @@ public class GtfsQueryRepository {
 
     private final DataSource dataSource;
 
+    /** How long a trip stays on the map after reaching its final stop. */
+    private final long endedGraceSeconds;
+
     private volatile OverviewDto cachedOverview;
 
     private volatile long cachedOverviewAt;
 
     @Inject
-    public GtfsQueryRepository(DataSource dataSource) {
+    public GtfsQueryRepository(
+            DataSource dataSource,
+            @ConfigProperty(name = "gtfsynq.api.markers.ended-grace", defaultValue = "5m") Duration endedGrace) {
         this.dataSource = dataSource;
+        this.endedGraceSeconds = Math.max(0, endedGrace.toSeconds());
     }
 
     public OverviewDto overview() {
@@ -510,6 +517,11 @@ public class GtfsQueryRepository {
      * is not in the future; a stop without any time information cannot be classified, so it is kept
      * rather than hiding a delay-only feed.
      *
+     * <p>A trip that has reached its final static stop, with a predicted (or planned) time older
+     * than {@code gtfsynq.api.markers.ended-grace}, is left out. The hot tables keep an ended trip
+     * for the retention window after its last update, so without this the map would draw it long
+     * after it finished.
+     *
      * <p>The position and the delay come from one backward primary-key scan per trip. The delay
      * lookup the table uses only runs as a fallback for trips whose reached stop reports no delay,
      * which keeps the marker identical to the table's current delay while halving the scans on a
@@ -529,7 +541,6 @@ public class GtfsQueryRepository {
                            (SELECT COALESCE(s.arrival_delay, s.departure_delay)
                             FROM rt_stop_time_updates_hot s
                             WHERE s.trip_update_id = h.trip_update_id
-                              AND s.last_seen_at >= h.last_seen_at
                               AND COALESCE(s.arrival_delay, s.departure_delay) IS NOT NULL
                               AND (COALESCE(
                                        s.arrival_time,
@@ -586,7 +597,10 @@ public class GtfsQueryRepository {
                           AND st.trip_id = m.trip_id
                           AND st.stop_sequence = s.stop_sequence
                     WHERE s.trip_update_id = h.trip_update_id
-                      AND s.last_seen_at >= h.last_seen_at
+                      -- A trip whose static schedule is loaded may only use stops that still
+                      -- exist in it. That drops a stop sequence left behind by an older static
+                      -- revision without also dropping the unchanged stops of a later update.
+                      AND (t.trip_id IS NULL OR st.stop_sequence IS NOT NULL)
                       AND (COALESCE(
                                s.arrival_time,
                                s.departure_time,
@@ -606,55 +620,87 @@ public class GtfsQueryRepository {
                 ) latest_stop ON TRUE
                 LEFT JOIN static_stops latest
                        ON latest.feed_id = h.feed_id AND latest.stop_id = latest_stop.stop_id
+                -- The trip's final static stop, used to tell a running trip from one that has
+                -- already finished. The hot tables keep an ended trip for the retention window
+                -- (one hour by default) after its last update, so the map has to stop drawing it
+                -- from the schedule rather than wait for the row to be pruned.
+                LEFT JOIN LATERAL (
+                    SELECT st.stop_sequence AS last_stop_sequence,
+                           ((m.start_date + COALESCE(st.arrival_time, st.departure_time)
+                              + make_interval(days => COALESCE(
+                                    st.arrival_time_overflow_days,
+                                    st.departure_time_overflow_days,
+                                    0)))
+                            AT TIME ZONE COALESCE(a.agency_timezone, 'UTC')) AS planned_time
+                    FROM static_stop_times st
+                    WHERE st.feed_id = h.feed_id
+                      AND st.trip_id = m.trip_id
+                    ORDER BY st.stop_sequence DESC
+                    LIMIT 1
+                ) terminal ON TRUE
                 -- A trip without a static stop has no position; filtering here keeps those rows off
                 -- the wire instead of dropping them in the UI.
                 WHERE latest.stop_lat IS NOT NULL AND latest.stop_lon IS NOT NULL
+                  -- Once the reached stop is the final one and its predicted (or, when the feed
+                  -- publishes no prediction there, its planned) time has passed, the trip is over.
+                  -- The grace period keeps a trip visible while it is arriving, even though the
+                  -- terminal time has just gone by.
+                  AND NOT (
+                      terminal.last_stop_sequence IS NOT NULL
+                      AND latest_stop.stop_sequence >= terminal.last_stop_sequence
+                      AND COALESCE(latest_stop.stop_time, terminal.planned_time) IS NOT NULL
+                      AND COALESCE(latest_stop.stop_time, terminal.planned_time)
+                          < now() - make_interval(secs => ?)
+                  )
                 """;
         try (Connection connection = dataSource.getConnection();
-                PreparedStatement statement = connection.prepareStatement(sql);
-                ResultSet rs = statement.executeQuery()) {
-            // One marker per trip: a feed can publish several hot rows for the same trip (another
-            // entity or service date), and the row whose reached stop is latest in time is the
-            // current prediction.
-            var byTrip = new HashMap<TripKey, MarkerRow>();
-            List<TripMarkerDto> unkeyed = new ArrayList<>();
-            while (rs.next()) {
-                var marker = new TripMarkerDto(
-                        rs.getLong("trip_update_id"),
-                        rs.getDouble("stop_lat"),
-                        rs.getDouble("stop_lon"),
-                        rs.getString("route_short_name"),
-                        rs.getString("trip_short_name"),
-                        rs.getString("route_id"),
-                        rs.getString("trip_id"),
-                        nullableInt(rs, "route_type"),
-                        rs.getString("stop_name"),
-                        nullableInt(rs, "current_delay"),
-                        offsetDateTime(rs, "stop_time"));
-                var keyId = rs.getString("trip_id");
-                if (keyId == null || keyId.isBlank()) {
-                    // Some feeds publish frequency-based updates without a trip id; the entity id is
-                    // then the only stable identifier across messages.
-                    var entityId = rs.getString("entity_id");
-                    keyId = entityId == null || entityId.isBlank() ? null : "entity:" + entityId;
+                PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setDouble(1, endedGraceSeconds);
+            try (ResultSet rs = statement.executeQuery()) {
+                // One marker per trip: a feed can publish several hot rows for the same trip (another
+                // entity or service date), and the row whose reached stop is latest in time is the
+                // current prediction.
+                var byTrip = new HashMap<TripKey, MarkerRow>();
+                List<TripMarkerDto> unkeyed = new ArrayList<>();
+                while (rs.next()) {
+                    var marker = new TripMarkerDto(
+                            rs.getLong("trip_update_id"),
+                            rs.getDouble("stop_lat"),
+                            rs.getDouble("stop_lon"),
+                            rs.getString("route_short_name"),
+                            rs.getString("trip_short_name"),
+                            rs.getString("route_id"),
+                            rs.getString("trip_id"),
+                            nullableInt(rs, "route_type"),
+                            rs.getString("stop_name"),
+                            nullableInt(rs, "current_delay"),
+                            offsetDateTime(rs, "stop_time"));
+                    var keyId = rs.getString("trip_id");
+                    if (keyId == null || keyId.isBlank()) {
+                        // Some feeds publish frequency-based updates without a trip id; the entity id
+                        // is then the only stable identifier across messages.
+                        var entityId = rs.getString("entity_id");
+                        keyId = entityId == null || entityId.isBlank() ? null : "entity:" + entityId;
+                    }
+                    if (keyId == null) {
+                        // Without either identifier there is nothing to deduplicate on.
+                        unkeyed.add(marker);
+                        continue;
+                    }
+                    var stopTime = offsetDateTime(rs, "stop_time");
+                    var stopSequence = rs.getInt("stop_sequence");
+                    var key = new TripKey(rs.getString("feed_id"), keyId);
+                    var existing = byTrip.get(key);
+                    if (existing == null
+                            || isLater(stopTime, stopSequence, existing.stopTime(), existing.stopSequence())) {
+                        byTrip.put(key, new MarkerRow(marker, stopTime, stopSequence));
+                    }
                 }
-                if (keyId == null) {
-                    // Without either identifier there is nothing to deduplicate on.
-                    unkeyed.add(marker);
-                    continue;
-                }
-                var stopTime = offsetDateTime(rs, "stop_time");
-                var stopSequence = rs.getInt("stop_sequence");
-                var key = new TripKey(rs.getString("feed_id"), keyId);
-                var existing = byTrip.get(key);
-                if (existing == null || isLater(stopTime, stopSequence, existing.stopTime(), existing.stopSequence())) {
-                    byTrip.put(key, new MarkerRow(marker, stopTime, stopSequence));
-                }
+                var items = new ArrayList<TripMarkerDto>(byTrip.size() + unkeyed.size());
+                byTrip.values().forEach(row -> items.add(row.marker()));
+                items.addAll(unkeyed);
+                return items;
             }
-            var items = new ArrayList<TripMarkerDto>(byTrip.size() + unkeyed.size());
-            byTrip.values().forEach(row -> items.add(row.marker()));
-            items.addAll(unkeyed);
-            return items;
         } catch (SQLException e) {
             throw new IllegalStateException("Failed to query GTFS data", e);
         }

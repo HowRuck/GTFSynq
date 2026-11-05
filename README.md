@@ -252,7 +252,10 @@ Behaviour shared by the tables:
   table's filters and paging: it loads its own unpaged `ListTripMarkers` result,
   which the API computes in the background every `gtfsynq.api.markers.refresh-interval`
   (30 s) and serves from memory, so a poll never waits for the query; a failed
-  refresh keeps the previous snapshot, and only a cold start waits once. It clusters
+  refresh keeps the previous snapshot, and only a cold start waits once. A trip is
+  removed once it has reached its final static stop and that stop's predicted (or
+  planned) time is older than `gtfsynq.api.markers.ended-grace` (5 min), rather than
+  staying on the map until the hot row is pruned an hour later. It clusters
   markers client-side and falls back to raster tiles when the vector basemap is
   unreachable. Marker loads are bounded twice:
   the call has its own deadline (`gtfsynq.ui.map.deadline-seconds`, 10 s) and the view

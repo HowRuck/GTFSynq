@@ -88,7 +88,7 @@ class GtfsQueryGrpcServiceTest {
         boolean failing;
 
         CountingRepository() {
-            super(null);
+            super(null, Duration.ofMinutes(5));
         }
 
         @Override
