@@ -117,6 +117,9 @@ the umbrella `postgres` reference), then the broader one for context.
   BOM. Vaadin's BOM wins where Vaadin and Quarkus overlap.
 - Formatting: Spotless with Palantir Java Format. Run `./gradlew spotlessApply` before handing
   work back.
+- `ingest-app` and `store-app` map the relocated `io.floci:testcontainers-floci` coordinate to
+  `testcontainers-floci-aws`. This is a workaround for the Amazon Services extension's 2.17.0
+  relocation, not a build preference; keep it until the extension declares the new coordinates.
 - CI workflow names, job ids, step ids and matrix keys are kebab-case. See `AGENTS.md`.
 
 ### UI rules
