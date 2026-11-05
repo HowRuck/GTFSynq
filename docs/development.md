@@ -40,7 +40,7 @@ reference files directly.
 
 ### Configured MCP servers
 
-The repository's `opencode.json` configures five MCP servers. They are optional helpers: if one
+The repository's `opencode.json` configures six MCP servers. They are optional helpers: if one
 is unavailable or fails, fall back to the local source, `./gradlew` or a local Playwright script
 rather than guessing.
 
@@ -50,11 +50,16 @@ rather than guessing.
 | `vaadin-directory` | Search Vaadin Directory add-ons | Remote (`https://vaadin.com/directory/mcp`); use only when a built-in component or official extension is not enough, and confirm Vaadin 25.4 compatibility before adding the dependency. |
 | `gradle` | Inspect Gradle tasks, dependencies and the build model | Local via `jbang run --quiet --fresh gradle-mcp@rnett`; the first run may fetch jbang and the tool. Pair with `gradle-best-practices`. |
 | `quarkus-agent` | Start/stop/restart Quarkus apps, proxy Dev MCP tools, search Quarkus docs and load extension skills | Local via `jbang quarkus-agent-mcp@quarkusio`; experimental, requires JBang, and the first docs search builds an index. |
+| `grafana` | Validate provisioned dashboards, panel queries and datasource health | Local via `scripts/run-grafana-mcp.sh` (`uvx mcp-grafana`); read-only, sources the Grafana admin credentials from `.env`, and needs Grafana on `localhost:3000`. |
 | `playwright` | Drive the running console for visual checks | Local via `npx @playwright/mcp@latest`; needs a browser binary. If the MCP browser is unavailable, use the system Chromium in a local `npx playwright` script. |
 
 Tool names carry the server name (for example `vaadin.search_vaadin_docs` or
 `playwright.browser_navigate`). When a server is down, say so and continue with the local
 fallback; do not block a change on MCP availability.
+
+Local servers are started when OpenCode starts. After changing `opencode.json` or a wrapper
+script, restart OpenCode (or reconnect the server) so the new tool list is loaded. The Grafana
+wrapper needs `uvx`, the Quarkus and Gradle servers need JBang, and Playwright needs a browser.
 
 #### Vaadin documentation
 
@@ -295,11 +300,21 @@ the umbrella `postgres` reference), then the broader one for context.
 6. Validate and reload:
    ```bash
    jq empty monitoring/grafana/dashboards/*.json
-   docker compose -f docker-compose.monitoring.yaml up -d
+   docker compose up -d grafana   # or the full stack with `docker compose up -d`
    curl -s http://localhost:3000/api/health
    ```
-   Confirm the dashboard appears in the **GTFSynq** folder, panels return data, and the Grafana
-   log has no provisioning errors.
+   Then validate through the read-only `grafana` MCP server:
+   - `search_dashboards` with `query: "GTFSynq"` — all five dashboards should be present.
+   - `get_dashboard_summary` for each changed UID — check panel count, panel types and variables.
+   - `get_dashboard_panel_queries` — confirm each changed panel uses the expected
+     `VictoriaMetrics`/`VictoriaLogs`/`VictoriaTraces` datasource and query.
+   - `check_datasources_health` — confirms the datasources are reachable before trusting query
+     results.
+   - `run_panel_query` for the changed panel IDs — prove the panel returns data, not just that the
+     JSON parses.
+   - Use `get_dashboard_by_uid` only when the full JSON is really needed; it is large.
+   The MCP server runs with `--disable-write`, so it cannot change the dashboards. Keep editing
+   the files under `monitoring/grafana/dashboards/` and let file provisioning apply them.
 
 ### 4.6 Frontend TypeScript change
 
@@ -378,6 +393,11 @@ the umbrella `postgres` reference), then the broader one for context.
 - `opentelemetry` is for the OTLP pipeline; the apps push metrics, logs and traces through
   `monitoring/otel-collector/config.yaml`. Do not switch them back to a Prometheus scrape job.
 - There is no Loki/Tempo/Mimir here: logs and traces are VictoriaLogs and VictoriaTraces.
+- Validate with the read-only `grafana` MCP server, not by pushing through the API. It runs
+  `scripts/run-grafana-mcp.sh`, sources the Grafana admin credentials from `.env`, and needs
+  `uvx` plus Grafana on `localhost:3000`. Start Grafana before a validation run; call
+  `check_datasources_health` before `run_panel_query` so a missing VictoriaMetrics/VictoriaLogs/
+  VictoriaTraces instance is reported as a datasource problem rather than a panel failure.
 
 ---
 
@@ -392,7 +412,7 @@ the umbrella `postgres` reference), then the broader one for context.
 | Native | `./gradlew :<app>:build -Dnative` | Startup, health, representative query |
 | Database | `./gradlew :store-app:test` plus a test database | Migration applies on a copy, query plan, rollback/forward-fix |
 | Build/CI | `./gradlew build` | Workflow names and ids are kebab-case |
-| Dashboards | `jq empty monitoring/grafana/dashboards/*.json`; `docker compose -f docker-compose.monitoring.yaml up -d`; `curl -s localhost:3000/api/health` | Dashboard appears in the GTFSynq folder, panels return data, no provisioning errors |
+| Dashboards | `jq empty monitoring/grafana/dashboards/*.json`; then `grafana` MCP: `search_dashboards` → `get_dashboard_summary` → `get_dashboard_panel_queries` → `check_datasources_health` → `run_panel_query` | All five UIDs present, expected datasource/queries, changed panels return data |
 | Frontend TS | `./gradlew :ui-app:build` | Map/chart behaviour in both schemes and narrow widths |
 
 ### Definition of done

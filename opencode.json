@@ -18,6 +18,10 @@
         "type": "local",
         "command": ["jbang", "quarkus-agent-mcp@quarkusio"]
       },
+      "grafana": {
+        "type": "local",
+        "command": ["bash", "scripts/run-grafana-mcp.sh"]
+      },
       "playwright": {
         "type": "local",
         "command": ["npx", "@playwright/mcp@latest"]
