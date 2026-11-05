@@ -40,7 +40,7 @@ reference files directly.
 
 ### Configured MCP servers
 
-The repository's `opencode.json` configures four MCP servers. They are optional helpers: if one
+The repository's `opencode.json` configures five MCP servers. They are optional helpers: if one
 is unavailable or fails, fall back to the local source, `./gradlew` or a local Playwright script
 rather than guessing.
 
@@ -49,6 +49,7 @@ rather than guessing.
 | `vaadin` | Vaadin 25.4 docs, component styling, Java API symbols, primer and new APIs | Remote (`https://mcp.vaadin.com/docs`); query text leaves the machine. |
 | `vaadin-directory` | Search Vaadin Directory add-ons | Remote (`https://vaadin.com/directory/mcp`); use only when a built-in component or official extension is not enough, and confirm Vaadin 25.4 compatibility before adding the dependency. |
 | `gradle` | Inspect Gradle tasks, dependencies and the build model | Local via `jbang run --quiet --fresh gradle-mcp@rnett`; the first run may fetch jbang and the tool. Pair with `gradle-best-practices`. |
+| `quarkus-agent` | Start/stop/restart Quarkus apps, proxy Dev MCP tools, search Quarkus docs and load extension skills | Local via `jbang quarkus-agent-mcp@quarkusio`; experimental, requires JBang, and the first docs search builds an index. |
 | `playwright` | Drive the running console for visual checks | Local via `npx @playwright/mcp@latest`; needs a browser binary. If the MCP browser is unavailable, use the system Chromium in a local `npx playwright` script. |
 
 Tool names carry the server name (for example `vaadin.search_vaadin_docs` or
@@ -65,6 +66,27 @@ the configured `vaadin` MCP server:
 - `get_java_symbol` for a type's real members, including inherited mixins.
 - `get_component_styling` for theme variants and shadow parts.
 - `vaadin-directory` only when you actually need an add-on; it is a separate server.
+
+#### Quarkus Agent MCP
+
+`quarkus-agent` is the Quarkus-specific agent server configured in `opencode.json`. It is
+experimental and requires JBang.
+
+- For an existing app, use `quarkus_start` when the agent should own the process, or
+  `quarkus_attach` when the app is already running in your terminal. All four apps enable Dev MCP
+  in their `%dev` profile, so an app started with `quarkusDev` is attachable without a manual
+  toggle. The apps use `application.yaml`, so pass the port explicitly for non-default ports:
+  `ui-app` 8083, `ingest-app` 8081, `store-app` 8082; `api-app` uses the 8080 default.
+- Call `quarkus_skills` before writing backend code to load the extension-specific patterns.
+- Use `quarkus_searchDocs` for Quarkus questions; pass `projectDir` so the answer matches the
+  project's Quarkus version.
+- The agent proxies the application's Dev MCP tools. Direct Dev MCP is available at
+  `http://localhost:<port>/q/dev-mcp`; `api-app` uses 8080 and `ui-app` uses 8083. It is enabled
+  in `%dev` only and is never exposed by a production build.
+- This repository has four Quarkus apps. The agent manages a project directory at a time; start
+  or attach to the app you are changing. The root `devInfra`/Compose stack is not started by the
+  agent, so for a full-stack run start the stack or the app in a terminal and use
+  `quarkus_attach`.
 
 ---
 

@@ -175,6 +175,10 @@ gtfsynq:
 # mode disables the SDK unless QUARKUS_OTEL_SDK_DISABLED is set explicitly.
 "%dev":
   quarkus:
+    # Expose the Dev MCP endpoint (/q/dev-mcp) so the Quarkus Agent MCP can
+    # attach to an app started from a terminal. Dev mode only.
+    dev-mcp:
+      enabled: true
     otel:
       sdk:
         disabled: true
