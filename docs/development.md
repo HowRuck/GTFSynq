@@ -98,9 +98,14 @@ experimental and requires JBang.
 | New or polished view, layout, spacing, motion, responsive design | `vaadin-frontend-design` | Pair with `aura-theme` when the work touches theme tokens. |
 | Form, entity editor or data-entry view | `vaadin-form-layout` | Then `vaadin-frontend-design` for the surrounding view. |
 | TypeScript in `ui-app/src/main/frontend` (MapLibre, charts) | `typescript-clean-code-cookbook` + `typescript-pragmatic-programmer` | Both are review lenses; keep the map/DOM code framework-free. |
+| Grafana dashboard JSON, panels, layout, variables, transformations | `dashboarding` | This repo provisions dashboards from files; use the skill's JSON schema and panel guidance, not its HTTP-API push workflow. |
+| PromQL / MetricsQL queries for dashboard panels | `promql` + `prometheus` | VictoriaMetrics is PromQL/MetricsQL-compatible; validate queries against VictoriaMetrics rather than assuming Prometheus parity. |
+| Grafana OSS provisioning, data sources, roles, annotations | `grafana-oss` | Matches the self-hosted Grafana 13 stack under `monitoring/grafana/`. |
+| Data source provisioning for a new plugin | `datasources-provisioning` | Only when adding a datasource; the existing VictoriaMetrics/VictoriaLogs/VictoriaTraces datasources are already configured. |
+| OTLP instrumentation, collector or signal routing | `opentelemetry` | The apps export OTLP; the collector config is `monitoring/otel-collector/config.yaml`. |
 | Gradle build, dependency or task wiring change | `gradle-best-practices` | Audit and fix findings; do not invent a parallel build convention. |
 | Gradle wrapper / Gradle version bump | `gradle-wrapper-upgrade` | Use the skill's copy-paste commands rather than hand-editing `gradle-wrapper.properties`. |
-| Quarkus version or project-structure check | `quarkus-update` | Current platform is Quarkus 4.0.0.Beta2; check before upgrading. |
+| Quarkus version or project-structure check | `quarkus-update` | Current platform is Quarkus 4.0.0.Beta3; check before upgrading. |
 | PostgreSQL schema or table design | `postgres` + `design-postgres-tables` | `postgres` is the umbrella; load the focused skill next. |
 | PostGIS / geometry / spatial index design | `design-postgis-tables` | Only when a table actually stores geometry or geography. |
 | Understanding an existing database before querying it | `schema-exploration` | Read-only catalog queries first; ask before inspecting row data. |
@@ -134,7 +139,7 @@ the umbrella `postgres` reference), then the broader one for context.
 ### Build and toolchain
 
 - Java 25, Gradle wrapper, `build-logic/` convention plugins.
-- Quarkus 4.0.0.Beta2, Vaadin 25.4.0-alpha4, TimescaleDB, Kafka, Protobuf 4.
+- Quarkus 4.0.0.Beta3, Vaadin 25.4.0-alpha4, TimescaleDB, Kafka, Protobuf 4.
 - Versions live in `gradle/libs.versions.toml`; do not hardcode versions already managed by a
   BOM. Vaadin's BOM wins where Vaadin and Quarkus overlap.
 - Formatting: Spotless with Palantir Java Format. Run `./gradlew spotlessApply` before handing
@@ -272,7 +277,31 @@ the umbrella `postgres` reference), then the broader one for context.
    `resolve-dependencies` passes; Quarkus/Vaadin prereleases, majors, the Gradle wrapper, Docker
    images and GitHub Actions stay manual. Do not merge a Renovate PR while its check is failing.
 
-### 4.5 Frontend TypeScript change
+### 4.5 Grafana dashboards and observability change
+
+1. Load `dashboarding` for the dashboard JSON; add `promql`/`prometheus` for panel queries,
+   `grafana-oss` for provisioning, `datasources-provisioning` for a new datasource plugin, and
+   `opentelemetry` when changing instrumentation or the collector.
+2. The dashboards are **file-provisioned**, not pushed through the Grafana API. Edit the JSON under
+   `monitoring/grafana/dashboards/`; Grafana reloads the folder every 10 seconds.
+3. Keep the existing UIDs and titles unless the change requires a new dashboard:
+   `gtfsynq-apps`, `gtfsynq-domain`, `gtfsynq-kafka`, `gtfsynq-logs`, `gtfsynq-postgres`.
+4. Existing datasource UIDs are fixed: `VictoriaMetrics` (default), `VictoriaLogs`,
+   `VictoriaTraces`. Do not hardcode container-only hostnames in panels; use the provisioned
+   datasource UID.
+5. VictoriaMetrics speaks PromQL/MetricsQL, not Prometheus exactly. The `promql` and `prometheus`
+   skill examples are Prometheus-flavored; validate the final query in Grafana Explore or VMUI.
+   The repo has no Loki/Tempo/Mimir, so the Loki/Tempo/Mimir parts of those skills do not apply.
+6. Validate and reload:
+   ```bash
+   jq empty monitoring/grafana/dashboards/*.json
+   docker compose -f docker-compose.monitoring.yaml up -d
+   curl -s http://localhost:3000/api/health
+   ```
+   Confirm the dashboard appears in the **GTFSynq** folder, panels return data, and the Grafana
+   log has no provisioning errors.
+
+### 4.6 Frontend TypeScript change
 
 1. Load `typescript-clean-code-cookbook` and `typescript-pragmatic-programmer`.
 2. Keep types explicit at the DOM/MapLibre boundary; avoid `any`.
@@ -334,6 +363,22 @@ the umbrella `postgres` reference), then the broader one for context.
 - They are review lenses, not a reason to restructure the map code. Keep the existing element
   lifecycle and property/event boundary.
 
+### Grafana dashboard skills
+
+- `dashboarding` is written around `POST /api/dashboards/db`; this repository uses file
+  provisioning. Reuse its panel/variable/transformation JSON guidance, but edit the files and
+  verify the reload instead of pushing through the API. Keep the existing `schemaVersion: 39`
+  unless you deliberately migrate all dashboards.
+- `promql` and `prometheus` are Prometheus-flavored. VictoriaMetrics is PromQL/MetricsQL
+  compatible, not identical; validate the query in Grafana Explore or VMUI.
+- `grafana-oss` matches the self-hosted Grafana OSS stack. Use it for provisioning YAML, data
+  sources, roles, annotations and health checks.
+- `datasources-provisioning` is for adding a new datasource plugin; the existing VictoriaMetrics,
+  VictoriaLogs and VictoriaTraces datasources are already provisioned.
+- `opentelemetry` is for the OTLP pipeline; the apps push metrics, logs and traces through
+  `monitoring/otel-collector/config.yaml`. Do not switch them back to a Prometheus scrape job.
+- There is no Loki/Tempo/Mimir here: logs and traces are VictoriaLogs and VictoriaTraces.
+
 ---
 
 ## 6. Verification and definition of done
@@ -347,6 +392,7 @@ the umbrella `postgres` reference), then the broader one for context.
 | Native | `./gradlew :<app>:build -Dnative` | Startup, health, representative query |
 | Database | `./gradlew :store-app:test` plus a test database | Migration applies on a copy, query plan, rollback/forward-fix |
 | Build/CI | `./gradlew build` | Workflow names and ids are kebab-case |
+| Dashboards | `jq empty monitoring/grafana/dashboards/*.json`; `docker compose -f docker-compose.monitoring.yaml up -d`; `curl -s localhost:3000/api/health` | Dashboard appears in the GTFSynq folder, panels return data, no provisioning errors |
 | Frontend TS | `./gradlew :ui-app:build` | Map/chart behaviour in both schemes and narrow widths |
 
 ### Definition of done
@@ -360,6 +406,7 @@ the umbrella `postgres` reference), then the broader one for context.
 - [ ] `spotlessCheck` and the affected tests pass.
 - [ ] Native-image impact was considered, and tested when relevant.
 - [ ] Database migrations are new files, tested on a copy, with a rollback/forward-fix.
+- [ ] Dashboard JSON parses, Grafana provisions it without errors, and the changed panels return data.
 - [ ] CI names follow the kebab-case rule in `AGENTS.md`.
 - [ ] `README.md` or this guide was updated when behaviour or setup changed.
 
@@ -401,6 +448,13 @@ the umbrella `postgres` reference), then the broader one for context.
 # Dev infrastructure
 docker compose -f docker-compose.dev.yaml up -d
 docker compose -f docker-compose.dev.yaml down
+
+# Monitoring stack
+jq empty monitoring/grafana/dashboards/*.json
+docker compose -f docker-compose.monitoring.yaml up -d
+docker compose -f docker-compose.monitoring.yaml logs -f grafana
+curl -s http://localhost:3000/api/health   # Grafana credentials: GF_SECURITY_ADMIN_*
 ```
 
-Health endpoints are at `/q/health` on each app's HTTP port.
+Health endpoints are at `/q/health` on each app's HTTP port. Grafana is at
+`http://localhost:3000`; dashboards are in the **GTFSynq** folder.
