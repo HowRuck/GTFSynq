@@ -1,11 +1,13 @@
 package org.example.gtfsynq.ui.client;
 
-import com.vaadin.flow.i18n.I18NProvider;
+import com.vaadin.flow.server.VaadinSession;
+import com.vaadin.quarkus.annotation.VaadinServiceEnabled;
 import io.grpc.StatusRuntimeException;
 import io.quarkus.grpc.GrpcClient;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -30,6 +32,7 @@ import org.example.gtfsynq.shared.protocol.query.TripUpdate;
 import org.example.gtfsynq.shared.protocol.query.TripUpdateRequest;
 import org.example.gtfsynq.shared.protocol.query.TripUpdatesRequest;
 import org.example.gtfsynq.shared.protocol.query.TripsRequest;
+import org.example.gtfsynq.ui.i18n.UiI18nProvider;
 
 /**
  * The console's only data source.
@@ -54,6 +57,10 @@ public class GtfsQueryClient {
     @Inject
     @GrpcClient("gtfs-api")
     GtfsQueryServiceGrpc.GtfsQueryServiceBlockingStub stub;
+
+    @Inject
+    @VaadinServiceEnabled
+    UiI18nProvider i18n;
 
     public OverviewReply overview() {
         return call(() -> stub().getOverview(OverviewRequest.getDefaultInstance()));
@@ -206,11 +213,11 @@ public class GtfsQueryClient {
         return new PagedResult<>(items, info.getTotal());
     }
 
-    private static <T> T call(Supplier<T> action) {
+    private <T> T call(Supplier<T> action) {
         return call(action, DEADLINE_SECONDS);
     }
 
-    private static <T> T call(Supplier<T> action, long deadlineSeconds) {
+    private <T> T call(Supplier<T> action, long deadlineSeconds) {
         try {
             return action.get();
         } catch (StatusRuntimeException e) {
@@ -218,14 +225,24 @@ public class GtfsQueryClient {
         }
     }
 
-    private static String friendlyMessage(StatusRuntimeException e, long deadlineSeconds) {
+    private String friendlyMessage(StatusRuntimeException e, long deadlineSeconds) {
         return switch (e.getStatus().getCode()) {
-            case UNAVAILABLE -> I18NProvider.translate("error.api.unavailable");
-            case DEADLINE_EXCEEDED -> I18NProvider.translate("error.api.deadline", deadlineSeconds);
-            case INVALID_ARGUMENT, NOT_FOUND, FAILED_PRECONDITION ->
-                description(e, I18NProvider.translate("error.api.rejected"));
-            default -> I18NProvider.translate("error.api.status", e.getStatus().getCode());
+            case UNAVAILABLE -> translate("error.api.unavailable");
+            case DEADLINE_EXCEEDED -> translate("error.api.deadline", deadlineSeconds);
+            case INVALID_ARGUMENT, NOT_FOUND, FAILED_PRECONDITION -> description(e, translate("error.api.rejected"));
+            default -> translate("error.api.status", e.getStatus().getCode());
         };
+    }
+
+    /**
+     * Translates a gRPC failure. Grid data providers fetch on background threads where Vaadin has
+     * no current service or session; fall back to English there instead of throwing an
+     * {@code I18NProvider} error that masks the real gRPC status.
+     */
+    private String translate(String key, Object... params) {
+        var session = VaadinSession.getCurrent();
+        var locale = session == null ? Locale.ENGLISH : session.getLocale();
+        return i18n.getTranslation(key, locale, params);
     }
 
     private static String description(StatusRuntimeException e, String fallback) {

@@ -13,6 +13,7 @@ import com.vaadin.flow.component.textfield.TextFieldVariant;
 import com.vaadin.flow.data.provider.SortDirection;
 import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.function.SerializableConsumer;
+import java.text.MessageFormat;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -31,10 +32,14 @@ import org.example.gtfsynq.ui.client.GtfsQueryClient;
 public class LiveUpdatesGrid extends Grid<TripUpdate> {
 
     private final LiveUpdatesDataProvider provider;
+    private final String loadErrorPattern;
     private String activeTripKey;
     private SerializableConsumer<TripUpdate> openTripHandler = trip -> {};
 
     public LiveUpdatesGrid(GtfsQueryClient client, String defaultSort, SortDirection defaultDirection) {
+        // Resolve translations while the component is constructed on the UI thread; the data
+        // provider and component renderers can run during a fetch, where VaadinService is absent.
+        loadErrorPattern = getTranslation("grid.error.load", "{0}");
         provider = new LiveUpdatesDataProvider(client, defaultSort, defaultDirection, this::errorMessage);
 
         setWidthFull();
@@ -177,11 +182,12 @@ public class LiveUpdatesGrid extends Grid<TripUpdate> {
      * users; the button makes the same action reachable by tabbing through the grid.
      */
     private void openTripColumn() {
+        var openLabel = getTranslation("live.map.openTrip");
         addComponentColumn(trip -> {
                     var open = new Button(VaadinIcon.ARROW_RIGHT.create());
                     open.addThemeVariants(ButtonVariant.TERTIARY, ButtonVariant.SMALL);
-                    open.setAriaLabel(getTranslation("live.map.openTrip"));
-                    open.setTooltipText(getTranslation("live.map.openTrip"));
+                    open.setAriaLabel(openLabel);
+                    open.setTooltipText(openLabel);
                     open.addClickListener(event -> openTripHandler.accept(trip));
                     return open;
                 })
@@ -213,7 +219,7 @@ public class LiveUpdatesGrid extends Grid<TripUpdate> {
     }
 
     private String errorMessage(String detail) {
-        return getTranslation("grid.error.load", detail);
+        return MessageFormat.format(loadErrorPattern, detail);
     }
 
     private static String tripKey(TripUpdate trip) {

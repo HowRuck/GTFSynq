@@ -129,6 +129,27 @@ html {
 }
 
 /*
+ * Below this width the brand, language switcher and tab strip no longer fit on one line. Let the
+ * tab strip take its own row; Aura's back/forward buttons then have room to scroll the remaining
+ * tabs, and the language switcher stays at the end of the first row.
+ */
+@media (max-width: 600px) {
+  .app-navbar {
+    flex-wrap: wrap;
+  }
+
+  .app-navbar > vaadin-tabs {
+    flex-basis: 100%;
+    order: 3;
+  }
+
+  .app-navbar .app-language {
+    order: 1;
+    margin-inline-start: auto;
+  }
+}
+
+/*
  * Live updates tree: color arrival and departure delay cells by how early or
  * late the predicted stop event is. The part names come from
  * Columns.delayPart(); the tokens are Aura's accessible text colors, so they

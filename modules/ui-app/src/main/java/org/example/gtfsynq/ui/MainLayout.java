@@ -79,6 +79,7 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
         var button = new Button();
         button.setIcon(VaadinIcon.GLOBE.create());
         button.addThemeVariants(ButtonVariant.TERTIARY, ButtonVariant.SMALL);
+        button.addClassName("app-language");
         button.setAriaLabel(getTranslation("language.label"));
         button.setTooltipText(getTranslation("language.label"));
 

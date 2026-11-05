@@ -6,6 +6,7 @@ import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.data.provider.Query;
 import com.vaadin.flow.data.provider.SortDirection;
+import java.text.MessageFormat;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -28,6 +29,7 @@ public class LazyGrid<T> extends Grid<T> {
     private final PageLoader<T> loader;
     private final String defaultSort;
     private final SortDirection defaultDirection;
+    private final String loadErrorPattern;
 
     private String feedId;
     private String search;
@@ -44,6 +46,8 @@ public class LazyGrid<T> extends Grid<T> {
         this.loader = loader;
         this.defaultSort = defaultSort;
         this.defaultDirection = defaultDirection;
+        // Resolve the localised pattern on the UI thread; fetch() may run during a backend load.
+        this.loadErrorPattern = getTranslation("grid.error.load", "{0}");
 
         setWidthFull();
         setMultiSort(false);
@@ -145,7 +149,8 @@ public class LazyGrid<T> extends Grid<T> {
             var message = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
             if (!message.equals(lastError)) {
                 lastError = message;
-                Notification.show(getTranslation("grid.error.load", message), 5000, Notification.Position.BOTTOM_END);
+                Notification.show(
+                        MessageFormat.format(loadErrorPattern, message), 5000, Notification.Position.BOTTOM_END);
             }
             return Stream.empty();
         }
