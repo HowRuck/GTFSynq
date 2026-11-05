@@ -1,0 +1,15 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "serena-kmp-lsp"
+version = "0.1.0"
+description = "Serena adapter that serves Kotlin, Gradle scripts, Java and Swift through kmp-lsp"
+requires-python = ">=3.11"
+
+[project.entry-points."solidlsp.language_server_registration"]
+kmp_lsp = "serena_kmp_lsp:register"
+
+[tool.hatch.build.targets.wheel]
+packages = ["serena_kmp_lsp"]

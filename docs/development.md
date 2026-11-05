@@ -53,7 +53,7 @@ rather than guessing.
 | `grafana` | Validate provisioned dashboards, panel queries and datasource health | Local via `scripts/run-grafana-mcp.sh` (`uvx mcp-grafana`); read-only, sources the Grafana admin credentials from `.env`, and needs Grafana on `localhost:3000`. |
 | `playwright` | Drive the running console for visual checks | Local via `npx @playwright/mcp@latest`; launches the **Google Chrome** channel at `/opt/google/chrome/chrome`, not the system Chromium. See [Playwright MCP](#playwright-mcp). |
 | `podman` | Inspect containers, read logs, check ports and start/stop individual containers | Local via `npx -y podman-mcp-server@latest`; uses the Podman socket or CLI. **Write-capable**: `container_remove`, `image_remove`, `image_push` and `image_build` mutate host state. No compose support, and `container_run` accepts only image, environment and ports (no volumes, networks or extra hosts). |
-| `serena` | Symbol-level navigation for Kotlin and Gradle scripts: overviews, find symbol, find references | Local via `scripts/run-serena-mcp.sh` (`uvx --from serena-agent serena start-mcp-server`); kmp-lsp is the Kotlin backend, so no IDE and no JVM are needed. **Write-capable**: symbol edits change source files. See [Serena MCP](#serena-mcp). |
+| `serena` | Symbol-level navigation for Kotlin, Gradle scripts and Java: overviews, find symbol, find references | Local via `scripts/run-serena-mcp.sh` (`uvx --from serena-agent serena start-mcp-server`); the backend is kmp-lsp through a small adapter, so no IDE and no JVM are needed. **Write-capable**: symbol edits change source files. See [Serena MCP](#serena-mcp). |
 
 Tool names carry the server name (for example `vaadin.search_vaadin_docs` or
 `playwright.browser_navigate`). When a server is down, say so and continue with the local
@@ -157,13 +157,21 @@ and `serena_repl`. Call `initial_instructions` first; the REPL entry point is `s
     - /home/evogel/Git/GTFSynq/**   # worktrees below the repo; add their parent if elsewhere
   ```
 
-- Coverage: `.serena/project.yml` maps the `kotlin` language server to kmp-lsp
-  (`ls_path: "kmp-lsp"`) and the directory is versioned; `.serena/.gitignore` excludes the cache
-  and `project.local.yml`. Serena routes only `.kt`/`.kts` to that server, and this repository's
-  Kotlin is Gradle build scripts, which define few symbols — expect empty symbol overviews for
-  them. Java is deliberately not configured: Serena's `java` backend is Eclipse JDT-LS, which
-  downloads a JVM bundle and imports the Gradle build on first use.
-- Java navigation uses kmp-lsp's CLI, which handles Java and Kotlin without an IDE:
+- Coverage: `.serena/project.yml` lists `kmp_lsp`, which is not a built-in Serena server. The
+  adapter in `tools/serena-kmp-lsp` registers it: it reuses Serena's Kotlin language-server
+  implementation, points it at kmp-lsp, and matches `.kt`, `.kts`, `.java` and `.swift`, so one
+  JVM-free server covers Kotlin, Gradle scripts and Java. The wrapper installs the adapter with
+  `uvx --with tools/serena-kmp-lsp`; when starting Serena directly, pass the same `--with`, or it
+  reports `kmp_lsp` as an unknown language server. `.serena/project.yml` and
+  `tools/serena-kmp-lsp` are versioned; `.serena/.gitignore` excludes the cache and
+  `project.local.yml`.
+- Do not add Serena's built-in `java` server next to it: that backend is Eclipse JDT-LS, which
+  downloads its own JVM bundle and imports the Gradle build on first use.
+- kmp-lsp resolves symbols with tree-sitter, not the IntelliJ analysis API: navigation,
+  references and signatures are fast and reliable, but type inference and diagnostics are
+  limited. The repository's Kotlin is Gradle build scripts, which declare little, so expect
+  empty overviews for them.
+- kmp-lsp's CLI complements the MCP and needs no Serena:
 
   ```bash
   kmp-lsp find GtfsQueryService
