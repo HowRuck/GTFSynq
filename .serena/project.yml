@@ -41,6 +41,7 @@ project_name: "GTFSynq"
 # Note that when using the JetBrains backend, language servers are not used and this list is correspondingly ignored.
 language_servers:
 - kotlin
+- java
 
 # the encoding used by text files in the project
 # For a list of possible encodings, see https://docs.python.org/3.11/library/codecs.html#standard-encodings
@@ -87,12 +88,30 @@ ignore_all_files_in_gitignore: true
 # Kotlin is served by kmp-lsp (https://github.com/Hessesian/kmp-lsp), which starts
 # instantly and needs no JVM. It is resolved from PATH; the Serena wrapper
 # (scripts/run-serena-mcp.sh) adds ~/.cargo/bin, the cargo install location.
-# Java files are intentionally not listed: Serena's `java` server is Eclipse JDT-LS,
-# which downloads a JVM bundle and imports the Gradle build on first use. Use
-# `kmp-lsp find|refs|check` or code search for Java navigation instead.
+#
+# Java uses Serena's Eclipse JDT-LS backend. It downloads its runtime on first use
+# and imports the Gradle build, so the first Java symbol query is slow. The settings
+# below keep that import close to a normal command-line build:
+#   - gradle_wrapper_enabled: use this project's ./gradlew, not Serena's Gradle
+#   - use_system_java_home: run JDT-LS on the JDK from JAVA_HOME (Java 25 here)
+#   - maven_import_enabled: this is a Gradle-only build
+#   - update_build_configuration: automatic, since an agent cannot answer prompts
+# If type resolution misses JDK types, add a machine-specific runtimes entry in
+# .serena/project.local.yml (git-ignored), for example:
+#   ls_specific_settings:
+#     java:
+#       runtimes:
+#         - name: JavaSE-25
+#           path: /path/to/jdk-25
+#           default: true
 ls_specific_settings:
   kotlin:
     ls_path: "kmp-lsp"
+  java:
+    gradle_wrapper_enabled: true
+    maven_import_enabled: false
+    update_build_configuration: automatic
+    use_system_java_home: true
 
 # list of workspace folder paths (LSP backend only).
 # These folders will be used to build up Serena's symbol index.

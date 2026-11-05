@@ -35,7 +35,11 @@
       },
       "playwright": {
         "type": "local",
-        "command": ["npx", "@playwright/mcp@latest"]
+        "command": [
+          "npx",
+          "@playwright/mcp@latest"
+        ],
+        "disabled": true
       },
       "serena": {
         "type": "local",
