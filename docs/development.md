@@ -342,11 +342,33 @@ the umbrella `postgres` reference), then the broader one for context.
      `VictoriaMetrics`/`VictoriaLogs`/`VictoriaTraces` datasource and query.
    - `check_datasources_health` — confirms the datasources are reachable before trusting query
      results.
-   - `run_panel_query` for the changed panel IDs — prove the panel returns data, not just that the
-     JSON parses.
+   - `run_panel_query` only understands the core Prometheus/Loki/SQL datasource types. Every panel
+     here uses the `victoriametrics-metrics-datasource` or `victoriametrics-logs-datasource` plugin,
+     so this tool answers `datasource type ... is not supported by run_panel_query`. Always pass
+     explicit variables too: it refuses panels whose variable is on `All`.
+   - Prove the panels return data instead by querying the store directly:
+     ```bash
+     # PromQL/MetricsQL, one expression at a time (substitute $__rate_interval and $vars first)
+     curl -sG --data-urlencode 'query=sum by (application) (rate(http.server.requests_count[5m]))' \
+       http://localhost:8428/api/v1/query | jq '.status, (.data.result | length)'
+     # LogsQL
+     curl -sG --data-urlencode 'query=* | stats by ("service.name") count()' --data-urlencode 'start=-1h' \
+       http://localhost:9428/select/logsql/query
+     ```
+     A `success` status proves the expression parses; a non-empty `result` proves the metric or
+     field exists. Open the dashboard itself to confirm units, legends and thresholds.
    - Use `get_dashboard_by_uid` only when the full JSON is really needed; it is large.
    The MCP server runs with `--disable-write`, so it cannot change the dashboards. Keep editing
    the files under `monitoring/grafana/dashboards/` and let file provisioning apply them.
+7. Metric and log-field naming comes from the OTLP pipeline, not from a Prometheus scrape:
+   - Micrometer names keep their dots (`gtfs.sink.db.write`, `http.server.requests`), histograms
+     add `_sum`/`_count`, and the decaying max gauge is `.max` — not `_max`.
+   - The common `application` tag is added by `ApplicationTagConfiguration`, so it is a label on
+     every app meter.
+   - VictoriaLogs stores the OTel resource attribute as `service.name`; `service_name` groups every
+     line into one unnamed bucket. `severity_text` and `_msg` are also present.
+   - Confirm a name against the source before adding a panel:
+     `grep -rn 'Counter.builder\|Timer.builder\|Gauge.builder' modules/*/src/main/java`.
 
 ### 4.6 Frontend TypeScript change
 

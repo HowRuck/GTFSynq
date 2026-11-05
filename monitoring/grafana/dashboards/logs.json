@@ -1,66 +1,356 @@
 {
-  "title": "GTFSynq Logs",
-  "uid": "gtfsynq-logs",
-  "tags": ["gtfsynq", "logs"],
-  "timezone": "browser",
-  "schemaVersion": 39,
-  "version": 1,
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
   "editable": true,
-  "refresh": "30s",
+  "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "templating": { "list": [] },
+  "links": [
+    {
+      "title": "Apps",
+      "url": "/d/gtfsynq-apps",
+      "type": "link",
+      "icon": "dashboard",
+      "tags": [],
+      "targetBlank": false
+    },
+    {
+      "title": "Domain",
+      "url": "/d/gtfsynq-domain",
+      "type": "link",
+      "icon": "dashboard",
+      "tags": [],
+      "targetBlank": false
+    },
+    {
+      "title": "Kafka",
+      "url": "/d/gtfsynq-kafka",
+      "type": "link",
+      "icon": "dashboard",
+      "tags": [],
+      "targetBlank": false
+    },
+    {
+      "title": "Logs",
+      "url": "/d/gtfsynq-logs",
+      "type": "link",
+      "icon": "dashboard",
+      "tags": [],
+      "targetBlank": false
+    },
+    {
+      "title": "Postgres",
+      "url": "/d/gtfsynq-postgres",
+      "type": "link",
+      "icon": "dashboard",
+      "tags": [],
+      "targetBlank": false
+    }
+  ],
   "panels": [
     {
       "id": 1,
+      "type": "row",
+      "title": "Volume",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 2,
       "type": "timeseries",
       "title": "Log volume by service",
-      "datasource": { "type": "victoriametrics-logs-datasource", "uid": "VictoriaLogs" },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "VictoriaLogs"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
       "targets": [
         {
-          "refId": "A",
-          "expr": "* | stats by (service_name) count()",
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "VictoriaLogs"
+          },
+          "editorMode": "code",
+          "expr": "* | stats by (\"service.name\") count()",
           "queryType": "statsRange",
-          "legendFormat": "{{service_name}}"
+          "legendFormat": "{{service.name}}",
+          "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "short",
+          "min": 0,
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
             "lineWidth": 1,
             "fillOpacity": 10,
             "showPoints": "never",
             "spanNulls": false,
-            "stacking": { "mode": "normal", "group": "A" }
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
           }
         },
         "overrides": []
       },
       "options": {
-        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       }
     },
     {
-      "id": 2,
-      "type": "logs",
-      "title": "Logs",
-      "datasource": { "type": "victoriametrics-logs-datasource", "uid": "VictoriaLogs" },
-      "gridPos": { "h": 18, "w": 24, "x": 0, "y": 8 },
+      "id": 3,
+      "type": "timeseries",
+      "title": "Log volume by severity",
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "VictoriaLogs"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
       "targets": [
         {
-          "refId": "A",
-          "expr": "*",
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "VictoriaLogs"
+          },
+          "editorMode": "code",
+          "expr": "* | stats by (severity_text) count()",
+          "queryType": "statsRange",
+          "legendFormat": "{{severity_text}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "row",
+      "title": "Warnings and errors",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "panels": []
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Warnings and errors by service",
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "VictoriaLogs"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "VictoriaLogs"
+          },
+          "editorMode": "code",
+          "expr": "severity_text:in(\"WARN\", \"ERROR\") | stats by (\"service.name\") count()",
+          "queryType": "statsRange",
+          "legendFormat": "{{service.name}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "logs",
+      "title": "Warnings and errors",
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "VictoriaLogs"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "VictoriaLogs"
+          },
+          "editorMode": "code",
+          "expr": "severity_text:in(\"WARN\", \"ERROR\")",
           "queryType": "instant",
-          "maxLines": 1000
+          "maxLines": 500,
+          "refId": "A"
         }
       ],
       "options": {
         "showTime": true,
-        "showLabels": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending"
+      }
+    },
+    {
+      "id": 7,
+      "type": "row",
+      "title": "All logs",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      },
+      "panels": []
+    },
+    {
+      "id": 8,
+      "type": "logs",
+      "title": "All logs",
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "VictoriaLogs"
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "VictoriaLogs"
+          },
+          "editorMode": "code",
+          "expr": "*",
+          "queryType": "instant",
+          "maxLines": 1000,
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": false,
         "showCommonLabels": false,
         "wrapLogMessage": true,
         "prettifyLogMessage": false,
@@ -70,5 +360,56 @@
       }
     }
   ],
-  "time": { "from": "now-1h", "to": "now" }
+  "preload": false,
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": [
+    "gtfsynq",
+    "logs"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "filter",
+        "label": "Filter",
+        "type": "adhoc",
+        "datasource": {
+          "type": "victoriametrics-logs-datasource",
+          "uid": "VictoriaLogs"
+        },
+        "hide": 0,
+        "skipUrlSync": false,
+        "filters": [],
+        "baseFilters": [],
+        "defaultKeys": [],
+        "current": null
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h"
+    ],
+    "time_options": [
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "7d"
+    ]
+  },
+  "timezone": "browser",
+  "title": "GTFSynq Logs",
+  "uid": "gtfsynq-logs",
+  "version": 0,
+  "weekStart": ""
 }

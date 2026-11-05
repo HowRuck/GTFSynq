@@ -1,106 +1,68 @@
 {
-  "title": "GTFSynq Domain",
-  "uid": "gtfsynq-domain",
-  "tags": [
-    "gtfsynq",
-    "domain"
-  ],
-  "timezone": "browser",
-  "schemaVersion": 39,
-  "version": 8,
-  "editable": true,
-  "refresh": "30s",
-  "graphTooltip": 1,
-  "templating": {
+  "annotations": {
     "list": [
       {
-        "name": "application",
-        "label": "Application",
-        "type": "query",
+        "builtIn": 1,
         "datasource": {
-          "type": "victoriametrics-metrics-datasource",
-          "uid": "VictoriaMetrics"
+          "type": "grafana",
+          "uid": "-- Grafana --"
         },
-        "query": "label_values(application)",
-        "refresh": 2,
-        "includeAll": true,
-        "multi": true,
-        "sort": 1,
-        "current": {
-          "text": "All",
-          "value": "$__all"
-        },
-        "definition": "label_values(application)"
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
       }
     ]
   },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [
+    {
+      "title": "Apps",
+      "url": "/d/gtfsynq-apps",
+      "type": "link",
+      "icon": "dashboard",
+      "tags": [],
+      "targetBlank": false
+    },
+    {
+      "title": "Domain",
+      "url": "/d/gtfsynq-domain",
+      "type": "link",
+      "icon": "dashboard",
+      "tags": [],
+      "targetBlank": false
+    },
+    {
+      "title": "Kafka",
+      "url": "/d/gtfsynq-kafka",
+      "type": "link",
+      "icon": "dashboard",
+      "tags": [],
+      "targetBlank": false
+    },
+    {
+      "title": "Logs",
+      "url": "/d/gtfsynq-logs",
+      "type": "link",
+      "icon": "dashboard",
+      "tags": [],
+      "targetBlank": false
+    },
+    {
+      "title": "Postgres",
+      "url": "/d/gtfsynq-postgres",
+      "type": "link",
+      "icon": "dashboard",
+      "tags": [],
+      "targetBlank": false
+    }
+  ],
   "panels": [
     {
       "id": 1,
-      "type": "stat",
-      "title": "Application availability",
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "count({application=~\"$application\"})",
-          "legendFormat": "{{application}}",
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "textMode": "value_and_name",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "DOWN",
-                  "color": "red"
-                },
-                "1": {
-                  "text": "UP",
-                  "color": "green"
-                }
-              }
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          }
-        }
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      }
-    },
-    {
-      "id": 2,
       "type": "row",
       "title": "Ingest",
       "collapsed": false,
@@ -108,77 +70,139 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 4
-      }
+        "y": 0
+      },
+      "panels": []
     },
     {
-      "id": 3,
+      "id": 2,
       "type": "timeseries",
       "title": "Invalid feed entities skipped",
-      "description": "Invalid feed entities skipped per second because they have no ID or entity type.",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "sum by (application) (rate(gtfs.ingest.skipped.invalid{application=~\"$application\"}[$__rate_interval]))",
-          "legendFormat": "{{application}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops"
-        }
       },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 5
-      }
-    },
-    {
-      "id": 4,
-      "type": "stat",
-      "title": "Invalid entities skipped",
-      "description": "Total invalid feed entities skipped during the selected time range.",
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "VictoriaMetrics"
+        "y": 1
       },
       "targets": [
         {
-          "expr": "sum by (application) (increase(gtfs.ingest.skipped.invalid{application=~\"$application\"}[$__range]))",
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum by (application) (rate(gtfs.ingest.skipped.invalid{application=~\"$application\"}[$__rate_interval]))",
           "legendFormat": "{{application}}",
+          "range": true,
+          "instant": false,
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
-        }
+          "unit": "ops",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
       },
       "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "textMode": "value_and_name",
-        "reduceOptions": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
           "calcs": [
-            "lastNotNull"
+            "lastNotNull",
+            "max"
           ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
         }
+      },
+      "description": "GTFS-RT entities dropped because they have no usable id or entity type."
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Invalid entities skipped (range)",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
       },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 5
-      }
+        "y": 1
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(gtfs.ingest.skipped.invalid{application=~\"$application\"}[$__range]))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [],
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "description": "Total invalid GTFS-RT entities skipped in the selected range."
     },
     {
-      "id": 21,
+      "id": 4,
       "type": "row",
       "title": "Static feed",
       "collapsed": false,
@@ -186,240 +210,535 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 13
-      }
+        "y": 9
+      },
+      "panels": []
     },
     {
-      "id": 22,
+      "id": 5,
       "type": "stat",
-      "title": "Static feed age since last success",
-      "description": "Seconds since the stalest configured feed was last ingested successfully. Static feeds poll on a days-scale cadence, so a growing value here is the stall signal no counter can give.",
+      "title": "Feed age since last success",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "max(gtfs.static.last.success.age.seconds{application=~\"$application\"})",
-          "legendFormat": "stalest feed",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s"
-        }
       },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 14
-      }
-    },
-    {
-      "id": 23,
-      "type": "timeseries",
-      "title": "Age since last success by feed",
-      "description": "Seconds since each feed was last ingested successfully. Alert when a feed exceeds roughly two poll intervals.",
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "VictoriaMetrics"
+        "y": 10
       },
       "targets": [
         {
-          "expr": "gtfs.static.last.success.age.seconds{application=~\"$application\"}",
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "max by (feed) (gtfs.static.last.success.age.seconds{application=~\"$application\", feed=~\"$feed\"})",
           "legendFormat": "{{feed}}",
+          "range": false,
+          "instant": true,
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s"
-        }
+          "unit": "s",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 600
+              },
+              {
+                "color": "red",
+                "value": 1800
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
       },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 14
-      }
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "description": "Static feeds poll every 5 minutes and have a 10-minute timeout. Warn at 10 minutes, page at 30."
     },
     {
-      "id": 24,
+      "id": 6,
       "type": "timeseries",
       "title": "Static ingestion attempts by outcome",
-      "description": "Attempts per second: success (new revision stored and published), unchanged (archive already stored) and failed.",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
       },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
       "targets": [
         {
-          "expr": "sum by (outcome) (rate(gtfs.static.ingest{application=~\"$application\"}[$__rate_interval]))",
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum by (outcome) (rate(gtfs.static.ingest{application=~\"$application\", feed=~\"$feed\"}[$__rate_interval]))",
           "legendFormat": "{{outcome}}",
+          "range": true,
+          "instant": false,
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "ops"
+          "unit": "ops",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
         }
       },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 22
-      }
+      "description": "Every attempt, including unchanged, rate-limited, timeout and failed."
     },
     {
-      "id": 25,
+      "id": 7,
       "type": "timeseries",
-      "title": "Static feed download duration (average)",
-      "description": "Time to stream a static archive off the remote server, 95th percentile. Useful for diagnosing the static-feed timeout.",
+      "title": "Archive download duration (average)",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
       },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 18
+      },
       "targets": [
         {
-          "expr": "sum(rate(gtfs.static.download.duration_sum{application=~\"$application\"}[$__rate_interval])) / sum(rate(gtfs.static.download.duration_count{application=~\"$application\"}[$__rate_interval]))",
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(gtfs.static.download.duration_sum{application=~\"$application\", feed=~\"$feed\"}[$__rate_interval])) / sum(rate(gtfs.static.download.duration_count{application=~\"$application\", feed=~\"$feed\"}[$__rate_interval]))",
           "legendFormat": "average",
+          "range": true,
+          "instant": false,
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s"
+          "unit": "s",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
         }
       },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 22
-      }
+      "description": "Mean time to transfer an archive, summed over all feeds. A 304 Not Modified does not transfer or record a duration."
     },
     {
-      "id": 26,
-      "type": "stat",
-      "title": "Static ingestion cycles skipped",
-      "description": "Scheduled cycles skipped because the previous one was still running. Non-zero means ingestion is falling behind its own schedule.",
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "sum(increase(gtfs.static.cycle.skipped{application=~\"$application\"}[$__range]))",
-          "legendFormat": "skipped",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        }
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 30
-      }
-    },
-    {
-      "id": 27,
+      "id": 8,
       "type": "timeseries",
-      "title": "Static archive size (max in range)",
-      "description": "Largest archive downloaded per feed in the current window. A sudden drop can mean a truncated or partial download.",
+      "title": "Static cycle duration (average)",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "max by (feed) (max_over_time(gtfs.static.archive.size.max{application=~\"$application\"}[$__range]))",
-          "legendFormat": "{{feed}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes"
-        }
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 30
-      }
-    },
-    {
-      "id": 28,
-      "type": "timeseries",
-      "title": "Static feed cycle duration (average)",
-      "description": "Wall clock time for one scheduled cycle, 95th percentile. Rising toward the poll interval is the early warning that cycle.skipped will start incrementing.",
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "VictoriaMetrics"
+        "w": 8,
+        "x": 8,
+        "y": 18
       },
       "targets": [
         {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
           "expr": "sum(rate(gtfs.static.cycle.duration_sum{application=~\"$application\"}[$__rate_interval])) / sum(rate(gtfs.static.cycle.duration_count{application=~\"$application\"}[$__rate_interval]))",
           "legendFormat": "average",
+          "range": true,
+          "instant": false,
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s"
+          "unit": "s",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
         }
       },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 38
-      }
+      "description": "Wall-clock time for one scheduled polling cycle across every feed."
     },
     {
-      "id": 29,
-      "type": "timeseries",
-      "title": "Feeds configured vs reporting",
-      "description": "Sources with a usable static URL against feeds that have actually reported an attempt. A persistent gap means a source was dropped from configuration, or has never been reachable.",
+      "id": 9,
+      "type": "stat",
+      "title": "Static cycles skipped (range)",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
       },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 18
+      },
       "targets": [
         {
-          "expr": "gtfs.static.feeds.configured{application=~\"$application\"}",
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(gtfs.static.cycle.skipped{application=~\"$application\"}[$__range]))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [],
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "description": "Cycles skipped because the previous cycle was still running. A nonzero value means 5 minutes is too tight."
+    },
+    {
+      "id": 10,
+      "type": "table",
+      "title": "Archive size (largest observed)",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 26
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "max by (feed) (max_over_time(gtfs.static.archive.size.max{application=~\"$application\", feed=~\"$feed\"}[$__range]))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "refId": "A",
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {},
+            "indexByName": {},
+            "includeByName": {}
+          }
+        }
+      ],
+      "description": "Peak of the Micrometer max gauge over the range. The gauge decays, so this is not the exact histogram maximum."
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "304 Not Modified polls",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 26
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum by (feed) (rate(gtfs.static.download.not_modified{application=~\"$application\", feed=~\"$feed\"}[$__rate_interval]))",
+          "legendFormat": "{{feed}}",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Polls resolved without transferring an archive. A feed that stops revalidating is suspicious."
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "Feed registrations configured vs reporting",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 26
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(gtfs.static.feeds.configured{application=~\"$application\"})",
           "legendFormat": "configured",
+          "range": false,
+          "instant": true,
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
           "expr": "count(gtfs.static.last.success.age.seconds{application=~\"$application\"})",
           "legendFormat": "reporting",
+          "range": false,
+          "instant": true,
           "refId": "B"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
-        }
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
       },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 38
-      }
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "description": "Each app registers every feed it is configured for, so both series count app/feed pairs. A gap means an app has not attempted one of its feeds yet, so no age gauge exists."
     },
     {
-      "id": 5,
+      "id": 13,
       "type": "row",
       "title": "Sink / Store",
       "collapsed": false,
@@ -427,319 +746,561 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 46
-      }
+        "y": 34
+      },
+      "panels": []
     },
     {
-      "id": 6,
+      "id": 14,
       "type": "timeseries",
       "title": "Database write rate",
-      "description": "Database writes completed per second, broken down by operation.",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "sum by (op) (rate(gtfs.sink.db.write_count{application=~\"$application\"}[$__rate_interval]))",
-          "legendFormat": "{{op}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops"
-        }
       },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 47
-      }
+        "y": 35
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum by (op) (rate(gtfs.sink.db.write_count{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "{{op}}",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Writes per second by table operation."
     },
     {
-      "id": 7,
+      "id": 15,
       "type": "timeseries",
       "title": "Database write latency (average)",
-      "description": "95% of database writes finish within this time; the remaining 5% take longer.",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
       },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 35
+      },
       "targets": [
         {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
           "expr": "sum by (op) (rate(gtfs.sink.db.write_sum{application=~\"$application\"}[$__rate_interval])) / sum by (op) (rate(gtfs.sink.db.write_count{application=~\"$application\"}[$__rate_interval]))",
           "legendFormat": "{{op}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s"
-        }
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 47
-      }
-    },
-    {
-      "id": 9,
-      "type": "timeseries",
-      "title": "Database write latency (recent maximum)",
-      "description": "Longest database write observed in the recent rolling window, approximately two minutes. This is not the maximum since startup.",
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "max by (op) (gtfs.sink.db.write.max{application=~\"$application\"})",
-          "legendFormat": "{{op}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s"
-        }
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 47
-      }
-    },
-    {
-      "id": 10,
-      "type": "timeseries",
-      "title": "Flush duration (average and maximum)",
-      "description": "Typical, slower, and slowest recent flush durations. p50 is the median, p95 covers 95% of flushes, and p99 covers 99%.",
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "sum(rate(gtfs.sink.flush.duration_sum{application=~\"$application\"}[$__rate_interval])) / sum(rate(gtfs.sink.flush.duration_count{application=~\"$application\"}[$__rate_interval]))",
-          "legendFormat": "average",
+          "range": true,
+          "instant": false,
           "refId": "A"
         },
         {
-          "expr": "max(gtfs.sink.flush.duration.max{application=~\"$application\"})",
-          "legendFormat": "average",
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "max by (op) (gtfs.sink.db.write.max{application=~\"$application\"})",
+          "legendFormat": "max {{op}}",
+          "range": true,
+          "instant": false,
           "refId": "B"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s"
+          "unit": "s",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
         }
+      }
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "Flush duration (average / max)",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
       },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 63
-      }
-    },
-    {
-      "id": 11,
-      "type": "timeseries",
-      "title": "Flushes per second",
-      "description": "Number of buffer flushes completed per second.",
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "VictoriaMetrics"
+        "y": 43
       },
       "targets": [
         {
-          "expr": "sum by (application) (rate(gtfs.sink.flush.duration_count{application=~\"$application\"}[$__rate_interval]))",
-          "legendFormat": "{{application}}",
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(gtfs.sink.flush.duration_sum{application=~\"$application\"}[$__rate_interval])) / sum(rate(gtfs.sink.flush.duration_count{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "average",
+          "range": true,
+          "instant": false,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "max(gtfs.sink.flush.duration.max{application=~\"$application\"})",
+          "legendFormat": "max",
+          "range": true,
+          "instant": false,
+          "refId": "B"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "ops"
+          "unit": "s",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
         }
+      },
+      "description": "Total time to map and persist one drained batch."
+    },
+    {
+      "id": 17,
+      "type": "timeseries",
+      "title": "Entities per flush",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
       },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 63
-      }
-    },
-    {
-      "id": 12,
-      "type": "timeseries",
-      "title": "Entities per flush",
-      "description": "Average and recent maximum number of descriptors or stop-time updates processed in each flush. Values can be absent when no flushes occur; the maximum covers a rolling window of approximately two minutes.",
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "VictoriaMetrics"
+        "y": 43
       },
       "targets": [
         {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
           "expr": "sum by (type) (rate(gtfs.sink.entities.count_sum{application=~\"$application\"}[$__rate_interval])) / sum by (type) (rate(gtfs.sink.entities.count_count{application=~\"$application\"}[$__rate_interval]))",
           "legendFormat": "avg {{type}}",
+          "range": true,
+          "instant": false,
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
           "expr": "max by (type) (gtfs.sink.entities.count.max{application=~\"$application\"})",
           "legendFormat": "max {{type}}",
+          "range": true,
+          "instant": false,
           "refId": "B"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "short",
+          "min": 0,
           "custom": {
-            "spanNulls": true
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
           }
-        }
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 71
-      }
-    },
-    {
-      "id": 13,
-      "type": "timeseries",
-      "title": "Entities processed per second",
-      "description": "Descriptors and stop-time updates processed per second.",
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "sum by (type) (rate(gtfs.sink.entities.count_sum{application=~\"$application\"}[$__rate_interval]))",
-          "legendFormat": "{{type}} per second",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops"
-        }
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 71
-      }
-    },
-    {
-      "id": 14,
-      "type": "timeseries",
-      "title": "Duplicate updates dropped per second",
-      "description": "Duplicate trip updates discarded per second before they are buffered.",
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "sum by (reason, instance) (rate(gtfs.sink.dropped{application=~\"$application\"}[$__rate_interval]))",
-          "legendFormat": "{{reason}} {{application}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops"
-        }
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 79
-      }
-    },
-    {
-      "id": 15,
-      "type": "stat",
-      "title": "Duplicate updates dropped",
-      "description": "Total duplicate trip updates discarded during the selected time range.",
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "sum by (reason, instance) (increase(gtfs.sink.dropped{application=~\"$application\"}[$__range]))",
-          "legendFormat": "{{reason}} {{application}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        }
+        },
+        "overrides": []
       },
       "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "textMode": "value_and_name",
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 18,
+      "type": "timeseries",
+      "title": "Entities processed per second",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 51
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum by (type) (rate(gtfs.sink.entities.count_sum{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "{{type}}",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 19,
+      "type": "timeseries",
+      "title": "Duplicate updates dropped",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 51
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum by (reason, application) (rate(gtfs.sink.dropped{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "{{reason}} {{application}}",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Duplicate trip updates and database-rejected updates."
+    },
+    {
+      "id": 20,
+      "type": "stat",
+      "title": "Duplicate updates dropped (range)",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 51
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum by (reason, application) (increase(gtfs.sink.dropped{application=~\"$application\"}[$__range]))",
+          "legendFormat": "{{reason}} {{application}}",
+          "range": false,
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [],
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
-        }
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 79
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 30,
+      "id": 21,
       "type": "timeseries",
-      "title": "Average flush phase duration",
-      "description": "Mean time each flush spends mapping the drained batch into rows and in each database write, broken down by phase. Mapping is client-side shaping; the db phases are the batch writes to the metadata, history, and hot tables.",
+      "title": "Flush phase duration",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "rate(gtfs.sink.map.duration_sum{application=~\"$application\"}[$__rate_interval]) / rate(gtfs.sink.map.duration_count{application=~\"$application\"}[$__rate_interval])",
-          "legendFormat": "map",
-          "refId": "A"
-        },
-        {
-          "expr": "sum by (op) (rate(gtfs.sink.db.write_sum{application=~\"$application\"}[$__rate_interval])) / sum by (op) (rate(gtfs.sink.db.write_count{application=~\"$application\"}[$__rate_interval]))",
-          "legendFormat": "db {{op}}",
-          "refId": "B"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s"
-        }
       },
       "gridPos": {
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 87
-      }
+        "y": 59
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(gtfs.sink.map.duration_sum{application=~\"$application\"}[$__rate_interval])) / sum(rate(gtfs.sink.map.duration_count{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "map",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum by (op) (rate(gtfs.sink.db.write_sum{application=~\"$application\"}[$__rate_interval])) / sum by (op) (rate(gtfs.sink.db.write_count{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "db {{op}}",
+          "range": true,
+          "instant": false,
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Map time versus each database operation, so the slow half of a flush is visible."
     },
     {
-      "id": 16,
+      "id": 22,
       "type": "row",
       "title": "Off-heap store",
       "collapsed": false,
@@ -747,83 +1308,171 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 95
-      }
+        "y": 67
+      },
+      "panels": []
     },
     {
-      "id": 17,
+      "id": 23,
       "type": "timeseries",
-      "title": "Off-heap store usage",
-      "description": "Occupied and total off-heap store slots for each application instance.",
+      "title": "Off-heap store slots",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
       },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 68
+      },
       "targets": [
         {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
           "expr": "offheap.store.size{application=~\"$application\"}",
           "legendFormat": "size {{application}}",
+          "range": true,
+          "instant": false,
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
           "expr": "offheap.store.capacity{application=~\"$application\"}",
           "legendFormat": "capacity {{application}}",
+          "range": true,
+          "instant": false,
           "refId": "B"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
-        }
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
       },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 96
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       }
     },
     {
-      "id": 18,
+      "id": 24,
       "type": "timeseries",
       "title": "Free off-heap slots",
-      "description": "Unused off-heap store slots. A value near zero means the store is close to its current capacity and may need to grow.",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
       },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 68
+      },
       "targets": [
         {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
           "expr": "offheap.store.capacity{application=~\"$application\"} - offheap.store.size{application=~\"$application\"}",
           "legendFormat": "free {{application}}",
+          "range": true,
+          "instant": false,
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
-        }
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
       },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 96
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       }
     },
     {
-      "id": 19,
+      "id": 25,
       "type": "timeseries",
-      "title": "Off-heap store usage",
-      "description": "Percentage of off-heap store capacity currently occupied. Automatic resizing starts at 70% usage.",
+      "title": "Off-heap load ratio",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
       },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 68
+      },
       "targets": [
         {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
           "expr": "offheap.store.load.ratio{application=~\"$application\"}",
           "legendFormat": "{{application}}",
+          "range": true,
+          "instant": false,
           "refId": "A"
         }
       ],
@@ -831,11 +1480,145 @@
         "defaults": {
           "unit": "percentunit",
           "min": 0,
-          "max": 1,
           "custom": {
-            "thresholdsStyle": {
-              "mode": "dashed"
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
             }
+          },
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Hash table occupancy. Sustained values near 1 trigger a resize."
+    },
+    {
+      "id": 26,
+      "type": "timeseries",
+      "title": "Off-heap allocated bytes",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 76
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "offheap.store.bytes{application=~\"$application\"}",
+          "legendFormat": "total {{application}}",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "offheap.store.retired.bytes{application=~\"$application\"}",
+          "legendFormat": "retired {{application}}",
+          "range": true,
+          "instant": false,
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 27,
+      "type": "stat",
+      "title": "Current off-heap load",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 76
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "offheap.store.load.ratio{application=~\"$application\"}",
+          "legendFormat": "{{application}}",
+          "range": false,
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "color": {
+            "mode": "thresholds"
           },
           "thresholds": {
             "mode": "absolute",
@@ -853,73 +1636,28 @@
                 "value": 0.9
               }
             ]
-          }
-        }
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 104
-      }
-    },
-    {
-      "id": 20,
-      "type": "stat",
-      "title": "Current off-heap store usage",
-      "description": "Current percentage of off-heap store capacity occupied by each application instance.",
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "offheap.store.load.ratio{application=~\"$application\"}",
-          "legendFormat": "{{application}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 0.7
-              },
-              {
-                "color": "red",
-                "value": 0.9
-              }
-            ]
-          }
-        }
+          },
+          "mappings": []
+        },
+        "overrides": []
       },
       "options": {
-        "colorMode": "background",
-        "graphMode": "area",
-        "textMode": "value_and_name",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
-        }
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 104
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 31,
+      "id": 28,
       "type": "row",
       "title": "Static validation",
       "collapsed": false,
@@ -927,338 +1665,107 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 112
+        "y": 84
       },
-      "targets": [],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        }
-      }
+      "panels": []
     },
     {
-      "id": 32,
+      "id": 29,
       "type": "timeseries",
-      "title": "Validation outcomes per second",
-      "description": "Attempts per second: success (new revision stored and published), unchanged (archive already stored) and failed.",
+      "title": "Validation outcomes",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "sum by (result) (rate(gtfs.static.validation.feeds{application=~\"$application\"}[$__rate_interval]))",
-          "refId": "A",
-          "legendFormat": "{{result}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops"
-        }
       },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 113
-      }
-    },
-    {
-      "id": 33,
-      "type": "stat",
-      "title": "Failed validations in range",
-      "description": "Scheduled cycles skipped because the previous one was still running. Non-zero means ingestion is falling behind its own schedule.",
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "VictoriaMetrics"
+        "y": 85
       },
       "targets": [
         {
-          "expr": "sum(increase(gtfs.static.validation.feeds{application=~\"$application\", result=~\"invalid|checksum_mismatch|fetch_failed\"}[$__range]))",
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum by (result) (rate(gtfs.static.validation.feeds{application=~\"$application\", feed=~\"$feed\"}[$__rate_interval]))",
+          "legendFormat": "{{result}}",
+          "range": true,
+          "instant": false,
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
-        }
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 12,
-        "y": 113
-      }
-    },
-    {
-      "id": 34,
-      "type": "stat",
-      "title": "Archives validated in range",
-      "description": "Scheduled cycles skipped because the previous one was still running. Non-zero means ingestion is falling behind its own schedule.",
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "sum(increase(gtfs.static.validation.feeds{application=~\"$application\"}[$__range]))",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        }
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 18,
-        "y": 113
-      }
-    },
-    {
-      "id": 35,
-      "type": "timeseries",
-      "title": "Outcomes by feed (range)",
-      "description": "Attempts per second: success (new revision stored and published), unchanged (archive already stored) and failed.",
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "sum by (feed, result) (increase(gtfs.static.validation.feeds{application=~\"$application\"}[$__range]))",
-          "refId": "A",
-          "legendFormat": "{{feed}} {{result}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        }
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 121
-      }
-    },
-    {
-      "id": 36,
-      "type": "timeseries",
-      "title": "Validation duration (average by stage)",
-      "description": "Attempts per second: success (new revision stored and published), unchanged (archive already stored) and failed.",
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "sum by (stage) (rate(gtfs.static.validation.duration_sum{application=~\"$application\"}[$__rate_interval])) / sum by (stage) (rate(gtfs.static.validation.duration_count{application=~\"$application\"}[$__rate_interval]))",
-          "refId": "A",
-          "legendFormat": "{{stage}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s"
-        }
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 121
-      }
-    },
-    {
-      "id": 37,
-      "type": "timeseries",
-      "title": "Rows checked per validated archive (average)",
-      "description": "Attempts per second: success (new revision stored and published), unchanged (archive already stored) and failed.",
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "sum(rate(gtfs.static.validation.rows_sum{application=~\"$application\"}[$__rate_interval])) / sum(rate(gtfs.static.validation.rows_count{application=~\"$application\"}[$__rate_interval]))",
-          "refId": "A",
-          "legendFormat": "average"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        }
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 129
-      }
-    },
-    {
-      "id": 38,
-      "type": "timeseries",
-      "title": "Violations per second by file",
-      "description": "Attempts per second: success (new revision stored and published), unchanged (archive already stored) and failed.",
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "sum by (file) (rate(gtfs.static.validation.violations{application=~\"$application\"}[$__rate_interval]))",
-          "refId": "A",
-          "legendFormat": "{{file}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops"
-        }
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 129
-      }
-    },
-    {
-      "id": 39,
-      "type": "timeseries",
-      "title": "Violations by feed and file (range)",
-      "description": "Attempts per second: success (new revision stored and published), unchanged (archive already stored) and failed.",
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "sum by (feed, file) (increase(gtfs.static.validation.violations{application=~\"$application\"}[$__range]))",
-          "refId": "A",
-          "legendFormat": "{{feed}} {{file}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        }
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 137
-      }
-    },
-    {
-      "id": 40,
-      "type": "timeseries",
-      "title": "Violations per validated archive (max in range)",
-      "description": "Attempts per second: success (new revision stored and published), unchanged (archive already stored) and failed.",
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "max(max_over_time(gtfs.static.validation.violations.per.feed.max{application=~\"$application\"}[$__range]))",
-          "refId": "A",
-          "legendFormat": "maximum"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        }
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 137
-      }
-    },
-    {
-      "id": 41,
-      "type": "row",
-      "title": "Static ingestion",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 145
-      },
-      "targets": [],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        }
-      }
-    },
-    {
-      "id": 42,
-      "type": "stat",
-      "title": "Static ingestions in flight",
-      "description": "Number of static-feed events currently being fetched, validated, or persisted.",
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "sum(gtfs.static.ingestion.in_flight.active{application=~\"$application\"})",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        }
+          "unit": "ops",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
       },
       "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "textMode": "value_and_name",
-        "reduceOptions": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
           "calcs": [
-            "lastNotNull"
+            "lastNotNull",
+            "max"
           ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
         }
       },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 0,
-        "y": 146
-      }
+      "description": "Valid, invalid, checksum mismatch, fetch failure, malformed event and disabled outcomes."
     },
     {
-      "id": 43,
+      "id": 30,
       "type": "stat",
-      "title": "In-flight ingestion duration",
-      "description": "Elapsed time accumulated across active static-feed ingestions. Yellow at 1 minute and red at 9 minutes, before the 10-minute Kafka threshold.",
+      "title": "Failed validations (range)",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
       },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 85
+      },
       "targets": [
         {
-          "expr": "max(gtfs.static.ingestion.in_flight.duration{application=~\"$application\"})",
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(gtfs.static.validation.feeds{application=~\"$application\", feed=~\"$feed\", result=~\"invalid|checksum_mismatch|fetch_failed|malformed_event\"}[$__range]))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1267,234 +1774,1402 @@
                 "value": null
               },
               {
-                "color": "yellow",
-                "value": 60
-              },
-              {
                 "color": "red",
-                "value": 540
+                "value": 1
               }
             ]
-          }
-        }
+          },
+          "mappings": [],
+          "decimals": 0
+        },
+        "overrides": []
       },
       "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "textMode": "value_and_name",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
-        }
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "id": 31,
+      "type": "stat",
+      "title": "Archives validated (range)",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
       },
       "gridPos": {
-        "h": 5,
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 85
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(gtfs.static.validation.feeds{application=~\"$application\", feed=~\"$feed\"}[$__range]))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [],
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "id": 32,
+      "type": "table",
+      "title": "Outcomes by feed (range)",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 93
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum by (feed, result) (increase(gtfs.static.validation.feeds{application=~\"$application\", feed=~\"$feed\"}[$__range]))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "refId": "A",
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {},
+            "indexByName": {},
+            "includeByName": {}
+          }
+        }
+      ],
+      "description": "A table, not a flat time series: increase over the whole range is a single value per feed/result."
+    },
+    {
+      "id": 33,
+      "type": "timeseries",
+      "title": "Validation duration (average by stage)",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 93
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum by (stage) (rate(gtfs.static.validation.duration_sum{application=~\"$application\"}[$__rate_interval])) / sum by (stage) (rate(gtfs.static.validation.duration_count{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "{{stage}}",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 34,
+      "type": "timeseries",
+      "title": "Rows checked per validated archive",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 101
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(gtfs.static.validation.rows_sum{application=~\"$application\"}[$__rate_interval])) / sum(rate(gtfs.static.validation.rows_count{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "average",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 35,
+      "type": "timeseries",
+      "title": "Violations per second by file",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 101
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum by (file) (rate(gtfs.static.validation.violations{application=~\"$application\", feed=~\"$feed\"}[$__rate_interval]))",
+          "legendFormat": "{{file}}",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 36,
+      "type": "table",
+      "title": "Violations by feed and file (range)",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 109
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum by (feed, file) (increase(gtfs.static.validation.violations{application=~\"$application\", feed=~\"$feed\"}[$__range]))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "refId": "A",
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {},
+            "indexByName": {},
+            "includeByName": {}
+          }
+        }
+      ],
+      "description": "Violation counts over the selected range, per feed and file."
+    },
+    {
+      "id": 37,
+      "type": "stat",
+      "title": "Max violations per archive",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 109
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "max(max_over_time(gtfs.static.validation.violations.per.feed.max{application=~\"$application\"}[$__range]))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [],
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "description": "The worst single archive in the selected range."
+    },
+    {
+      "id": 38,
+      "type": "row",
+      "title": "Static ingestion and persistence",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 117
+      },
+      "panels": []
+    },
+    {
+      "id": 39,
+      "type": "stat",
+      "title": "Static ingestions in flight",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 118
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(gtfs.static.ingestion.in_flight.active{application=~\"$application\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [],
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "id": 40,
+      "type": "stat",
+      "title": "In-flight ingestion duration",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "gridPos": {
+        "h": 8,
         "w": 6,
         "x": 6,
-        "y": 146
+        "y": 118
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "max(gtfs.static.ingestion.in_flight.duration{application=~\"$application\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "id": 41,
+      "type": "timeseries",
+      "title": "End-to-end ingestion duration (average by outcome)",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 118
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum by (outcome) (rate(gtfs.static.ingestion.duration_sum{application=~\"$application\"}[$__rate_interval])) / sum by (outcome) (rate(gtfs.static.ingestion.duration_count{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "{{outcome}}",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 42,
+      "type": "timeseries",
+      "title": "Event age at processing start",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 126
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(gtfs.static.ingestion.queue.age_sum{application=~\"$application\"}[$__rate_interval])) / sum(rate(gtfs.static.ingestion.queue.age_count{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "average",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Time between archive publication and the start of processing."
+    },
+    {
+      "id": 43,
+      "type": "timeseries",
+      "title": "Archive size (average)",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 126
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(gtfs.static.ingestion.archive.size_sum{application=~\"$application\"}[$__rate_interval])) / sum(rate(gtfs.static.ingestion.archive.size_count{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "average",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       }
     },
     {
       "id": 44,
       "type": "timeseries",
-      "title": "End-to-end ingestion duration (average by outcome)",
-      "description": "Average time from staging through validation and persistence, grouped by the final result.",
+      "title": "Persistence revisions by result",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "sum by (outcome) (rate(gtfs.static.ingestion.duration_sum{application=~\"$application\"}[$__rate_interval])) / sum by (outcome) (rate(gtfs.static.ingestion.duration_count{application=~\"$application\"}[$__rate_interval]))",
-          "legendFormat": "{{outcome}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s"
-        }
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 146
-      }
-    },
-    {
-      "id": 45,
-      "type": "timeseries",
-      "title": "Event age at processing start",
-      "description": "Average time since the archive was uploaded and its event was published, before this consumer started processing it.",
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "rate(gtfs.static.ingestion.queue.age_sum{application=~\"$application\"}[$__rate_interval]) / rate(gtfs.static.ingestion.queue.age_count{application=~\"$application\"}[$__rate_interval])",
-          "legendFormat": "average",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s"
-        }
       },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 154
-      }
-    },
-    {
-      "id": 46,
-      "type": "timeseries",
-      "title": "Static archive size (average)",
-      "description": "Average compressed archive size reported on ingestion events.",
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "VictoriaMetrics"
+        "y": 134
       },
       "targets": [
         {
-          "expr": "rate(gtfs.static.ingestion.archive.size_sum{application=~\"$application\"}[$__rate_interval]) / rate(gtfs.static.ingestion.archive.size_count{application=~\"$application\"}[$__rate_interval])",
-          "legendFormat": "average",
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum by (result) (rate(gtfs.static.persistence.revisions{application=~\"$application\", feed=~\"$feed\"}[$__rate_interval]))",
+          "legendFormat": "{{result}}",
+          "range": true,
+          "instant": false,
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "bytes"
+          "unit": "ops",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
         }
+      },
+      "description": "Loaded, unchanged, failed and disabled persistence outcomes."
+    },
+    {
+      "id": 45,
+      "type": "timeseries",
+      "title": "Persistence load duration (average)",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
       },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 154
+        "y": 134
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(gtfs.static.persistence.duration_sum{application=~\"$application\"}[$__rate_interval])) / sum(rate(gtfs.static.persistence.duration_count{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "average",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Time to stream a validated archive into the database."
+    },
+    {
+      "id": 46,
+      "type": "timeseries",
+      "title": "Rows written per load",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 142
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(gtfs.static.persistence.rows_sum{application=~\"$application\"}[$__rate_interval])) / sum(rate(gtfs.static.persistence.rows_count{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "average",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       }
     },
     {
       "id": 47,
       "type": "timeseries",
-      "title": "Database batch duration (average by table)",
-      "description": "Time spent binding rows and executing JDBC batches, grouped by target table.",
+      "title": "Rows written per second by table",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "sum by (table) (rate(gtfs.static.persistence.batch.duration_sum{application=~\"$application\"}[$__rate_interval])) / sum by (table) (rate(gtfs.static.persistence.batch.duration_count{application=~\"$application\"}[$__rate_interval]))",
-          "legendFormat": "{{table}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s"
-        }
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 162
-      }
-    },
-    {
-      "id": 48,
-      "type": "timeseries",
-      "title": "Rows per database batch (average by table)",
-      "description": "Average number of rows submitted per JDBC batch by target table.",
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "sum by (table) (rate(gtfs.static.persistence.batch.rows_sum{application=~\"$application\"}[$__rate_interval])) / sum by (table) (rate(gtfs.static.persistence.batch.rows_count{application=~\"$application\"}[$__rate_interval]))",
-          "legendFormat": "{{table}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        }
       },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 162
+        "y": 142
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum by (table) (rate(gtfs.static.persistence.rows.by_table{application=~\"$application\", feed=~\"$feed\"}[$__rate_interval]))",
+          "legendFormat": "{{table}}",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "The per-table counters are monotonic, so this is a write rate; the total rows per load is above."
+    },
+    {
+      "id": 48,
+      "type": "timeseries",
+      "title": "Database batch duration (average by table)",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 150
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum by (table) (rate(gtfs.static.persistence.batch.duration_sum{application=~\"$application\"}[$__rate_interval])) / sum by (table) (rate(gtfs.static.persistence.batch.duration_count{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "{{table}}",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       }
     },
     {
       "id": 49,
       "type": "timeseries",
-      "title": "Database transaction phase duration (average)",
-      "description": "Average time spent acquiring a connection, waiting for the per-feed lock, looking up the revision, clearing old rows, committing, and rolling back.",
+      "title": "Rows per database batch",
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
         "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "sum by (phase) (rate(gtfs.static.persistence.transaction.phase.duration_sum{application=~\"$application\"}[$__rate_interval])) / sum by (phase) (rate(gtfs.static.persistence.transaction.phase.duration_count{application=~\"$application\"}[$__rate_interval]))",
-          "legendFormat": "{{phase}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s"
-        }
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 170
-      }
-    },
-    {
-      "id": 50,
-      "type": "timeseries",
-      "title": "Database batch attempts and failures per second",
-      "description": "Batch insert attempts and failed batch operations, grouped by target table.",
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "VictoriaMetrics"
-      },
-      "targets": [
-        {
-          "expr": "sum by (table) (rate(gtfs.static.persistence.batch.attempts{application=~\"$application\"}[$__rate_interval]))",
-          "legendFormat": "{{table}} attempts",
-          "refId": "A"
-        },
-        {
-          "expr": "sum by (table) (rate(gtfs.static.persistence.batch.failures{application=~\"$application\"}[$__rate_interval]))",
-          "legendFormat": "{{table}} failures",
-          "refId": "B"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops"
-        }
       },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 170
+        "y": 150
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum by (table) (rate(gtfs.static.persistence.batch.rows_sum{application=~\"$application\"}[$__rate_interval])) / sum by (table) (rate(gtfs.static.persistence.batch.rows_count{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "{{table}}",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 50,
+      "type": "timeseries",
+      "title": "Transaction phase duration (average)",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 158
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum by (phase) (rate(gtfs.static.persistence.transaction.phase.duration_sum{application=~\"$application\"}[$__rate_interval])) / sum by (phase) (rate(gtfs.static.persistence.transaction.phase.duration_count{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "{{phase}}",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 51,
+      "type": "timeseries",
+      "title": "Batch attempts and failures",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 158
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum by (table) (rate(gtfs.static.persistence.batch.attempts{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "{{table}} attempts",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum by (table) (rate(gtfs.static.persistence.batch.failures{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "{{table}} failures",
+          "range": true,
+          "instant": false,
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       }
     }
-  ]
+  ],
+  "preload": false,
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": [
+    "gtfsynq",
+    "domain"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "application",
+        "label": "Application",
+        "type": "query",
+        "datasource": {
+          "type": "victoriametrics-metrics-datasource",
+          "uid": "VictoriaMetrics"
+        },
+        "definition": "label_values(application)",
+        "query": {
+          "query": "label_values(application)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "sort": 1,
+        "hide": 0,
+        "skipUrlSync": false
+      },
+      {
+        "name": "feed",
+        "label": "Feed",
+        "type": "query",
+        "datasource": {
+          "type": "victoriametrics-metrics-datasource",
+          "uid": "VictoriaMetrics"
+        },
+        "definition": "label_values(gtfs.static.last.success.age.seconds, feed)",
+        "query": {
+          "query": "label_values(gtfs.static.last.success.age.seconds, feed)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "sort": 1,
+        "hide": 0,
+        "skipUrlSync": false
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h"
+    ],
+    "time_options": [
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "7d"
+    ]
+  },
+  "timezone": "browser",
+  "title": "GTFSynq Domain",
+  "uid": "gtfsynq-domain",
+  "version": 0,
+  "weekStart": ""
 }
