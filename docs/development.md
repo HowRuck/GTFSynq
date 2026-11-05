@@ -51,7 +51,7 @@ rather than guessing.
 | `gradle` | Inspect Gradle tasks, dependencies and the build model | Local via `jbang run --quiet --fresh gradle-mcp@rnett`; the first run may fetch jbang and the tool. Pair with `gradle-best-practices`. |
 | `quarkus-agent` | Start/stop/restart Quarkus apps, proxy Dev MCP tools, search Quarkus docs and load extension skills | Local via `jbang quarkus-agent-mcp@quarkusio`; experimental, requires JBang, and the first docs search builds an index. |
 | `grafana` | Validate provisioned dashboards, panel queries and datasource health | Local via `scripts/run-grafana-mcp.sh` (`uvx mcp-grafana`); read-only, sources the Grafana admin credentials from `.env`, and needs Grafana on `localhost:3000`. |
-| `playwright` | Drive the running console for visual checks | Local via `npx @playwright/mcp@latest`; needs a browser binary. If the MCP browser is unavailable, use the system Chromium in a local `npx playwright` script. |
+| `playwright` | Drive the running console for visual checks | Local via `npx @playwright/mcp@latest`; launches the **Google Chrome** channel at `/opt/google/chrome/chrome`, not the system Chromium. See [Playwright MCP](#playwright-mcp). |
 
 Tool names carry the server name (for example `vaadin.search_vaadin_docs` or
 `playwright.browser_navigate`). When a server is down, say so and continue with the local
@@ -59,7 +59,8 @@ fallback; do not block a change on MCP availability.
 
 Local servers are started when OpenCode starts. After changing `opencode.json` or a wrapper
 script, restart OpenCode (or reconnect the server) so the new tool list is loaded. The Grafana
-wrapper needs `uvx`, the Quarkus and Gradle servers need JBang, and Playwright needs a browser.
+wrapper needs `uvx`, the Quarkus and Gradle servers need JBang, and Playwright needs Google Chrome
+installed (see [Playwright MCP](#playwright-mcp)).
 
 #### Vaadin documentation
 
@@ -92,6 +93,36 @@ experimental and requires JBang.
   or attach to the app you are changing. The root `devInfra`/Compose stack is not started by the
   agent, so for a full-stack run start the stack or the app in a terminal and use
   `quarkus_attach`.
+
+#### Playwright MCP
+
+`playwright` drives the running console for visual checks. It launches the installed **Google
+Chrome** (the `chrome` channel), not a browser bundled with the MCP package.
+
+- Prerequisite: Google Chrome at `/opt/google/chrome/chrome` (verified with 157.0.8103.38).
+  `npx playwright install chrome` installs it on a bare machine. The system Chromium at
+  `/usr/bin/chromium` is **not** picked up by the MCP.
+- If `browser_navigate` fails with `Chromium distribution 'chrome' is not found`, Chrome is
+  missing. Install it and retry; the server spawns the browser per call, so no restart is needed.
+- The server runs **headed** by default, so a Chrome window opens on the desktop. Add
+  `"--headless"` to the `command` array in `opencode.json` to keep it off-screen; restart OpenCode
+  afterwards so the new flags load.
+- File outputs are limited to the allowed roots: the repository root and `.playwright-mcp/` in it.
+  A path such as `/tmp/shot.png` is refused with `outside allowed roots`. Write screenshots to
+  `.playwright-mcp/`, which is git-ignored, and clean the folder up when the check is done.
+- `browser_take_screenshot` requires `scale` (`"css"` matches the viewport); `filename` alone fails
+  argument validation.
+- The console must be running (`./gradlew :ui-app:quarkusDev`, `http://localhost:8083`). With no
+  `api-app` or VictoriaMetrics, the data views show their error or empty states; check layout and
+  states, not data.
+- When the MCP is unavailable, drive the system Chromium directly; it renders the same console:
+
+  ```bash
+  chromium --headless --no-sandbox --window-size=1440,900 \
+    --virtual-time-budget=15000 --screenshot=shot.png http://localhost:8083/metrics
+  ```
+
+  Force dark mode with `--force-dark-mode` and emulate a narrow viewport with `--window-size`.
 
 ---
 
@@ -210,7 +241,7 @@ the umbrella `postgres` reference), then the broader one for context.
    ./gradlew :ui-app:quarkusDev      # terminal 2, http://localhost:8083
    ```
    If the Compose services are already running, add `-x :devInfra`.
-9. Use Playwright (the `playwright` MCP server or a local `npx playwright` script) to check:
+9. Use the `playwright` MCP server (or the headless Chromium fallback) to check:
    - all routes: `/`, `/feeds`, `/routes`, `/stops`, `/trips`, `/live`, `/metrics`;
    - light and dark (`colorScheme: 'light'` and `'dark'`);
    - 1600 px, 820 px and 480 px widths;
@@ -220,8 +251,9 @@ the umbrella `postgres` reference), then the broader one for context.
    - filters and icon-only buttons have accessible names;
    - `prefers-reduced-motion` disables non-essential animation.
 
-   If the Playwright MCP cannot launch its bundled browser, point a local `npx playwright` script
-   at the system Chromium (`executablePath: '/usr/bin/chromium'`).
+   The MCP launches the installed Google Chrome. If it reports that the `chrome` distribution is
+   missing, follow [Playwright MCP](#playwright-mcp). Save screenshots under `.playwright-mcp/`
+   and remove them afterwards so the working tree stays clean.
 
    If `api-app` or VictoriaMetrics is not running, the data views show their expected error or
    empty states; verify the layout and states, not the data.

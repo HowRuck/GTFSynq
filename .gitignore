@@ -46,6 +46,9 @@ state_dump.bin
 .opencode
 .kotlin
 
+# Playwright MCP output (screenshots, snapshots); the server can only write inside the repo.
+.playwright-mcp/
+
 .agents/skills
 
 # Vaadin: the Gradle plugin generates the frontend bundle, the Vite config and
