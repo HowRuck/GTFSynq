@@ -190,6 +190,11 @@ health checks, and copies their credentials into the app (the `config_map`
 labels in that file map the container environment onto `quarkus.datasource.*`
 and `gtfsynq.storage.s3.*`), so nothing has to be exported.
 
+Before making a change, follow [docs/development.md](docs/development.md). It
+maps UI, database, build, Quarkus and frontend work to the matching skill under
+`.agents/skills/` and lists the project-specific conventions and verification
+steps that apply on top of that skill.
+
 1. Run an app with `./gradlew :api-app:quarkusDev`.
 2. Make changes in `src/main/java` — Quarkus dev mode reloads them on refresh.
 3. Re-run `./gradlew test` and `./gradlew build` as needed.

@@ -1,5 +1,12 @@
 # Agent Guidance
 
+## Development workflow
+
+Follow [`docs/development.md`](docs/development.md). It maps UI, database, Gradle, Quarkus and
+frontend work to the matching skill under `.agents/skills/`, lists the repository conventions
+that apply on top of that skill, and defines the verification checklist. Load the matching skill
+before editing; where a skill's default conflicts with the development guide, the guide wins.
+
 ## CI workflow naming
 
 Every CI workflow must use **kebab-case** for names and identifiers —
