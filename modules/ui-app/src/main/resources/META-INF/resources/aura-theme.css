@@ -9,7 +9,7 @@
  * uses a desaturated clay variant of the preset pair: the stock Orange light accent (#ca3500) and
  * dark accent (#fb923c) are fully saturated, which made selected tabs, links and primary actions
  * read as an alarm rather than as branding. Both remain dark/light enough for text and small icons
- * (about 4.9:1 on the light background, 8:1 on the dark one).
+ * (5.0:1 on the light background, 7.7:1 on the dark one).
  */
 @font-face {
   font-family: 'Inter';
