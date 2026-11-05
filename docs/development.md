@@ -40,7 +40,7 @@ reference files directly.
 
 ### Configured MCP servers
 
-The repository's `opencode.json` configures six MCP servers. They are optional helpers: if one
+The repository's `opencode.json` configures seven MCP servers. They are optional helpers: if one
 is unavailable or fails, fall back to the local source, `./gradlew` or a local Playwright script
 rather than guessing.
 
@@ -52,6 +52,7 @@ rather than guessing.
 | `quarkus-agent` | Start/stop/restart Quarkus apps, proxy Dev MCP tools, search Quarkus docs and load extension skills | Local via `jbang quarkus-agent-mcp@quarkusio`; experimental, requires JBang, and the first docs search builds an index. |
 | `grafana` | Validate provisioned dashboards, panel queries and datasource health | Local via `scripts/run-grafana-mcp.sh` (`uvx mcp-grafana`); read-only, sources the Grafana admin credentials from `.env`, and needs Grafana on `localhost:3000`. |
 | `playwright` | Drive the running console for visual checks | Local via `npx @playwright/mcp@latest`; launches the **Google Chrome** channel at `/opt/google/chrome/chrome`, not the system Chromium. See [Playwright MCP](#playwright-mcp). |
+| `podman` | Inspect containers, read logs, check ports and start/stop individual containers | Local via `npx -y podman-mcp-server@latest`; uses the Podman socket or CLI. **Write-capable**: `container_remove`, `image_remove`, `image_push` and `image_build` mutate host state. No compose support, and `container_run` accepts only image, environment and ports (no volumes, networks or extra hosts). |
 
 Tool names carry the server name (for example `vaadin.search_vaadin_docs` or
 `playwright.browser_navigate`). When a server is down, say so and continue with the local
@@ -59,8 +60,14 @@ fallback; do not block a change on MCP availability.
 
 Local servers are started when OpenCode starts. After changing `opencode.json` or a wrapper
 script, restart OpenCode (or reconnect the server) so the new tool list is loaded. The Grafana
-wrapper needs `uvx`, the Quarkus and Gradle servers need JBang, and Playwright needs Google Chrome
-installed (see [Playwright MCP](#playwright-mcp)).
+wrapper needs `uvx`, the Quarkus and Gradle servers need JBang, Playwright needs Google Chrome
+installed (see [Playwright MCP](#playwright-mcp)), and Podman needs `npx` plus a running Podman
+socket or CLI.
+
+`podman` is the only write-capable server in this list. Use it to inspect state and read logs;
+only stop or remove containers you started yourself, and never remove, push or rebuild images that
+belong to the shared image store. It cannot read compose files, so bring the stack up with
+`podman-compose`/`docker compose` and use the MCP for per-container checks.
 
 #### Vaadin documentation
 

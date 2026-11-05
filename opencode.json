@@ -12,7 +12,14 @@
       },
       "gradle": {
         "type": "local",
-        "command": ["jbang", "run", "--quiet", "--fresh", "gradle-mcp@rnett"]
+        "command": [
+          "jbang",
+          "run",
+          "--quiet",
+          "--fresh",
+          "gradle-mcp@rnett"
+        ],
+        "disabled": false
       },
       "quarkus-agent": {
         "type": "local",
@@ -21,6 +28,10 @@
       "grafana": {
         "type": "local",
         "command": ["bash", "scripts/run-grafana-mcp.sh"]
+      },
+      "podman": {
+        "type": "local",
+        "command": ["npx", "-y", "podman-mcp-server@latest"]
       },
       "playwright": {
         "type": "local",
