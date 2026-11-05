@@ -278,13 +278,5 @@
       matchManagers: ["gradle-wrapper", "docker-compose", "github-actions", "custom.regex"],
       automerge: false,
     },
-    {
-      // resolve-dependencies already fails the check when the Avrea mirror is
-      // missing an artifact, which is enough to stop automerge. Treat the label
-      // as an explicit stop too, so a future change to that workflow cannot
-      // merge a PR that is known to be waiting on the mirror.
-      matchLabels: ["blocked-by-mirror"],
-      automerge: false,
-    },
   ],
 }
