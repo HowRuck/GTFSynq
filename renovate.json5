@@ -36,8 +36,25 @@
   commitMessageAction: "bump",
 
   // The Dependency Dashboard issue lists every pending update and lets you
-  // trigger a PR by hand; handy for the prerelease groups below.
+  // trigger a PR by hand; handy for the prerelease groups below. It is a status
+  // view, not an approval gate: PRs are opened as soon as an update is found.
   dependencyDashboard: true,
+  dependencyDashboardApproval: false,
+  prCreation: "immediate",
+
+  // Renovate already opens a PR for every update it finds. Auto-merge is
+  // enabled only for the safe Gradle patch/minor lane at the bottom of
+  // packageRules: those PRs change build files, so the resolve-dependencies
+  // workflow runs on them. Majors, Quarkus/Vaadin prereleases, the Gradle
+  // wrapper, Docker images and GitHub Actions stay manual because they either
+  // need a compatibility review or do not trigger a PR check.
+  automerge: false,
+  automergeType: "pr",
+  // Use Renovate's own automerge: main is not a protected branch and the
+  // repository does not enable GitHub's auto-merge, so platform automerge would
+  // have nothing to wait for. Renovate waits for the PR's checks (notably
+  // resolve-dependencies) before it merges.
+  platformAutomerge: false,
 
   // Every Renovate PR gets this label; the per-manager tags are added through
   // the `addLabels` rules at the top of packageRules below. Renovate does not
@@ -237,6 +254,37 @@
         ],
         executionMode: "update",
       },
+    },
+
+    // --- Auto-merge ---------------------------------------------------------
+    // Only the routine Gradle dependency lane merges itself. These updates
+    // touch gradle/**, build.gradle.kts or modules/**, so the
+    // resolve-dependencies workflow runs on the PR; Renovate waits for it and
+    // leaves a failed resolution unmerged. Everything below stays manual:
+    // - Quarkus and Vaadin are prerelease lines that need a compatibility check;
+    // - the wrapper also regenerates gradlew and the wrapper jar;
+    // - Docker and GitHub Actions do not run resolve-dependencies.
+    {
+      matchManagers: ["gradle"],
+      matchUpdateTypes: ["minor", "patch", "pin", "digest"],
+      automerge: true,
+    },
+    {
+      matchManagers: ["gradle"],
+      matchPackageNames: ["io.quarkus*", "com.vaadin*"],
+      automerge: false,
+    },
+    {
+      matchManagers: ["gradle-wrapper", "docker-compose", "github-actions", "custom.regex"],
+      automerge: false,
+    },
+    {
+      // resolve-dependencies already fails the check when the Avrea mirror is
+      // missing an artifact, which is enough to stop automerge. Treat the label
+      // as an explicit stop too, so a future change to that workflow cannot
+      // merge a PR that is known to be waiting on the mirror.
+      matchLabels: ["blocked-by-mirror"],
+      automerge: false,
     },
   ],
 }

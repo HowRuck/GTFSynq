@@ -243,6 +243,9 @@ the umbrella `postgres` reference), then the broader one for context.
    ```
 6. If the dependency affects `ui-app` frontend or native image, run the UI build and the native
    build as well.
+7. Renovate opens the dependency PRs. Routine Gradle patch/minor updates auto-merge only after
+   `resolve-dependencies` passes; Quarkus/Vaadin prereleases, majors, the Gradle wrapper, Docker
+   images and GitHub Actions stay manual. Do not merge a Renovate PR while its check is failing.
 
 ### 4.5 Frontend TypeScript change
 
