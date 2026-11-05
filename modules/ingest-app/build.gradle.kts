@@ -28,6 +28,18 @@ dependencies {
     testImplementation(libs.quarkus.junit5)
 }
 
+// io.floci:testcontainers-floci 2.17.0 is a relocation POM. Gradle follows it to
+// testcontainers-floci-aws, but Quarkus' conditional deployment classpath can still load the old
+// coordinate without the relocated jar. Map the old coordinate to the real artifact until the
+// Amazon Services extension ships a version that declares the new coordinates directly.
+configurations.configureEach {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "io.floci" && requested.name == "testcontainers-floci") {
+            useTarget("io.floci:testcontainers-floci-aws:${requested.version}")
+        }
+    }
+}
+
 // Dev mode shares one Compose stack: the root `devInfra` task starts it once per build, and
 // every dev-mode app then discovers it instead of running its own `compose up`.
 tasks.named("quarkusDev") {
