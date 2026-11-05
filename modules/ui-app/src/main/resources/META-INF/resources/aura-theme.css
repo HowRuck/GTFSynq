@@ -5,8 +5,11 @@
  * self-hosted (the woff2 files are beside this stylesheet under fonts/) so the console does not
  * depend on a third-party font CDN at runtime.
  *
- * The Stone neutral pair and the preset Orange accent pair are the curated Aura values: the light
- * accent is dark enough for text and small icons, the dark accent is lighter for dark surfaces.
+ * The Stone neutral pair is the curated Aura background. The accent keeps the warm Orange hue but
+ * uses a desaturated clay variant of the preset pair: the stock Orange light accent (#ca3500) and
+ * dark accent (#fb923c) are fully saturated, which made selected tabs, links and primary actions
+ * read as an alarm rather than as branding. Both remain dark/light enough for text and small icons
+ * (about 4.9:1 on the light background, 8:1 on the dark one).
  */
 @font-face {
   font-family: 'Inter';
@@ -34,8 +37,8 @@
 html {
   /* Also set by @ColorScheme(SYSTEM) on AppShell; kept here so the theme is self-contained. */
   color-scheme: light dark;
-  --aura-accent-color-dark: #fb923c;
-  --aura-accent-color-light: #ca3500;
+  --aura-accent-color-dark: #d9a06f;
+  --aura-accent-color-light: #a4532b;
   --aura-background-color-dark: #1c1917;
   --aura-background-color-light: #f5f5f4;
   --aura-base-radius: 4;

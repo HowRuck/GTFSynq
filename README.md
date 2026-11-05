@@ -287,8 +287,8 @@ Behaviour shared by the tables:
   (`src/main/resources/vaadin-i18n/translations.properties`); English, German and
   French are bundled, the initial language follows the browser and a navbar
   switcher overrides it for the session. The look comes from the Aura theme
-  configured in `META-INF/resources/styles.css` (Inter font, orange accent, warm
-  light/dark backgrounds).
+  configured in `META-INF/resources/styles.css` (Inter font, muted orange accent,
+  warm light/dark backgrounds).
 
 ## Project Structure
 
@@ -369,7 +369,7 @@ The Vaadin Flow web console (see [Web Console](#web-console)):
 - a live trip overview map that loads every positioned trip independently of the
   table's paging, so the overview stays complete while the table stays lazy
 - English, German and French translations via Vaadin I18N, Aura theme with the
-  Inter font and an orange accent palette
+  Inter font and a muted orange accent palette
 - no database access and no REST calls — it is a pure gRPC client of `api-app`
 
 ## Runtime Flow
