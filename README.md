@@ -16,7 +16,7 @@
 GTFSynq is a modern Quarkus transit data platform for ingesting, processing, storing, and analyzing **GTFS-RT (General Transit Feed Specification - Real-Time)** feeds and **GTFS CSV** static feed data
 
 <div align="center">
-  <img src="docs/images/live-updates.webp" alt="GTFSynq console on the Live Trip Updates page: a clustered overview map of every trip with a reported position, the live trip table below it, and the detail pane with the selected trip's route map above its stop timeline" width="100%" />
+  <img src="docs/images/live-updates.webp" alt="GTFSynq console on the Live Trip Updates page: a clustered map of every trip with a reported position, the live trip table below it, and the detail pane with the selected trip's route map above its stop timeline" width="100%" />
   <p><em>The Live Trip Updates page: every trip with a reported position on the overview map, the live table below it, and the selected trip's map and stop timeline in the detail pane</em></p>
 </div>
 
