@@ -89,7 +89,7 @@ jobs:
     needs: detect-changes
     # An empty matrix is an error, so skip the job when nothing matched.
     if: needs.detect-changes.outputs.apps != '[]'
-    runs-on: avrea-ubuntu-26.04-4-vcpu
+    runs-on: avrea-ubuntu-26.04-4-vcpu-8gb
     # Jib's HTTP timeout is disabled in gradle.properties, so bound the whole job
     # instead: a JVM image build plus a containerised native build fits well
     # inside this, and a dead registry connection cannot hang a runner forever.
