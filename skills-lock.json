@@ -7,6 +7,18 @@
       "skillPath": "skills/aura-theme/SKILL.md",
       "computedHash": "3ca0d9fc49619561dd6efe10d082efe55723e8fa6fc3b9f216a2b5a0712c98ca"
     },
+    "dashboarding": {
+      "source": "grafana/skills",
+      "sourceType": "github",
+      "skillPath": "skills/grafana-core/dashboarding/SKILL.md",
+      "computedHash": "f9ad2b49a4b91cecad7d76c86f5e8d1b36c7ba1c932284289715fa8935ccb7c7"
+    },
+    "datasources-provisioning": {
+      "source": "grafana/skills",
+      "sourceType": "github",
+      "skillPath": "skills/grafana-datasources/datasources-provisioning/SKILL.md",
+      "computedHash": "3b45321e5eb57f512e484eacc2c77a3c71ecc460df4643b6f1816481c61c4c03"
+    },
     "design-postgis-tables": {
       "source": "timescale/pg-aiguide",
       "sourceType": "github",
@@ -37,6 +49,12 @@
       "skillPath": "skills/gradle-wrapper-upgrade/SKILL.md",
       "computedHash": "fe67a0ec5f69c05d4e4e9ed354e9460b511491a8d823a664579c871bc95f5df7"
     },
+    "grafana-oss": {
+      "source": "grafana/skills",
+      "sourceType": "github",
+      "skillPath": "skills/grafana-core/grafana-oss/SKILL.md",
+      "computedHash": "6638b23a0e6ee2cb2c35fa5c3646b78c183ca018209f9b37efeb5b7e6a71e8af"
+    },
     "migrate-postgres-tables-to-hypertables": {
       "source": "timescale/pg-aiguide",
       "sourceType": "github",
@@ -48,6 +66,12 @@
       "sourceType": "github",
       "skillPath": "skills/migrate-spring-to-quarkus/SKILL.md",
       "computedHash": "fb844ebbdf7e224610eb2af3204348c24af454079e61f341238ecc815f2c465b"
+    },
+    "opentelemetry": {
+      "source": "grafana/skills",
+      "sourceType": "github",
+      "skillPath": "skills/grafana-core/opentelemetry/SKILL.md",
+      "computedHash": "abdf5df50836781e22422495d92d5a8cf66906e72bccf1aebaa211058a292401"
     },
     "pgvector-semantic-search": {
       "source": "timescale/pg-aiguide",
@@ -72,6 +96,18 @@
       "sourceType": "github",
       "skillPath": "skills/postgres-hybrid-text-search/SKILL.md",
       "computedHash": "38477f02bfa87a76e2438dadb150f678ebde45b5a4c327faf1b673dc13cfcbf2"
+    },
+    "prometheus": {
+      "source": "grafana/skills",
+      "sourceType": "github",
+      "skillPath": "skills/grafana-lgtm/prometheus/SKILL.md",
+      "computedHash": "bd3152772f8a77010dd30ee9d589a97ed14950843ed41c2d11291366a5b45218"
+    },
+    "promql": {
+      "source": "grafana/skills",
+      "sourceType": "github",
+      "skillPath": "skills/grafana-core/promql/SKILL.md",
+      "computedHash": "0d45e3db2b92907b99aa41a645d5e685cdac5bc6fa6741189c54aad7ca5b2322"
     },
     "quarkus-update": {
       "source": "quarkusio/skills",
