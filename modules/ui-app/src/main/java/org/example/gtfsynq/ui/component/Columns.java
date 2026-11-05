@@ -165,12 +165,6 @@ public final class Columns {
                 .setKey("currentDelay")
                 .setPartNameGenerator(trip -> delayPart(trip.hasCurrentDelay() ? trip.getCurrentDelay() : null));
 
-        grid.addColumn(trip -> UiFormat.dateTime(trip.getFeedTs()))
-                .setHeader(grid.getTranslation("column.feedTimestamp"))
-                .setKey("feedTs")
-                .setSortProperty("feedTs")
-                .setSortable(true);
-
         grid.addColumn(trip -> UiFormat.dateTime(trip.getLastSeenAt()))
                 .setHeader(grid.getTranslation("column.lastSeen"))
                 .setKey("lastSeenAt")
@@ -188,7 +182,7 @@ public final class Columns {
         var row = grid.prependHeaderRow();
         join(row, grid, "column.group.trip", "tripId", "feed", "agency", "routeId", "routeType");
         join(row, grid, "column.group.service", "startDate", "startTime");
-        join(row, grid, "column.group.status", "currentDelay", "feedTs", "lastSeenAt");
+        join(row, grid, "column.group.status", "currentDelay", "lastSeenAt");
     }
 
     /**
