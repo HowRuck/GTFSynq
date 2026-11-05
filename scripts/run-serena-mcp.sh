@@ -26,7 +26,9 @@ if [[ -d "$HOME/.cargo/bin" ]]; then
     export PATH
 fi
 
-exec uvx --from serena-agent serena start-mcp-server \
+# The local adapter registers the `kmp_lsp` language server (kmp-lsp also covers
+# Java and Swift) next to Serena.
+exec uvx --from serena-agent --with "$repo_root/tools/serena-kmp-lsp" serena start-mcp-server \
     --context ide \
     --project-from-cwd \
     --open-web-dashboard False
