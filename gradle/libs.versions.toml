@@ -1,5 +1,5 @@
 [versions]
-protobufPlugin = "0.10.0"
+protobufPlugin = "0.10.1"
 spotless = "8.11.0"
 palantir-java-format = "2.102.0"
 
