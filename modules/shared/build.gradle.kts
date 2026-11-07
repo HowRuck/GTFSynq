@@ -25,8 +25,6 @@ dependencies {
     compileOnly(libs.slf4j.api)
 
     compileOnly(libs.jspecify)
-    compileOnly(libs.bundles.lombok)
-    annotationProcessor(libs.bundles.lombok)
 
     testImplementation(libs.junit.jupiter.api)
     testRuntimeOnly(libs.junit.jupiter.engine)

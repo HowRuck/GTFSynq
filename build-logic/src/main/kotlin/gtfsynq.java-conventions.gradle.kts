@@ -10,6 +10,11 @@ val catalog = extensions.getByType<VersionCatalogsExtension>().named("libs")
 group = "org.example"
 version = "0.0.1-SNAPSHOT"
 
+dependencies {
+    compileOnly(catalog.findLibrary("lombok").get())
+    annotationProcessor(catalog.findLibrary("lombok").get())
+}
+
 java {
     targetCompatibility = JavaVersion.VERSION_25
     sourceCompatibility = JavaVersion.VERSION_25

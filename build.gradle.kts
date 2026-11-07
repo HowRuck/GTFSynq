@@ -19,7 +19,7 @@ plugins {
 // same time and collide on the fixed container names. Running compose once here, before any
 // dev-mode app, keeps it to a single invocation; the apps then only discover the services.
 //
-// The app modules wire this in as a dependency of their `quarkusDev` task.
+// The quarkus-app convention plugin wires this in as a dependency of each app's `quarkusDev` task.
 tasks.register<Exec>("devInfra") {
     group = "application"
     description = "Starts the local development infrastructure from docker-compose.dev.yaml."
