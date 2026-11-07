@@ -292,7 +292,12 @@ public class TripDetailPanel extends VerticalLayout {
         subtitle.setText(UiFormat.elideId(subtitleText));
         subtitle.setTitle(UiFormat.text(subtitleText));
 
-        feed.setText(trip.getFeedId());
+        if (!trip.getFeedId().isBlank()) {
+            feed.setText(trip.getFeedId());
+            feed.setVisible(true);
+        } else {
+            feed.setVisible(false);
+        }
 
         if (trip.hasStartDate() || trip.hasStartTime()) {
             start.setText(getTranslation(
@@ -301,7 +306,12 @@ public class TripDetailPanel extends VerticalLayout {
         } else {
             start.setVisible(false);
         }
-        lastSeen.setText(getTranslation("live.detail.lastSeen", UiFormat.dateTime(trip.getLastSeenAt())));
+        if (trip.hasLastSeenAt()) {
+            lastSeen.setText(getTranslation("live.detail.lastSeen", UiFormat.dateTime(trip.getLastSeenAt())));
+            lastSeen.setVisible(true);
+        } else {
+            lastSeen.setVisible(false);
+        }
 
         if (trip.hasCurrentDelay()) {
             var seconds = trip.getCurrentDelay();

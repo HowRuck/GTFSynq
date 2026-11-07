@@ -183,11 +183,17 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
     }
 
     /**
-     * Opens a trip selected from a map popup. The marker only carries the update id, so the full row
-     * is fetched first; a lookup superseded by another selection is discarded.
+     * Opens a trip selected from a map popup.
+     *
+     * <p>The popup only carries the update id, so the pane opens at once with its loading state
+     * while the full row is fetched; a lookup superseded by another selection is discarded.
      */
-    private void openTripFromMap(long tripUpdateId) {
+    void openTripFromMap(long tripUpdateId) {
         var request = ++tripLookupRequest;
+        // The header needs the full row, but the id is enough to open the pane immediately.
+        var provisional = TripUpdate.newBuilder().setTripUpdateId(tripUpdateId).build();
+        showLoading(provisional);
+
         getUI().ifPresent(ui -> CompletableFuture.runAsync(
                 () -> {
                     TripUpdate trip;
@@ -198,7 +204,7 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
                             if (request == tripLookupRequest && attached) {
                                 var message =
                                         e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
-                                reportDetailError(message);
+                                detail.showError(provisional, message);
                             }
                         });
                         return;
@@ -212,17 +218,23 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
                 BACKGROUND_LOADS));
     }
 
-    private void showTrip(TripUpdate trip) {
+    void showTrip(TripUpdate trip) {
+        showLoading(trip);
+        getUI().ifPresent(ui -> loadTripDetail(ui, false));
+    }
+
+    /** Puts the pane in place and shows its loading state, before any data is fetched. */
+    private void showLoading(TripUpdate trip) {
         selectedTrip = trip;
         detailLoaded = false;
         lastDetailError = null;
-        table.setActiveTrip(trip);
         if (layout.getSecondaryComponent() == null) {
             layout.removeClassName("live-detail-closed");
             layout.addToSecondary(detail);
             layout.setSplitterPosition(detailSplitPosition);
         }
-        getUI().ifPresentOrElse(ui -> loadTripDetail(ui, true), () -> detail.showLoading(trip));
+        detail.showLoading(trip);
+        table.setActiveTrip(trip);
     }
 
     /** Closes the detail pane and cancels any stop times still on the way. */

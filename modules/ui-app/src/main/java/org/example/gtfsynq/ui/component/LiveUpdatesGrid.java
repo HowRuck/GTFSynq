@@ -34,6 +34,7 @@ public class LiveUpdatesGrid extends Grid<TripUpdate> {
     private final LiveUpdatesDataProvider provider;
     private final String loadErrorPattern;
     private String activeTripKey;
+    private TripUpdate activeTrip;
     private SerializableConsumer<TripUpdate> openTripHandler = trip -> {};
 
     public LiveUpdatesGrid(GtfsQueryClient client, String defaultSort, SortDirection defaultDirection) {
@@ -201,15 +202,27 @@ public class LiveUpdatesGrid extends Grid<TripUpdate> {
      * Marks the trip whose detail pane is open, or clears the mark when {@code null}.
      *
      * <p>Only the part-name generator changes, but the rows already rendered keep their old part
-     * name until Vaadin re-renders them, so the provider is refreshed.
+     * name until Vaadin re-renders them, so the previous and the new row are refreshed. Refreshing
+     * just those two items keeps the response that opens the detail pane fast; a full provider
+     * refresh made the grid read its page again first.
      */
     public void setActiveTrip(TripUpdate trip) {
         var key = trip == null ? null : tripKey(trip);
         if (Objects.equals(activeTripKey, key)) {
             return;
         }
+        var previous = activeTrip;
         activeTripKey = key;
-        getDataProvider().refreshAll();
+        activeTrip = trip;
+        // Refresh only the two affected rows. refreshAll() made the grid fetch its page again,
+        // which delayed the response that carries the detail pane's loading state.
+        var provider = getDataProvider();
+        if (previous != null) {
+            provider.refreshItem(previous);
+        }
+        if (trip != null) {
+            provider.refreshItem(trip);
+        }
     }
 
     /** Reloads the current page, keeping the open trip marked. */
@@ -223,6 +236,9 @@ public class LiveUpdatesGrid extends Grid<TripUpdate> {
     }
 
     private static String tripKey(TripUpdate trip) {
-        return trip.getTripUpdateId() + ":" + trip.getFeedId();
+        // The update id is already the provider's item identity and is unique across feeds. Using
+        // the feed id as well would make a row opened from a map marker (which has no feed id)
+        // miss its own highlight until the full row arrives.
+        return Long.toString(trip.getTripUpdateId());
     }
 }

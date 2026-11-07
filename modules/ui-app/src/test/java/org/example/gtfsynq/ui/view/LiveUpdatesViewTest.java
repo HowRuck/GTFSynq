@@ -1,14 +1,19 @@
 package org.example.gtfsynq.ui.view;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.protobuf.Timestamp;
+import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
 import java.time.Instant;
+import java.util.ArrayDeque;
 import java.util.List;
+import java.util.NoSuchElementException;
 import org.example.gtfsynq.shared.protocol.query.TripMarker;
+import org.example.gtfsynq.shared.protocol.query.TripUpdate;
 import org.example.gtfsynq.ui.client.GtfsQueryClient;
 import org.junit.jupiter.api.Test;
 
@@ -116,6 +121,46 @@ class LiveUpdatesViewTest {
                 assertTrue(Math.abs(marker.lon() - 13.4) < 0.001);
             }
         });
+    }
+
+    @Test
+    void opensTheDetailPaneInItsLoadingStateFromTheTable() {
+        withView(view -> {
+            view.showTrip(TripUpdate.newBuilder()
+                    .setTripUpdateId(7)
+                    .setFeedId("feed")
+                    .setTripId("trip-id")
+                    .build());
+
+            assertTrue(child(view, "trip-detail").isVisible(), "the pane is open before the stop times arrive");
+            assertTrue(child(view, "trip-detail-loading").isVisible(), "the pane shows that data is loading");
+            assertFalse(child(view, "trip-detail-split").isVisible(), "the timeline waits for the stop times");
+        });
+    }
+
+    @Test
+    void opensTheDetailPaneInItsLoadingStateFromTheMap() {
+        withView(view -> {
+            view.openTripFromMap(7);
+
+            assertTrue(child(view, "trip-detail").isVisible(), "the marker opens the pane immediately");
+            assertTrue(child(view, "trip-detail-loading").isVisible(), "the pane shows that data is loading");
+            assertFalse(child(view, "trip-detail-split").isVisible(), "the timeline waits for the stop times");
+        });
+    }
+
+    /** The first descendant with the class, so a test can inspect a nested pane. */
+    private static Component child(Component root, String className) {
+        var pending = new ArrayDeque<Component>();
+        pending.add(root);
+        while (!pending.isEmpty()) {
+            var current = pending.remove();
+            if (current.hasClassName(className)) {
+                return current;
+            }
+            current.getChildren().forEach(pending::add);
+        }
+        throw new NoSuchElementException(className);
     }
 
     private static void withView(java.util.function.Consumer<LiveUpdatesView> assertions) {
