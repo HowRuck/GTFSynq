@@ -17,7 +17,6 @@ dependencies {
     implementation(libs.quarkus.micrometer.opentelemetry)
     implementation(libs.quarkus.container.image.jib)
     implementation(libs.zero.allocation.hashing)
-    implementation(libs.yavi)
 
     implementation(libs.quarkus.amazon.s3)
     implementation(libs.aws.sdk.url.connection.client)
