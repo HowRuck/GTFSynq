@@ -24,11 +24,16 @@ tasks.register<Exec>("devInfra") {
     group = "application"
     description = "Starts the local development infrastructure from docker-compose.dev.yaml."
 
-    val pathDirectories = System.getenv("PATH").orEmpty().split(File.pathSeparator)
-    val composeCli = listOf("docker", "podman").firstOrNull { cli ->
-        pathDirectories.any { directory -> File(directory, cli).canExecute() }
-    } ?: "docker"
+    // The compose CLI is picked from PATH at execution time; probing the filesystem
+    // during configuration would run whenever this task is realized.
+    inputs.property("composePath", providers.environmentVariable("PATH"))
 
     workingDir = layout.projectDirectory.asFile
-    commandLine(composeCli, "compose", "-f", "docker-compose.dev.yaml", "up", "-d")
+    doFirst {
+        val pathDirectories = System.getenv("PATH").orEmpty().split(File.pathSeparator)
+        val composeCli = listOf("docker", "podman").firstOrNull { cli ->
+            pathDirectories.any { directory -> File(directory, cli).canExecute() }
+        } ?: "docker"
+        commandLine(composeCli, "compose", "-f", "docker-compose.dev.yaml", "up", "-d")
+    }
 }
