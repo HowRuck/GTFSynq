@@ -33,6 +33,9 @@ vaadin-chartjs = "2.1.0"
 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 
+# Build tooling applied from build-logic
+spotless-plugin-gradle = { module = "com.diffplug.spotless:spotless-plugin-gradle", version.ref = "spotless" }
+
 jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
 
 # Jakarta EE APIs (provided by Quarkus at runtime)

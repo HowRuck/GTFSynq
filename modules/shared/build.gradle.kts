@@ -1,8 +1,12 @@
+import org.gradle.api.artifacts.VersionCatalogsExtension
+
 plugins {
     `java-library`
     id("gtfsynq.java-conventions")
     alias(libs.plugins.protobuf)
 }
+
+val catalog = extensions.getByType<VersionCatalogsExtension>().named("libs")
 
 dependencies {
     api(libs.protobuf.java)
@@ -31,13 +35,13 @@ dependencies {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:${libs.versions.protobuf.get()}"
+        artifact = "com.google.protobuf:protoc:${catalog.findVersion("protobuf").get().requiredVersion}"
     }
     plugins {
         // Generates the GtfsQueryService client/server stubs used by api-app
         // (server) and ui-app (client).
         create("grpc") {
-            artifact = "io.grpc:protoc-gen-grpc-java:${libs.versions.grpc.get()}"
+            artifact = "io.grpc:protoc-gen-grpc-java:${catalog.findVersion("grpc").get().requiredVersion}"
         }
     }
     generateProtoTasks {
