@@ -3,7 +3,13 @@
 
 dependencyResolutionManagement {
     repositories {
-        gradlePluginPortal()
+        // The portal only serves the Spotless plugin (marker and artifacts);
+        // every library resolves from Central.
+        gradlePluginPortal {
+            content {
+                includeGroupByRegex("com\\.diffplug\\..*")
+            }
+        }
         mavenCentral()
     }
     versionCatalogs {
