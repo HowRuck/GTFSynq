@@ -20,7 +20,7 @@ plugins {
 // dev-mode app, keeps it to a single invocation; the apps then only discover the services.
 //
 // The app modules wire this in as a dependency of their `quarkusDev` task.
-val devInfra by tasks.registering(Exec::class) {
+tasks.register<Exec>("devInfra") {
     group = "application"
     description = "Starts the local development infrastructure from docker-compose.dev.yaml."
 
