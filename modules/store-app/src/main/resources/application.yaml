@@ -217,3 +217,8 @@ gtfsynq:
         stop-services: false
         ryuk-enabled: false
         startup-timeout: 180s
+
+  gtfsynq:
+    storage:
+      s3:
+        endpoint: http://localhost:9010

@@ -68,8 +68,10 @@ services:
         image: docker.io/versity/versitygw:v1.10.0
         container_name: gtfsynq-s3
         # S3-compatible object store for downloaded GTFS static feed archives.
+        # Port 9000 is also used by some local services (the Lemonade server on this
+        # machine), so dev uses 9010. The apps' %dev profile points at the same port.
         ports:
-            - "127.0.0.1:9000:7070"
+            - "127.0.0.1:9010:7070"
         environment:
             ROOT_ACCESS_KEY: ${S3_ACCESS_KEY:-gtfsynq}
             ROOT_SECRET_KEY: ${S3_SECRET_KEY:-gtfsynq-dev-secret}

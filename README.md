@@ -663,7 +663,9 @@ Important defaults:
 
 - Kafka bootstrap server: `localhost:9092`
 - PostgreSQL / TimescaleDB: `localhost:5432`, database `gtfsynq`
-- S3-compatible object storage: `http://localhost:9000`, bucket `gtfsynq-static`
+- S3-compatible object storage: `http://localhost:9000`, bucket `gtfsynq-static`; dev mode's
+  Compose gateway uses `http://localhost:9010` because port 9000 is commonly taken by local
+  services such as the Lemonade server
 - Static persistence: enabled, batch size `5000` rows
 - Realtime polling interval: `60s`; static polling interval: `5m`
 - Buffered sink flush interval: `10s`, hot data retention `1h`
