@@ -24,6 +24,7 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
     id("com.gradle.develocity") version "4.6.1"
     id("com.autonomousapps.build-health") version "3.20.2"
+    id("io.github.ag-libs.lathe") version "0.3.1"
 }
 
 dependencyResolutionManagement {

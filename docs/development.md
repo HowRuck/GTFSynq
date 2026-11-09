@@ -40,7 +40,7 @@ reference files directly.
 
 ### Configured MCP servers
 
-The repository's `opencode.json` configures eight MCP servers. They are optional helpers: if one
+The repository's `opencode.json` configures seven MCP servers. They are optional helpers: if one
 is unavailable or fails, fall back to the local source, `./gradlew` or a local Playwright script
 rather than guessing.
 
@@ -53,7 +53,6 @@ rather than guessing.
 | `grafana` | Validate provisioned dashboards, panel queries and datasource health | Local via `scripts/run-grafana-mcp.sh` (`uvx mcp-grafana`); read-only, sources the Grafana admin credentials from `.env`, and needs Grafana on `localhost:3000`. |
 | `playwright` | Drive the running console for visual checks | Local via `npx @playwright/mcp@latest`; launches the **Google Chrome** channel at `/opt/google/chrome/chrome`, not the system Chromium. See [Playwright MCP](#playwright-mcp). |
 | `podman` | Inspect containers, read logs, check ports and start/stop individual containers | Local via `npx -y podman-mcp-server@latest`; uses the Podman socket or CLI. **Write-capable**: `container_remove`, `image_remove`, `image_push` and `image_build` mutate host state. No compose support, and `container_run` accepts only image, environment and ports (no volumes, networks or extra hosts). |
-| `serena` | Symbol-level navigation for Kotlin, Gradle scripts and Java: overviews, find symbol, find references | Local via `scripts/run-serena-mcp.sh` (`uvx --from serena-agent serena start-mcp-server`); the backend is kmp-lsp through a small adapter, so no IDE and no JVM are needed. **Write-capable**: symbol edits change source files. See [Serena MCP](#serena-mcp). |
 
 Tool names carry the server name (for example `vaadin.search_vaadin_docs` or
 `playwright.browser_navigate`). When a server is down, say so and continue with the local
@@ -62,10 +61,10 @@ fallback; do not block a change on MCP availability.
 Local servers are started when OpenCode starts. After changing `opencode.json` or a wrapper
 script, restart OpenCode (or reconnect the server) so the new tool list is loaded. The Grafana
 wrapper needs `uvx`, the Quarkus and Gradle servers need JBang, Playwright needs Google Chrome
-installed (see [Playwright MCP](#playwright-mcp)), Serena needs `uvx` plus `kmp-lsp` (see
-[Serena MCP](#serena-mcp)), and Podman needs `npx` plus a running Podman socket or CLI.
+installed (see [Playwright MCP](#playwright-mcp)), and Podman needs `npx` plus a running Podman
+socket or CLI.
 
-`podman` and `serena` are the only write-capable servers in this list. Use Podman to inspect state and read logs;
+`podman` is the only write-capable server in this list. Use it to inspect state and read logs;
 only stop or remove containers you started yourself, and never remove, push or rebuild images that
 belong to the shared image store. It cannot read compose files, so bring the stack up with
 `podman-compose`/`docker compose` and use the MCP for per-container checks.
@@ -131,56 +130,6 @@ Chrome** (the `chrome` channel), not a browser bundled with the MCP package.
   ```
 
   Force dark mode with `--force-dark-mode` and emulate a narrow viewport with `--window-size`.
-
-#### Serena MCP
-
-`serena` exposes symbol-level tools over MCP, backed by
-[kmp-lsp](https://github.com/Hessesian/kmp-lsp) instead of an IDE or the JVM-based Kotlin
-language server. `scripts/run-serena-mcp.sh` starts it with `--context ide` and
-`--project-from-cwd`, so the main checkout and each worktree resolve their own project.
-Serena 2 defaults to the REPL interface, so the MCP exposes two tools: `initial_instructions`
-and `serena_repl`. Call `initial_instructions` first; the REPL entry point is `s`, for example
-`s.lsp.get_symbols_overview("build.gradle.kts")`.
-
-- Prerequisites: `uvx` (from uv) and `kmp-lsp`. `curl -fsSL
-  https://raw.githubusercontent.com/Hessesian/kmp-lsp/main/install.sh | bash` installs kmp-lsp
-  and its JAR indexer sidecar; cargo installs it to `~/.cargo/bin`, which the wrapper adds to
-  `PATH`.
-- Trust: Serena ignores project-level `ls_specific_settings` for untrusted projects and would
-  silently download JetBrains' Kotlin LSP instead of using kmp-lsp. Add the checkout to
-  `trusted_project_path_patterns` in `~/.serena/serena_config.yml` (or run `serena config
-  edit`):
-
-  ```yaml
-  trusted_project_path_patterns:
-    - /home/evogel/Git/GTFSynq
-    - /home/evogel/Git/GTFSynq/**   # worktrees below the repo; add their parent if elsewhere
-  ```
-
-- Coverage: `.serena/project.yml` lists `kmp_lsp`, which is not a built-in Serena server. The
-  adapter in `tools/serena-kmp-lsp` registers it: it reuses Serena's Kotlin language-server
-  implementation, points it at kmp-lsp, and matches `.kt`, `.kts`, `.java` and `.swift`, so one
-  JVM-free server covers Kotlin, Gradle scripts and Java. The wrapper installs the adapter with
-  `uvx --with tools/serena-kmp-lsp`; when starting Serena directly, pass the same `--with`, or it
-  reports `kmp_lsp` as an unknown language server. `.serena/project.yml` and
-  `tools/serena-kmp-lsp` are versioned; `.serena/.gitignore` excludes the cache and
-  `project.local.yml`.
-- Do not add Serena's built-in `java` server next to it: that backend is Eclipse JDT-LS, which
-  downloads its own JVM bundle and imports the Gradle build on first use.
-- kmp-lsp resolves symbols with tree-sitter, not the IntelliJ analysis API: navigation,
-  references and signatures are fast and reliable, but type inference and diagnostics are
-  limited. The repository's Kotlin is Gradle build scripts, which declare little, so expect
-  empty overviews for them.
-- kmp-lsp's CLI complements the MCP and needs no Serena:
-
-  ```bash
-  kmp-lsp find GtfsQueryService
-  kmp-lsp refs GtfsQueryService --exclude-imports
-  kmp-lsp check modules/api-app/src/main/java   # instant syntax check, no index
-  ```
-
-- Serena edits files directly and does not run Spotless, so run `./gradlew spotlessApply` after
-  symbol-level edits. When Serena or kmp-lsp is unavailable, fall back to `rg`/`grep` and Gradle.
 
 ---
 
@@ -580,10 +529,6 @@ the umbrella `postgres` reference), then the broader one for context.
 # Dev infrastructure
 docker compose -f docker-compose.dev.yaml up -d
 docker compose -f docker-compose.dev.yaml down
-
-# Code navigation (Serena + kmp-lsp)
-kmp-lsp refs <Symbol> --exclude-imports
-kmp-lsp check <file-or-dir>
 
 # Monitoring stack
 jq empty monitoring/grafana/dashboards/*.json

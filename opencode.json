@@ -40,13 +40,6 @@
           "@playwright/mcp@latest"
         ],
         "disabled": true
-      },
-      "serena": {
-        "type": "local",
-        "command": ["bash", "scripts/run-serena-mcp.sh"],
-        "timeout": {
-          "startup": 120000
-        }
       }
     }
   }
