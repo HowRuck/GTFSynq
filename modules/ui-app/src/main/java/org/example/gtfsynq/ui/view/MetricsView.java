@@ -5,6 +5,7 @@ import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.card.Card;
+import com.vaadin.flow.component.card.CardVariant;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -45,16 +46,27 @@ public class MetricsView extends VerticalLayout implements HasDynamicTitle {
         this.client = client;
 
         panels = List.of(
-                panel("metrics.panel.ingest", "sum by (outcome) (rate(gtfs.static.ingest[5m]))"),
-                panel("metrics.panel.validation", "sum by (result) (rate(gtfs.static.validation.feeds[5m]))"),
+                panel("metrics.panel.ingest", "metrics.unit.events", "sum by (outcome) (rate(gtfs.static.ingest[5m]))"),
+                panel(
+                        "metrics.panel.validation",
+                        "metrics.unit.events",
+                        "sum by (result) (rate(gtfs.static.validation.feeds[5m]))"),
                 panel(
                         "metrics.panel.tripUpdates",
+                        "metrics.unit.entities",
                         "sum by (type) (rate(gtfs.sink.entities.count_sum{type=\"descriptors\"}[5m]))"),
                 panel(
                         "metrics.panel.stopTimes",
+                        "metrics.unit.entities",
                         "sum by (type) (rate(gtfs.sink.entities.count_sum{type=\"stop_times\"}[5m]))"),
-                panel("metrics.panel.kafkaLag", "sum by (consumergroup) (kafka_consumergroup_lag)"),
-                panel("metrics.panel.heap", "sum by (application) (jvm.memory.used{area=\"heap\"})"));
+                panel(
+                        "metrics.panel.kafkaLag",
+                        "metrics.unit.messages",
+                        "sum by (consumergroup) (kafka_consumergroup_lag)"),
+                panel(
+                        "metrics.panel.heap",
+                        "metrics.unit.bytes",
+                        "sum by (application) (jvm.memory.used{area=\"heap\"})"));
 
         var refresh = new Button(getTranslation("metrics.refresh"), event -> getUI().ifPresent(this::load));
         refresh.setIcon(VaadinIcon.REFRESH.create());
@@ -71,10 +83,13 @@ public class MetricsView extends VerticalLayout implements HasDynamicTitle {
         setFlexGrow(1, grid);
     }
 
-    private Panel panel(String titleKey, String query) {
+    private Panel panel(String titleKey, String unitKey, String query) {
         var chart = new MetricsChart();
         var card = new Card();
+        card.addClassName("metrics-card");
+        card.addThemeVariants(CardVariant.ELEVATED);
         card.setTitle(getTranslation(titleKey));
+        card.setSubtitle(getTranslation(unitKey));
         card.setWidthFull();
         card.add(chart);
         return new Panel(query, chart, card);

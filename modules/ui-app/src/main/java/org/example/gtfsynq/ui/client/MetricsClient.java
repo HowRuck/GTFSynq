@@ -145,7 +145,7 @@ public class MetricsClient {
     public record Series(Map<String, String> labels, List<Point> points) {
 
         private static final List<String> NAME_LABELS =
-                List.of("outcome", "result", "op", "consumergroup", "application");
+                List.of("outcome", "result", "type", "op", "consumergroup", "application");
 
         public String name() {
             for (var label : NAME_LABELS) {

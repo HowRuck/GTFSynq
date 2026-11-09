@@ -48,6 +48,17 @@ class MetricsClientTest {
     }
 
     @Test
+    void namesASeriesAfterItsTypeLabel() {
+        var series = MetricsClient.parse("""
+                {"status":"success","data":{"resultType":"matrix","result":[
+                  {"metric":{"type":"stop_times"},"values":[[1700000000,"12"]]}
+                ]}}
+                """);
+
+        assertEquals("stop_times", series.get(0).name());
+    }
+
+    @Test
     void namesASeriesWithoutGroupingLabelsAfterItsMetric() {
         var series = MetricsClient.parse("""
                 {"status":"success","data":{"resultType":"matrix","result":[

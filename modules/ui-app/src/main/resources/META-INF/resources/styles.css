@@ -600,4 +600,35 @@ vaadin-grid::part(active-trip first-column-cell) {
     gap: var(--vaadin-gap-m);
     width: 100%;
     align-items: start;
+    /* The grid is a flex child, so without this its rows stretch to fill the viewport and leave a
+       large gap between the two rows. */
+    align-content: start;
+}
+
+.metrics-chart-state {
+    gap: var(--vaadin-gap-s);
+    padding: var(--vaadin-padding-m);
+    text-align: center;
+}
+
+.metrics-chart-state-icon {
+    color: var(--aura-red-text);
+    width: 2rem;
+    height: 2rem;
+}
+
+.metrics-chart-state-empty .metrics-chart-state-icon {
+    color: var(--vaadin-text-color-secondary);
+}
+
+.metrics-chart-state-title {
+    color: var(--vaadin-text-color);
+    font-weight: var(--aura-font-weight-semibold);
+}
+
+.metrics-chart-state-detail {
+    color: var(--vaadin-text-color-secondary);
+    line-height: 1.5;
+    max-width: 34rem;
+    overflow-wrap: anywhere;
 }
