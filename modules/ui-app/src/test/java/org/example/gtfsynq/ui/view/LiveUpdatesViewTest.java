@@ -99,6 +99,20 @@ class LiveUpdatesViewTest {
             assertEquals(52.5, markers.getFirst().lat());
             assertEquals(13.4, markers.getFirst().lon());
             assertEquals(7, markers.getFirst().tripUpdateId());
+            assertEquals(3, markers.getFirst().routeType(), "the map uses the route type to pick the mode icon");
+        });
+    }
+
+    @Test
+    void leavesTheMarkerRouteTypeEmptyWhenTheFeedPublishesNone() {
+        withView(view -> {
+            var update = TripMarker.newBuilder()
+                    .setLat(52.5)
+                    .setLon(13.4)
+                    .setTripUpdateId(7)
+                    .build();
+
+            assertTrue(view.marker(update).orElseThrow().routeType() == null);
         });
     }
 

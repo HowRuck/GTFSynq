@@ -509,7 +509,8 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
                 detail,
                 update.hasDelaySeconds() ? update.getDelaySeconds() : null,
                 reachedMinutesAgo,
-                update.getTripUpdateId()));
+                update.getTripUpdateId(),
+                update.hasRouteType() ? update.getRouteType() : null));
     }
 
     /** Route part of the label: the route type names the mode, then the short name or id. */

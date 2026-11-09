@@ -257,12 +257,16 @@ Behaviour shared by the tables:
   planned) time is older than `gtfsynq.api.markers.ended-grace` (5 min), rather than
   staying on the map until the hot row is pruned an hour later. It clusters
   markers client-side and falls back to raster tiles when the vector basemap is
-  unreachable. Marker loads are bounded twice:
+  unreachable. Each marker's delay-coloured dot carries a small white glyph for
+  the trip's GTFS route type (bus, tram, rail, subway, ferry, and the other base
+  modes; extended route types map to the closest base mode). Marker loads are
+  bounded twice:
   the call has its own deadline (`gtfsynq.ui.map.deadline-seconds`, 10 s) and the view
   releases its loading state if no reply arrives within it, so one slow refresh cannot
   leave the map spinning or block the next poll. Marker snapshots travel as compact
-  `[lat, lon, label, detail, delay, reachedMinutesAgo, tripUpdateId]` tuples (the
-  update id as a quoted string, since it can exceed JavaScript's safe integer range)
+  `[lat, lon, label, detail, delay, reachedMinutesAgo, tripUpdateId, routeType]`
+  tuples (the update id as a quoted string, since it can exceed JavaScript's safe
+  integer range)
   and are only pushed when they change; co-located trips are spread a few metres so a
   cluster's number matches the markers that become visible when zooming in. The
   popup also says how long ago the trip reached that stop and offers a link that

@@ -14,40 +14,47 @@ class LiveMapTest {
 
     @Test
     void writesOneTuplePerMarker() {
-        var json = LiveMap.json(List.of(new LiveMap.Marker(52.5, 13.4, "10 · Trip 1", "Central", 120, 5, 42)));
+        var json = LiveMap.json(List.of(new LiveMap.Marker(52.5, 13.4, "10 · Trip 1", "Central", 120, 5, 42, 3)));
 
-        assertEquals("[[52.5,13.4,\"10 · Trip 1\",\"Central\",120,5,\"42\"]]", json);
+        assertEquals("[[52.5,13.4,\"10 · Trip 1\",\"Central\",120,5,\"42\",3]]", json);
     }
 
     @Test
     void writesTripUpdateIdAsAStringToSurviveJavaScriptNumbers() {
         var id = 8602430676343853057L;
-        var json = LiveMap.json(List.of(new LiveMap.Marker(52.5, 13.4, "10 · Trip 1", "Central", 120, 5, id)));
+        var json = LiveMap.json(List.of(new LiveMap.Marker(52.5, 13.4, "10 · Trip 1", "Central", 120, 5, id, 3)));
 
-        assertEquals("[[52.5,13.4,\"10 · Trip 1\",\"Central\",120,5,\"" + id + "\"]]", json);
+        assertEquals("[[52.5,13.4,\"10 · Trip 1\",\"Central\",120,5,\"" + id + "\",3]]", json);
+    }
+
+    @Test
+    void writesAnAbsentRouteTypeAsNull() {
+        var json = LiveMap.json(List.of(new LiveMap.Marker(52.5, 13.4, "10 · Trip 1", "Central", 120, 5, 42, null)));
+
+        assertEquals("[[52.5,13.4,\"10 · Trip 1\",\"Central\",120,5,\"42\",null]]", json);
     }
 
     @Test
     void roundsCoordinatesWithoutLosingMapPrecision() {
         var json = LiveMap.json(
-                List.of(new LiveMap.Marker(52.12345678, 13.98765432, "10 · Trip 1", "Central", null, null, 42)));
+                List.of(new LiveMap.Marker(52.12345678, 13.98765432, "10 · Trip 1", "Central", null, null, 42, 3)));
 
-        assertEquals("[[52.123457,13.987654,\"10 · Trip 1\",\"Central\",null,null,\"42\"]]", json);
+        assertEquals("[[52.123457,13.987654,\"10 · Trip 1\",\"Central\",null,null,\"42\",3]]", json);
     }
 
     @Test
     void escapesQuotesAndControlCharacters() {
-        var json = LiveMap.json(List.of(new LiveMap.Marker(1, 2, "a\"b", "line\nbreak", null, null, 42)));
+        var json = LiveMap.json(List.of(new LiveMap.Marker(1, 2, "a\"b", "line\nbreak", null, null, 42, 3)));
 
         assertFalse(json.contains("\"a\"b\""), "an unescaped quote would break the JSON array");
-        assertEquals("[[1.0,2.0,\"a\\\"b\",\"line\\nbreak\",null,null,\"42\"]]", json);
+        assertEquals("[[1.0,2.0,\"a\\\"b\",\"line\\nbreak\",null,null,\"42\",3]]", json);
     }
 
     @Test
     void dropsMarkersWithoutFiniteCoordinates() {
         var json = LiveMap.json(List.of(
-                new LiveMap.Marker(Double.NaN, 13.4, "nan", "detail", null, null, 1),
-                new LiveMap.Marker(52.5, Double.POSITIVE_INFINITY, "infinite", "detail", null, null, 2)));
+                new LiveMap.Marker(Double.NaN, 13.4, "nan", "detail", null, null, 1, 3),
+                new LiveMap.Marker(52.5, Double.POSITIVE_INFINITY, "infinite", "detail", null, null, 2, 3)));
 
         assertEquals("[]", json, "MapLibre cannot render, and JSON cannot express, non-finite coordinates");
     }

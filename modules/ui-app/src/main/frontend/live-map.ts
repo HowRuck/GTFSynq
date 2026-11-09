@@ -1,18 +1,19 @@
 import { Map as MapLibreMap, Popup } from 'maplibre-gl';
 import type { GeoJSONSource, PointLike } from 'maplibre-gl';
 import { BasemapElement, parseJsonPayload, type FitOptions } from './basemap-element';
+import { installModeIcons, modeForRouteType, modeIconName } from './map-mode-icons';
 import { pointCoordinates, popupOffset } from './map-basemap';
 
 /**
  * One trip position as a compact tuple:
- * [lat, lon, label, detail, delaySeconds, reachedMinutesAgo, tripUpdateId].
+ * [lat, lon, label, detail, delaySeconds, reachedMinutesAgo, tripUpdateId, routeType].
  *
  * <p>The id is a string because a 64-bit id can exceed JavaScript's safe integer range.
  *
  * <p>The tuple form replaces a keyed object because the marker array is pushed to the browser on
  * every poll; repeating the keys per marker costs more than the values themselves at scale.
  */
-type LiveMapMarker = [number, number, string, string, number | null, number | null, string];
+type LiveMapMarker = [number, number, string, string, number | null, number | null, string, number | null];
 
 interface MarkerProperties {
   label: string;
@@ -20,6 +21,7 @@ interface MarkerProperties {
   delayClass: 'early' | 'on-time' | 'late' | 'severe' | 'unknown';
   reachedMinutesAgo: number | null;
   tripUpdateId: string;
+  modeIcon: string;
 }
 
 interface MarkerFeature {
@@ -37,6 +39,7 @@ const SOURCE_ID = 'live-trips';
 const CLUSTER_LAYER = 'live-trips-clusters';
 const CLUSTER_COUNT_LAYER = 'live-trips-cluster-count';
 const POINT_LAYER = 'live-trips-points';
+const MODE_LAYER = 'live-trips-modes';
 
 /** Optional raster overlay blended over the vector basemap (e.g. Thunderforest Transport). */
 const TRANSPORT_SOURCE = 'transport-overlay';
@@ -68,10 +71,10 @@ const COLOUR_HALO = 'rgba(255, 255, 255, 0.9)';
 const MAX_POPUP_LABEL_LENGTH = 32;
 
 function isLiveMapMarker(value: unknown): value is LiveMapMarker {
-  if (!Array.isArray(value) || value.length !== 7) {
+  if (!Array.isArray(value) || value.length !== 8) {
     return false;
   }
-  const [lat, lon, label, detail, delay, reachedMinutesAgo, tripUpdateId] = value;
+  const [lat, lon, label, detail, delay, reachedMinutesAgo, tripUpdateId, routeType] = value;
   return (
     typeof lat === 'number' &&
     typeof lon === 'number' &&
@@ -79,7 +82,8 @@ function isLiveMapMarker(value: unknown): value is LiveMapMarker {
     typeof detail === 'string' &&
     (delay === null || typeof delay === 'number') &&
     (reachedMinutesAgo === null || typeof reachedMinutesAgo === 'number') &&
-    typeof tripUpdateId === 'string'
+    typeof tripUpdateId === 'string' &&
+    (routeType === null || typeof routeType === 'number')
   );
 }
 
@@ -122,7 +126,7 @@ function parseMarkerFeatures(json: string): MarkerFeature[] {
     if (!isLiveMapMarker(entry)) {
       continue;
     }
-    const [lat, lon, label, detail, delay, reachedMinutesAgo, tripUpdateId] = entry;
+    const [lat, lon, label, detail, delay, reachedMinutesAgo, tripUpdateId, routeType] = entry;
     // MapLibre cannot render non-finite coordinates; skip them here instead of in a second pass.
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
       continue;
@@ -136,6 +140,7 @@ function parseMarkerFeatures(json: string): MarkerFeature[] {
         delayClass: delayClass(delay),
         reachedMinutesAgo,
         tripUpdateId,
+        modeIcon: modeIconName(modeForRouteType(routeType)),
       },
     });
   }
@@ -256,8 +261,10 @@ class LiveMap extends BasemapElement {
     }
     this.ensureMarkerSource(map);
     this.installClusterLayers(map);
-
     this.installPointLayer(map);
+    // The glyphs sit inside the delay-coloured points, so they go on top of them.
+    installModeIcons(map);
+    this.installModeLayer(map);
   }
 
   private ensureMarkerSource(map: MapLibreMap): void {
@@ -329,9 +336,32 @@ class LiveMap extends BasemapElement {
           COLOUR_SEVERE,
           COLOUR_UNKNOWN,
         ],
-        'circle-radius': 6,
+        // Big enough to hold the mode glyph while still reading as a point, not a cluster.
+        'circle-radius': 9,
         'circle-stroke-width': 2,
         'circle-stroke-color': COLOUR_HALO,
+      },
+    });
+  }
+
+  /**
+   * Draws the transit mode as a white glyph inside each delay-coloured point. The layer carries no
+   * text and ignores placement, so a glyph never disappears behind a neighbouring label.
+   */
+  private installModeLayer(map: MapLibreMap): void {
+    if (map.getLayer(MODE_LAYER)) {
+      return;
+    }
+    map.addLayer({
+      id: MODE_LAYER,
+      type: 'symbol',
+      source: SOURCE_ID,
+      filter: ['!', ['has', 'point_count']],
+      layout: {
+        'icon-image': ['get', 'modeIcon'],
+        'icon-size': 0.5,
+        'icon-allow-overlap': true,
+        'icon-ignore-placement': true,
       },
     });
   }

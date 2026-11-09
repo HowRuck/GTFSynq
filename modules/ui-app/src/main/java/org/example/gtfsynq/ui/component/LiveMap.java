@@ -30,7 +30,10 @@ import java.util.List;
 @JsModule("./live-map.ts")
 public class LiveMap extends Component {
 
-    /** One trip's latest reported position, label, and the update id that opens its detail pane. */
+    /**
+     * One trip's latest reported position, label, the update id that opens its detail pane, and the
+     * GTFS route type that selects the marker's mode icon.
+     */
     public record Marker(
             double lat,
             double lon,
@@ -38,7 +41,8 @@ public class LiveMap extends Component {
             String detail,
             Integer delaySeconds,
             Integer reachedMinutesAgo,
-            long tripUpdateId) {}
+            long tripUpdateId,
+            Integer routeType) {}
 
     public LiveMap() {
         getElement()
@@ -154,8 +158,8 @@ public class LiveMap extends Component {
 
     /**
      * Serialises the markers as one
-     * {@code [lat, lon, label, detail, delaySeconds, reachedMinutesAgo, tripUpdateId]} array per
-     * trip.
+     * {@code [lat, lon, label, detail, delaySeconds, reachedMinutesAgo, tripUpdateId, routeType]}
+     * array per trip.
      *
      * <p>The tuple form keeps the pushed JSON small: at tens of thousands of markers, repeating the
      * keys of an object costs more than the values themselves. The trip update id is written as a
@@ -188,6 +192,8 @@ public class LiveMap extends Component {
                     .append(marker.reachedMinutesAgo() == null ? "null" : marker.reachedMinutesAgo())
                     .append(',')
                     .append(JsonText.quote(Long.toString(marker.tripUpdateId())))
+                    .append(',')
+                    .append(marker.routeType() == null ? "null" : marker.routeType())
                     .append(']');
         }
         return json.append(']').toString();

@@ -12,3 +12,12 @@ declare module '*?worker&url' {
   const url: string;
   export default url;
 }
+
+/**
+ * Vite inlines the referenced file as a string. Used for the vendored transit-mode SVGs, which
+ * the map element rasterises at runtime.
+ */
+declare module '*?raw' {
+  const content: string;
+  export default content;
+}
