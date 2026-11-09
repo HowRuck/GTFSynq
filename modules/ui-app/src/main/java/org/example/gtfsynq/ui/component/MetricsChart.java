@@ -19,11 +19,11 @@ import tools.jackson.databind.ObjectMapper;
  * serialises POJOs reflectively, which would need reflection registrations in the native image.
  *
  * <p>Chart.js draws on a canvas, so it cannot inherit CSS custom properties. The defaults for
- * text, grid and font are applied by {@code metrics-chart-theme.js}, which resolves them from the
+ * text, grid and font are applied by {@code metrics-chart-theme.ts}, which resolves them from the
  * Aura/Lumo theme tokens before a chart is built and refreshes them when the browser switches
  * between light and dark.
  */
-@JsModule("./metrics-chart-theme.js")
+@JsModule("./metrics-chart-theme.ts")
 public class MetricsChart extends ChartContainer {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

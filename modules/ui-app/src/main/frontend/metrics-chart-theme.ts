@@ -6,17 +6,44 @@
  * chart is built and refreshed when the browser switches between light and
  * dark. Tokens are resolved through a hidden element because their values may
  * be light-dark() or color-mix() expressions, which a canvas cannot parse.
+ *
+ * Chart.js arrives as a global from the vaadin-chartjs-wrapper, not as an npm
+ * import, so only the members used here are typed.
  */
+
+interface ChartInstance {
+  update(mode?: string): void;
+}
+
+interface ChartDefaults {
+  color: string;
+  borderColor: string;
+  font: {
+    family: string;
+  };
+}
+
+interface ChartConstructor {
+  defaults: ChartDefaults;
+  getChart(canvas: HTMLCanvasElement): ChartInstance | undefined;
+}
+
+interface ChartThemeWindow extends Window {
+  Chart?: ChartConstructor;
+  gtfsynqChartTheme?: { apply: () => void };
+}
+
+const chartWindow = window as ChartThemeWindow;
 
 const TEXT_TOKENS = [
   '--vaadin-text-color-secondary',
   '--lumo-secondary-text-color',
   '--lumo-body-text-color',
-];
+] as const;
 
-const BORDER_TOKENS = ['--vaadin-border-color-secondary', '--lumo-contrast-20pct'];
+const BORDER_TOKENS = ['--vaadin-border-color-secondary', '--lumo-contrast-20pct'] as const;
 
-function resolveColor(names, fallback) {
+function resolveColor(names: readonly string[], fallback: string): string {
   const root = getComputedStyle(document.documentElement);
   for (const name of names) {
     if (!root.getPropertyValue(name).trim()) {
@@ -35,30 +62,31 @@ function resolveColor(names, fallback) {
   return fallback;
 }
 
-function apply() {
-  if (!window.Chart) {
+function apply(): void {
+  const chart = chartWindow.Chart;
+  if (!chart) {
     return;
   }
-  window.Chart.defaults.color = resolveColor(TEXT_TOKENS, '#666666');
-  window.Chart.defaults.borderColor = resolveColor(BORDER_TOKENS, 'rgba(0, 0, 0, 0.1)');
-  window.Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+  chart.defaults.color = resolveColor(TEXT_TOKENS, '#666666');
+  chart.defaults.borderColor = resolveColor(BORDER_TOKENS, 'rgba(0, 0, 0, 0.1)');
+  chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
 }
 
-function watchColorScheme() {
+function watchColorScheme(): void {
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
     apply();
-    if (!window.Chart) {
+    const chart = chartWindow.Chart;
+    if (!chart) {
       return;
     }
     document.querySelectorAll('canvas').forEach((canvas) => {
-      const chart = window.Chart.getChart(canvas);
-      if (chart) {
-        chart.update('none');
-      }
+      chart.getChart(canvas)?.update('none');
     });
   });
 }
 
 watchColorScheme();
 
-window.gtfsynqChartTheme = { apply };
+chartWindow.gtfsynqChartTheme = { apply };
+
+export {};
