@@ -41,6 +41,9 @@ out/
 .gradle/
 .cnb-cache/
 
+# Lathe's build capture: generated locally by ./gradlew latheSync, never committed.
+.lathe/
+
 state_dump.bin
 
 .opencode

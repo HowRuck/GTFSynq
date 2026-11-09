@@ -54,6 +54,23 @@ rather than guessing.
 | `playwright` | Drive the running console for visual checks | Local via `npx @playwright/mcp@latest`; launches the **Google Chrome** channel at `/opt/google/chrome/chrome`, not the system Chromium. See [Playwright MCP](#playwright-mcp). |
 | `podman` | Inspect containers, read logs, check ports and start/stop individual containers | Local via `npx -y podman-mcp-server@latest`; uses the Podman socket or CLI. **Write-capable**: `container_remove`, `image_remove`, `image_push` and `image_build` mutate host state. No compose support, and `container_run` accepts only image, environment and ports (no volumes, networks or extra hosts). |
 
+Lathe is the intended Java language server and MCP replacement for the removed Serena setup, but
+its Gradle settings plugin is still pending its first Gradle Plugin Portal review, so
+`id("io.github.ag-libs.lathe") version "0.3.1"` does not resolve yet. The plugin line in
+`settings.gradle.kts` is commented out, and no `lathe` MCP server is configured. `.lathe/` is
+already ignored. Once [the plugin page](https://plugins.gradle.org/plugin/io.github.ag-libs.lathe)
+resolves:
+
+1. Uncomment the plugin line in `settings.gradle.kts`.
+2. Run `./gradlew latheSync -Plathe.capture.only=true` to write `.lathe/` and the MCP launcher.
+3. Add a local server to `opencode.json`:
+   ```json
+   "lathe": {
+     "type": "local",
+     "command": ["bash", ".lathe/lathe-mcp-launcher.sh"]
+   }
+   ```
+
 Tool names carry the server name (for example `vaadin.search_vaadin_docs` or
 `playwright.browser_navigate`). When a server is down, say so and continue with the local
 fallback; do not block a change on MCP availability.
