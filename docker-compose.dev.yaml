@@ -65,7 +65,7 @@ services:
         restart: "no"
 
     s3:
-        image: docker.io/versity/versitygw:v1.10.0
+        image: docker.io/versity/versitygw:v1.11.0
         container_name: gtfsynq-s3
         # S3-compatible object store for downloaded GTFS static feed archives.
         # Port 9000 is also used by some local services (the Lemonade server on this
