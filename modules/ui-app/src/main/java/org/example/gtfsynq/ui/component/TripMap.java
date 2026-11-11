@@ -18,7 +18,7 @@ import java.util.List;
  * live overview map, so a poll replaces a small JSON property instead of rebuilding the element.
  */
 @Tag("trip-map")
-@NpmPackage(value = "maplibre-gl", version = "6.17.0")
+@NpmPackage(value = "maplibre-gl", version = "6.18.0")
 @JsModule("./trip-map.ts")
 public class TripMap extends Component {
 
