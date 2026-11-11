@@ -5,12 +5,14 @@ import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.Grid.Column;
 import com.vaadin.flow.component.grid.HeaderRow;
 import com.vaadin.flow.component.html.Span;
+import java.time.Instant;
 import org.example.gtfsynq.shared.protocol.query.Route;
 import org.example.gtfsynq.shared.protocol.query.StaticFeed;
 import org.example.gtfsynq.shared.protocol.query.Stop;
 import org.example.gtfsynq.shared.protocol.query.StopTimeUpdate;
 import org.example.gtfsynq.shared.protocol.query.Trip;
 import org.example.gtfsynq.shared.protocol.query.TripUpdate;
+import org.example.gtfsynq.ui.format.TripStatus;
 import org.example.gtfsynq.ui.format.UiFormat;
 
 /**
@@ -160,6 +162,11 @@ public final class Columns {
                 .setHeader(grid.getTranslation("column.startTime"))
                 .setKey("startTime");
 
+        // Derived from timestamps and the clock, so it cannot be sorted server-side.
+        grid.addComponentColumn(trip -> tripStatus(grid, trip))
+                .setHeader(grid.getTranslation("column.tripStatus"))
+                .setKey("tripStatus");
+
         grid.addColumn(Columns::currentDelay)
                 .setHeader(grid.getTranslation("column.currentDelay"))
                 .setKey("currentDelay")
@@ -182,7 +189,7 @@ public final class Columns {
         var row = grid.prependHeaderRow();
         join(row, grid, "column.group.trip", "tripId", "feed", "agency", "routeId", "routeType");
         join(row, grid, "column.group.service", "startDate", "startTime");
-        join(row, grid, "column.group.status", "currentDelay", "lastSeenAt");
+        join(row, grid, "column.group.status", "tripStatus", "currentDelay", "lastSeenAt");
     }
 
     /**
@@ -199,6 +206,16 @@ public final class Columns {
         Column<?>[] columns =
                 java.util.Arrays.stream(columnKeys).map(grid::getColumnByKey).toArray(Column<?>[]::new);
         row.join(columns).setText(grid.getTranslation(groupKey));
+    }
+
+    /** Trip status badge text; the hover title explains the statuses that are only inferred. */
+    private static Span tripStatus(Grid<TripUpdate> grid, TripUpdate trip) {
+        var status = TripStatus.of(trip, Instant.now());
+        var span = new Span(grid.getTranslation(status.labelKey()));
+        if (status.titleKey() != null) {
+            span.setTitle(grid.getTranslation(status.titleKey()));
+        }
+        return span;
     }
 
     /**

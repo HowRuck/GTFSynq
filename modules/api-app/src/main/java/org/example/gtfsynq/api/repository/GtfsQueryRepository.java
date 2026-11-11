@@ -106,7 +106,26 @@ public class GtfsQueryRepository {
                 LIMIT 1) AS current_delay,
                latest.stop_lat AS latest_stop_lat,
                latest.stop_lon AS latest_stop_lon,
-               latest.stop_name AS latest_stop_name
+               latest.stop_name AS latest_stop_name,
+               ((m.start_date + m.start_time
+                  + make_interval(days => COALESCE(m.start_time_overflow_days, 0)))
+                AT TIME ZONE COALESCE(a.agency_timezone, 'UTC')) AS scheduled_start_at,
+               -- The scheduled time of the trip's final static stop, i.e. when the trip ends.
+               -- Planned times only: predictions are not used, so a late trip counts as finished
+               -- on schedule. A scalar subquery rather than a join so that Postgres evaluates it
+               -- after sorting and paging: as a lateral join it ran for every live trip, which
+               -- made sorting by trip or route id about 15 times slower.
+               (SELECT ((m.start_date + COALESCE(st.arrival_time, st.departure_time)
+                          + make_interval(days => COALESCE(
+                                st.arrival_time_overflow_days,
+                                st.departure_time_overflow_days,
+                                0)))
+                        AT TIME ZONE COALESCE(a.agency_timezone, 'UTC'))
+                FROM static_stop_times st
+                WHERE st.feed_id = h.feed_id
+                  AND st.trip_id = m.trip_id
+                ORDER BY st.stop_sequence DESC
+                LIMIT 1) AS last_stop_at
         FROM rt_trip_updates_hot h
         LEFT JOIN rt_trip_updates_meta m ON m.id = h.trip_update_id
         LEFT JOIN static_trips t ON t.feed_id = h.feed_id AND t.trip_id = m.trip_id
@@ -499,7 +518,9 @@ public class GtfsQueryRepository {
                 nullableInt(rs, "route_type"),
                 rs.getObject("latest_stop_lat", Double.class),
                 rs.getObject("latest_stop_lon", Double.class),
-                rs.getString("latest_stop_name"));
+                rs.getString("latest_stop_name"),
+                offsetDateTime(rs, "scheduled_start_at"),
+                offsetDateTime(rs, "last_stop_at"));
     }
 
     /**

@@ -122,6 +122,8 @@ class GtfsQueryGrpcServiceTest {
                     3,
                     null,
                     null,
+                    null,
+                    null,
                     null));
         }
     }

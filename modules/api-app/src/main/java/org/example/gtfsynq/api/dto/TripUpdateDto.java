@@ -24,4 +24,6 @@ public record TripUpdateDto(
         Integer routeType,
         Double latestStopLat,
         Double latestStopLon,
-        String latestStopName) {}
+        String latestStopName,
+        OffsetDateTime scheduledStartAt,
+        OffsetDateTime lastStopAt) {}

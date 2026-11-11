@@ -187,7 +187,9 @@ class GtfsQueryMapperTest {
                 null,
                 lat,
                 lon,
-                stopName);
+                stopName,
+                null,
+                null);
     }
 
     private static PageResponse<TripUpdateDto> page(TripUpdateDto update) {
@@ -239,6 +241,8 @@ class GtfsQueryMapperTest {
                 routeLongName,
                 agencyName,
                 routeType,
+                null,
+                null,
                 null,
                 null,
                 null);

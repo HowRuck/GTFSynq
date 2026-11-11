@@ -155,6 +155,8 @@ final class GtfsQueryMapper {
             item.setLatestStopLon(update.latestStopLon());
         }
         setIfPresent(update.latestStopName(), item::setLatestStopName);
+        setIfPresent(update.scheduledStartAt(), start -> item.setScheduledStartAt(timestamp(start)));
+        setIfPresent(update.lastStopAt(), last -> item.setLastStopAt(timestamp(last)));
         return item.build();
     }
 
