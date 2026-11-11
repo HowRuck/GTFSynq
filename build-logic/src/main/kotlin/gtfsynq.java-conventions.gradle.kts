@@ -3,6 +3,9 @@ import org.gradle.api.artifacts.VersionCatalogsExtension
 plugins {
     java
     id("com.diffplug.spotless")
+    // Adds the open-java-format step to Spotless; the formatter ships inside the
+    // plugin, so no formatter dependency or version is declared here.
+    id("dev.openjavaformat.java-format")
 }
 
 val catalog = extensions.getByType<VersionCatalogsExtension>().named("libs")
@@ -27,7 +30,6 @@ java {
 spotless {
     java {
         targetExclude("build/generated/**")
-        palantirJavaFormat(catalog.findVersion("palantir-java-format").get().requiredVersion)
         removeUnusedImports()
         importOrder()
     }
