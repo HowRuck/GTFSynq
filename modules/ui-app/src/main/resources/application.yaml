@@ -96,6 +96,9 @@ gtfsynq:
 vaadin:
   build:
     pnpm-enable: true
+    # Do not hold back npm packages released in the last day; pnpm would otherwise
+    # reject e.g. a just-published maplibre-gl bump and fail the build.
+    minimum-frontend-package-age-days: 0
     node-version: v26.12.1
     require-home-node-exec: true
 
