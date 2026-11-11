@@ -44,22 +44,7 @@ class TripStopMergeTest {
     }
 
     @Test
-    void derivesTheDelayOfATimeOnlyPrediction() {
-        var scheduledArrival = OffsetDateTime.parse("2026-11-01T16:27:54+01:00");
-        var scheduledDeparture = scheduledArrival.plusSeconds(30);
-        var schedule = stopTimes(null, null, scheduledArrival, null, null, scheduledDeparture, false);
-        var live = stopTimes(
-                scheduledArrival.plusSeconds(180), null, null, scheduledDeparture.plusSeconds(180), null, null, true);
-
-        var merged = TripStopMerge.merge(List.of(schedule), List.of(live)).getFirst();
-
-        assertEquals(180, merged.arrivalDelay(), "a published time implies a delay against the plan");
-        assertEquals(180, merged.departureDelay());
-        assertEquals(scheduledArrival, merged.scheduledArrivalTime(), "the plan stays the plan");
-    }
-
-    @Test
-    void keepsAPublishedDelayInsteadOfDerivingOne() {
+    void keepsTheStoredDelayWithoutDerivingOne() {
         var scheduledArrival = OffsetDateTime.parse("2026-11-01T16:27:54+01:00");
         var schedule = stopTimes(null, null, scheduledArrival, null, null, scheduledArrival, false);
         var live = stopTimes(
@@ -72,14 +57,16 @@ class TripStopMergeTest {
     }
 
     @Test
-    void leavesTheDelayAbsentWithoutAPlanToCompare() {
+    void leavesTheDelayAbsentWhenTheRowStoresNone() {
         var predicted = OffsetDateTime.parse("2026-11-01T16:30:54+01:00");
+        var scheduled = predicted.minusSeconds(180);
+        var schedule = stopTimes(null, null, scheduled, null, null, scheduled, false);
 
         var merged = TripStopMerge.merge(
-                        List.of(), List.of(stopTimes(predicted, null, null, predicted, null, null, true)))
+                        List.of(schedule), List.of(stopTimes(predicted, null, null, predicted, null, null, true)))
                 .getFirst();
 
-        assertNull(merged.arrivalDelay());
+        assertNull(merged.arrivalDelay(), "the read path no longer derives a delay");
         assertNull(merged.departureDelay());
     }
 

@@ -1,7 +1,5 @@
 package org.example.gtfsynq.api.repository;
 
-import java.time.Duration;
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeMap;
@@ -13,9 +11,8 @@ import org.example.gtfsynq.api.dto.StopTimeUpdateDto;
  * <p>Doing this in Java instead of SQL keeps both queries simple (and index-friendly) and makes the
  * merge rules explicit: schedule rows provide the stop list and scheduled times, live rows overlay
  * every value they carry, and live-only stops (e.g. ADDED stops) are appended in sequence order.
- * A live row that carries a time but no delay is given the delay its time implies against the
- * schedule, so a feed that publishes predictions only (PKP PLK, HSL) still shows a delay where the
- * plan is known.
+ * Delays are not derived here: the sink stores the effective delay when it writes the row, and the
+ * live query reads it back as the stop's arrival and departure delay.
  */
 final class TripStopMerge {
 
@@ -51,12 +48,10 @@ final class TripStopMerge {
                 live.stopSequence(),
                 coalesce(live.stopId(), schedule == null ? null : schedule.stopId()),
                 arrivalTime,
-                // A feed that publishes a prediction and no delay (PKP PLK) still implies one: the
-                // predicted time minus the plan for the same stop.
-                coalesce(live.arrivalDelay(), impliedDelay(arrivalTime, scheduledArrival)),
+                live.arrivalDelay(),
                 scheduledArrival,
                 departureTime,
-                coalesce(live.departureDelay(), impliedDelay(departureTime, scheduledDeparture)),
+                live.departureDelay(),
                 scheduledDeparture,
                 coalesce(live.scheduleRelationship(), schedule == null ? null : schedule.scheduleRelationship()),
                 coalesce(live.assignedStopId(), schedule == null ? null : schedule.assignedStopId()),
@@ -65,14 +60,6 @@ final class TripStopMerge {
                 coalesce(live.lon(), schedule == null ? null : schedule.lon()),
                 coalesce(live.lastSeenAt(), schedule == null ? null : schedule.lastSeenAt()),
                 true);
-    }
-
-    /** Delay implied by a prediction against the plan, or {@code null} when either side is unknown. */
-    private static Integer impliedDelay(OffsetDateTime predicted, OffsetDateTime scheduled) {
-        if (predicted == null || scheduled == null) {
-            return null;
-        }
-        return (int) Duration.between(scheduled, predicted).toSeconds();
     }
 
     private static <T> T coalesce(T preferred, T fallback) {
