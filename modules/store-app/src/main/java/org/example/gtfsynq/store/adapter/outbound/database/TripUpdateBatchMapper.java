@@ -4,11 +4,18 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.example.gtfsynq.shared.model.dto.TripDescriptorDto;
 import org.example.gtfsynq.shared.model.dto.TripStopTimeUpdateDto;
 import org.example.gtfsynq.shared.model.dto.TripUpdateDto;
+import org.example.gtfsynq.store.adapter.outbound.database.StopSequenceResolver.StaticStopTime;
+import org.example.gtfsynq.store.adapter.outbound.database.StopSequenceResolver.StaticStopTimes;
+import org.example.gtfsynq.store.adapter.outbound.database.StopSequenceResolver.StopSelection;
+import org.example.gtfsynq.store.adapter.outbound.database.StopSequenceResolver.TripKey;
 import org.example.gtfsynq.store.adapter.outbound.database.TripUpdateRows.HotTripRow;
 
 /**
@@ -26,6 +33,11 @@ import org.example.gtfsynq.store.adapter.outbound.database.TripUpdateRows.HotTri
  * all. {@link StopSequenceResolver} fills them from the static schedule, or from message order when
  * the trip cannot be matched.
  *
+ * <p>The same static read carries the scheduled times and the agency time zone, so
+ * {@link EffectiveDelayResolver} can fill the effective delay and event times in the same pass. A
+ * row that already carries both times and both delays needs no lookup; its published values are
+ * copied into the effective columns.
+ *
  * <p>Collapsing is not optional: {@code reWriteBatchedInserts} merges a batch into a single
  * multi-row INSERT, and PostgreSQL rejects such a statement if it targets the same conflict key
  * twice. The history table uses {@code DO NOTHING} and tolerates duplicates, so it is left
@@ -40,6 +52,10 @@ public class TripUpdateBatchMapper {
 
     private final StopSequenceResolver stopSequences;
 
+    private final EffectiveDelayResolver effectiveDelays;
+
+    private final StaticStopTimes staticStopTimes;
+
     /**
      * Shapes a batch into the row streams for each target table.
      *
@@ -47,11 +63,13 @@ public class TripUpdateBatchMapper {
      * @return the row streams to persist, never {@code null}
      */
     public TripUpdateRows map(List<TripUpdateDto> batch) {
-        var sequenced = stopSequences.resolve(batch);
-        var descriptors = new ArrayList<TripDescriptorDto>(sequenced.size());
-        var stopTimes = new ArrayList<TripStopTimeUpdateDto>(stopTimeRowCount(sequenced));
+        var schedules = schedulesFor(batch);
+        var sequenced = stopSequences.resolve(batch, schedules);
+        var effective = effectiveDelays.resolve(sequenced, schedules);
+        var descriptors = new ArrayList<TripDescriptorDto>(effective.size());
+        var stopTimes = new ArrayList<TripStopTimeUpdateDto>(stopTimeRowCount(effective));
 
-        for (var dto : sequenced) {
+        for (var dto : effective) {
             if (dto.tripDescriptor() != null) {
                 descriptors.add(dto.tripDescriptor());
             }
@@ -75,6 +93,45 @@ public class TripUpdateBatchMapper {
         var latestStops = latestStops(stopTimes, hotTripsById);
 
         return new TripUpdateRows(latestDescriptors, stopTimes, new ArrayList<>(hotTripsById.values()), latestStops);
+    }
+
+    /**
+     * Loads the static stops once for every trip that needs them, whether for sequence resolution
+     * or for the effective delay. A feed that needs both does not read the static tables twice.
+     */
+    private Map<TripKey, List<StaticStopTime>> schedulesFor(List<TripUpdateDto> batch) {
+        var keys = new HashSet<TripKey>();
+        keys.addAll(StopSequenceResolver.keysNeedingLookup(batch));
+        keys.addAll(EffectiveDelayResolver.keysNeedingLookup(batch));
+        if (keys.isEmpty()) {
+            return Map.of();
+        }
+        return staticStopTimes.load(selectionsFor(batch, keys));
+    }
+
+    /** The stop ids and sequences each needed trip refers to, merged over the batch's updates. */
+    private static Map<TripKey, StopSelection> selectionsFor(List<TripUpdateDto> batch, Set<TripKey> keys) {
+        var selections = new HashMap<TripKey, StopSelection>(keys.size() * 2 + 16);
+        for (var update : batch) {
+            var descriptor = update.tripDescriptor();
+            if (descriptor == null || update.stopTimeUpdates() == null) {
+                continue;
+            }
+            var key = new TripKey(descriptor.feedId(), descriptor.tripId());
+            if (!keys.contains(key)) {
+                continue;
+            }
+            var selection = selections.computeIfAbsent(key, k -> new StopSelection(new HashSet<>(), new HashSet<>()));
+            for (var row : update.stopTimeUpdates()) {
+                if (row.stopId() != null) {
+                    selection.stopIds().add(row.stopId());
+                }
+                if (row.stopSequence() != null) {
+                    selection.sequences().add(row.stopSequence());
+                }
+            }
+        }
+        return selections;
     }
 
     /**

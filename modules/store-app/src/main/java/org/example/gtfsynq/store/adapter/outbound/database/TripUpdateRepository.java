@@ -66,8 +66,13 @@ public class TripUpdateRepository {
                 departure_delay,
                 scheduled_departure_time,
                 schedule_relationship,
-                assigned_stop_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                assigned_stop_id,
+                delay_seconds,
+                effective_arrival_time,
+                effective_departure_time,
+                effective_arrival_delay,
+                effective_departure_delay
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (trip_update_id, feed_ts, stop_sequence) DO NOTHING
             """;
 
@@ -97,8 +102,13 @@ public class TripUpdateRepository {
                 departure_delay,
                 scheduled_departure_time,
                 schedule_relationship,
-                assigned_stop_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                assigned_stop_id,
+                delay_seconds,
+                effective_arrival_time,
+                effective_departure_time,
+                effective_arrival_delay,
+                effective_departure_delay
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (trip_update_id, stop_sequence) DO UPDATE SET
                 feed_id = EXCLUDED.feed_id,
                 feed_ts = EXCLUDED.feed_ts,
@@ -111,6 +121,11 @@ public class TripUpdateRepository {
                 scheduled_departure_time = EXCLUDED.scheduled_departure_time,
                 schedule_relationship = EXCLUDED.schedule_relationship,
                 assigned_stop_id = EXCLUDED.assigned_stop_id,
+                delay_seconds = EXCLUDED.delay_seconds,
+                effective_arrival_time = EXCLUDED.effective_arrival_time,
+                effective_departure_time = EXCLUDED.effective_departure_time,
+                effective_arrival_delay = EXCLUDED.effective_arrival_delay,
+                effective_departure_delay = EXCLUDED.effective_departure_delay,
                 last_seen_at = NOW()
             """;
 
@@ -224,6 +239,13 @@ public class TripUpdateRepository {
         preparedStatement.setObject(
                 12, update.scheduleRelationship() == null ? null : update.scheduleRelationship(), Types.OTHER);
         preparedStatement.setString(13, update.assignedStopId());
+        setNullableInteger(preparedStatement, 14, update.delaySeconds());
+        preparedStatement.setTimestamp(
+                15, update.effectiveArrivalTime() == null ? null : Timestamp.from(update.effectiveArrivalTime()));
+        preparedStatement.setTimestamp(
+                16, update.effectiveDepartureTime() == null ? null : Timestamp.from(update.effectiveDepartureTime()));
+        setNullableInteger(preparedStatement, 17, update.effectiveArrivalDelay());
+        setNullableInteger(preparedStatement, 18, update.effectiveDepartureDelay());
     }
 
     private void setNullableInteger(PreparedStatement ps, int index, Integer value) throws SQLException {

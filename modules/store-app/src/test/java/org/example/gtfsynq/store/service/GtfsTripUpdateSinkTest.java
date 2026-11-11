@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import org.example.gtfsynq.shared.model.FeedEntityWithMetadata;
 import org.example.gtfsynq.shared.model.dto.TripUpdateDto;
+import org.example.gtfsynq.store.adapter.outbound.database.EffectiveDelayResolver;
 import org.example.gtfsynq.store.adapter.outbound.database.PersistenceException;
 import org.example.gtfsynq.store.adapter.outbound.database.StopSequenceResolver;
 import org.example.gtfsynq.store.adapter.outbound.database.TripUpdateBatchMapper;
@@ -30,7 +31,7 @@ class GtfsTripUpdateSinkTest {
 
     private final GtfsTripUpdateSink sink = new GtfsTripUpdateSink(
             repository,
-            new TripUpdateBatchMapper(new StopSequenceResolver(keys -> Map.of())),
+            new TripUpdateBatchMapper(new StopSequenceResolver(), new EffectiveDelayResolver(), keys -> Map.of()),
             new PassthroughDeduplication(),
             new GtfsSinkMetrics(new SimpleMeterRegistry()),
             true,

@@ -4,6 +4,7 @@ import com.google.transit.realtime.GtfsRealtime.TripUpdate.StopTimeUpdate;
 import com.google.transit.realtime.GtfsRealtime.TripUpdate.StopTimeUpdate.ScheduleRelationship;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Objects;
 import org.example.gtfsynq.shared.util.FeedHashing;
 import org.example.gtfsynq.shared.util.GtfsFeedFormatter;
 import org.jspecify.annotations.NonNull;
@@ -25,6 +26,11 @@ import org.jspecify.annotations.Nullable;
  * @param scheduledDepartureTime the scheduled departure time of this stop time update
  * @param scheduleRelationship the schedule relationship of this stop time update
  * @param assignedStopId the assigned stop ID of this stop time update
+ * @param delaySeconds the effective delay derived at write time; never part of the hash
+ * @param effectiveArrivalTime the published or plan-derived arrival time; never part of the hash
+ * @param effectiveDepartureTime the published or plan-derived departure time; never part of the hash
+ * @param effectiveArrivalDelay the delay of the arrival event, published or derived; never part of the hash
+ * @param effectiveDepartureDelay the delay of the departure event, published or derived; never part of the hash
  * @param hash the hash of this stop time update for deduplication
  */
 public record TripStopTimeUpdateDto(
@@ -41,7 +47,55 @@ public record TripStopTimeUpdateDto(
         @Nullable Instant scheduledDepartureTime,
         @Nullable ScheduleRelationship scheduleRelationship,
         @Nullable String assignedStopId,
+        @Nullable Integer delaySeconds,
+        @Nullable Instant effectiveArrivalTime,
+        @Nullable Instant effectiveDepartureTime,
+        @Nullable Integer effectiveArrivalDelay,
+        @Nullable Integer effectiveDepartureDelay,
         long hash) {
+    /**
+     * A row that carries only what the feed published, before the static schedule is consulted.
+     *
+     * <p>The effective delay and event times are filled in by the store app's write path; callers
+     * that only need the source row, such as existing tests, can use this constructor.
+     */
+    public TripStopTimeUpdateDto(
+            long tripKey,
+            @NonNull String feedId,
+            @NonNull Instant feedTs,
+            @Nullable Integer stopSequence,
+            @Nullable String stopId,
+            @Nullable Instant arrivalTime,
+            @Nullable Integer arrivalDelay,
+            @Nullable Instant scheduledArrivalTime,
+            @Nullable Instant departureTime,
+            @Nullable Integer departureDelay,
+            @Nullable Instant scheduledDepartureTime,
+            @Nullable ScheduleRelationship scheduleRelationship,
+            @Nullable String assignedStopId,
+            long hash) {
+        this(
+                tripKey,
+                feedId,
+                feedTs,
+                stopSequence,
+                stopId,
+                arrivalTime,
+                arrivalDelay,
+                scheduledArrivalTime,
+                departureTime,
+                departureDelay,
+                scheduledDepartureTime,
+                scheduleRelationship,
+                assignedStopId,
+                null,
+                null,
+                null,
+                null,
+                null,
+                hash);
+    }
+
     /**
      * Creates a TripStopTimeUpdateDto from a StopTimeUpdate protobuf message
      */
@@ -114,6 +168,11 @@ public record TripStopTimeUpdateDto(
                 scheduledDepartureTime,
                 scheduleRelationship,
                 assignedStopId,
+                null,
+                null,
+                null,
+                null,
+                null,
                 hash);
     }
 
@@ -145,6 +204,11 @@ public record TripStopTimeUpdateDto(
                 scheduledDepartureTime,
                 scheduleRelationship,
                 assignedStopId,
+                delaySeconds,
+                effectiveArrivalTime,
+                effectiveDepartureTime,
+                effectiveArrivalDelay,
+                effectiveDepartureDelay,
                 hashMetaFields(
                         feedId,
                         sequence,
@@ -188,6 +252,11 @@ public record TripStopTimeUpdateDto(
                 scheduledDepartureTime,
                 scheduleRelationship,
                 assignedStopId,
+                delaySeconds,
+                effectiveArrivalTime,
+                effectiveDepartureTime,
+                effectiveArrivalDelay,
+                effectiveDepartureDelay,
                 hashMetaFields(
                         feedId,
                         stopSequence,
@@ -200,6 +269,55 @@ public record TripStopTimeUpdateDto(
                         scheduledDepartureTime,
                         scheduleRelationship,
                         assignedStopId));
+    }
+
+    /**
+     * Returns a copy carrying the effective delay and event times derived at write time.
+     *
+     * <p>These values are excluded from {@link #hash()}: deduplication is about what the producer
+     * sent, not about a derivation that a later static revision could change.
+     *
+     * @param delaySeconds the effective delay, or {@code null} when neither a published delay nor
+     *     a static plan is available
+     * @param effectiveArrivalTime the published or plan-derived arrival time
+     * @param effectiveDepartureTime the published or plan-derived departure time
+     * @param effectiveArrivalDelay the delay of the arrival event, published or derived
+     * @param effectiveDepartureDelay the delay of the departure event, published or derived
+     * @return this instance when all values already match, otherwise a copy
+     */
+    public TripStopTimeUpdateDto withEffectiveValues(
+            @Nullable Integer delaySeconds,
+            @Nullable Instant effectiveArrivalTime,
+            @Nullable Instant effectiveDepartureTime,
+            @Nullable Integer effectiveArrivalDelay,
+            @Nullable Integer effectiveDepartureDelay) {
+        if (Objects.equals(this.delaySeconds, delaySeconds)
+                && Objects.equals(this.effectiveArrivalTime, effectiveArrivalTime)
+                && Objects.equals(this.effectiveDepartureTime, effectiveDepartureTime)
+                && Objects.equals(this.effectiveArrivalDelay, effectiveArrivalDelay)
+                && Objects.equals(this.effectiveDepartureDelay, effectiveDepartureDelay)) {
+            return this;
+        }
+        return new TripStopTimeUpdateDto(
+                tripKey,
+                feedId,
+                feedTs,
+                stopSequence,
+                stopId,
+                arrivalTime,
+                arrivalDelay,
+                scheduledArrivalTime,
+                departureTime,
+                departureDelay,
+                scheduledDepartureTime,
+                scheduleRelationship,
+                assignedStopId,
+                delaySeconds,
+                effectiveArrivalTime,
+                effectiveDepartureTime,
+                effectiveArrivalDelay,
+                effectiveDepartureDelay,
+                hash);
     }
 
     /**

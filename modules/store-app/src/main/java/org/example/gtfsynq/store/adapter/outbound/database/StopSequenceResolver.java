@@ -1,9 +1,8 @@
 package org.example.gtfsynq.store.adapter.outbound.database;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
+import java.time.LocalTime;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -48,35 +47,51 @@ import org.example.gtfsynq.shared.model.dto.TripUpdateDto;
 public class StopSequenceResolver {
 
     /** One static stop of a trip; lists are ordered by {@link #sequence()}. */
-    public record StaticStopTime(String stopId, int sequence) {}
+    public record StaticStopTime(
+            String stopId,
+            int sequence,
+            LocalTime arrivalTime,
+            Short arrivalOverflowDays,
+            LocalTime departureTime,
+            Short departureOverflowDays,
+            String timezone) {
+
+        /** A stop with no schedule fields, for callers that only need its identity. */
+        public StaticStopTime(String stopId, int sequence) {
+            this(stopId, sequence, null, null, null, null, null);
+        }
+    }
 
     /** Feed-scoped trip identity: trip ids are only unique inside their feed. */
     public record TripKey(String feedId, String tripId) {}
 
-    /** Loads the ordered static stops of the given trips, omitting trips the feed does not have. */
+    /**
+     * The stops of a trip that the batch actually refers to, by id and by sequence. Loading only
+     * these keeps a long trip's untouched stops out of memory.
+     */
+    public record StopSelection(Set<String> stopIds, Set<Integer> sequences) {}
+
+    /**
+     * Loads the ordered static stops of the given trips, restricted to the selected stops and
+     * omitting trips the feed does not have.
+     */
     @FunctionalInterface
     public interface StaticStopTimes {
 
-        Map<TripKey, List<StaticStopTime>> load(Collection<TripKey> keys);
-    }
-
-    private final StaticStopTimes staticStopTimes;
-
-    @Inject
-    public StopSequenceResolver(StaticStopTimes staticStopTimes) {
-        this.staticStopTimes = staticStopTimes;
+        Map<TripKey, List<StaticStopTime>> load(Map<TripKey, StopSelection> selections);
     }
 
     /**
-     * Resolves the missing identifiers of a batch, leaving complete updates untouched.
+     * Resolves the missing identifiers from a schedule the caller already loaded.
+     *
+     * <p>The batch mapper loads once for both sequence resolution and delay derivation, so a feed
+     * that needs both does not pay for two static reads per flush.
      *
      * @param batch drained sink batch, in message order per trip
+     * @param staticStops the static stops of every trip that needs them
      * @return the same updates with every stop sequence, and every stop id the schedule knows, set
      */
-    public List<TripUpdateDto> resolve(List<TripUpdateDto> batch) {
-        var keys = keysNeedingLookup(batch);
-        var staticStops = keys.isEmpty() ? Map.<TripKey, List<StaticStopTime>>of() : staticStopTimes.load(keys);
-
+    public List<TripUpdateDto> resolve(List<TripUpdateDto> batch, Map<TripKey, List<StaticStopTime>> staticStops) {
         var resolved = new ArrayList<TripUpdateDto>(batch.size());
         var needing = 0;
         var fallbacks = 0;
@@ -212,7 +227,7 @@ public class StopSequenceResolver {
         return changed ? named : null;
     }
 
-    private static Set<TripKey> keysNeedingLookup(List<TripUpdateDto> batch) {
+    static Set<TripKey> keysNeedingLookup(List<TripUpdateDto> batch) {
         var keys = new HashSet<TripKey>();
         for (var update : batch) {
             var rows = update.stopTimeUpdates();

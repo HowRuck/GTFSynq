@@ -1,7 +1,6 @@
 package org.example.gtfsynq.store.adapter.outbound.database;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -10,7 +9,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import org.example.gtfsynq.shared.model.dto.TripDescriptorDto;
 import org.example.gtfsynq.shared.model.dto.TripStopTimeUpdateDto;
@@ -25,29 +23,23 @@ class StopSequenceResolverTest {
 
     private static final TripKey TRIP = new TripKey("feed", "trip");
 
+    private static final StopSequenceResolver RESOLVER = new StopSequenceResolver();
+
     @Test
     void keepsPublishedSequencesWithoutLookingUpStaticStops() {
-        var looked = new AtomicBoolean();
-        var resolver = new StopSequenceResolver(keys -> {
-            looked.set(true);
-            return Map.of();
-        });
-
         var update = update("trip", stop(4, "A"), stop(9, "B"));
 
-        var resolved = resolver.resolve(List.of(update));
+        var resolved = RESOLVER.resolve(List.of(update), Map.of());
 
         assertEquals(List.of(4, 9), sequences(resolved));
-        assertFalse(looked.get(), "a complete update must not cost a database lookup");
         assertSame(update, resolved.getFirst(), "a complete update is returned untouched");
     }
 
     @Test
     void resolvesMissingSequencesFromTheStaticSchedule() {
-        var resolver = resolverReturning(
-                stops(new StaticStopTime("A", 1), new StaticStopTime("B", 2), new StaticStopTime("C", 3)));
-
-        var resolved = resolver.resolve(List.of(update("trip", stop(null, "A"), stop(null, "B"), stop(null, "C"))));
+        var resolved = RESOLVER.resolve(
+                List.of(update("trip", stop(null, "A"), stop(null, "B"), stop(null, "C"))),
+                schedule(stops(new StaticStopTime("A", 1), new StaticStopTime("B", 2), new StaticStopTime("C", 3))));
 
         assertEquals(List.of(1, 2, 3), sequences(resolved));
     }
@@ -55,10 +47,9 @@ class StopSequenceResolverTest {
     @Test
     void resolvesASuffixOfTheTrip() {
         // Producers may drop stops the vehicle has already passed; matching must still line up.
-        var resolver = resolverReturning(
-                stops(new StaticStopTime("A", 1), new StaticStopTime("B", 2), new StaticStopTime("C", 3)));
-
-        var resolved = resolver.resolve(List.of(update("trip", stop(null, "B"), stop(null, "C"))));
+        var resolved = RESOLVER.resolve(
+                List.of(update("trip", stop(null, "B"), stop(null, "C"))),
+                schedule(stops(new StaticStopTime("A", 1), new StaticStopTime("B", 2), new StaticStopTime("C", 3))));
 
         assertEquals(List.of(2, 3), sequences(resolved));
     }
@@ -66,10 +57,9 @@ class StopSequenceResolverTest {
     @Test
     void resolvesRepeatedStopsInVisitOrder() {
         // A loop route visits A twice: the cursor must pick the next visit, not always the first.
-        var resolver = resolverReturning(
-                stops(new StaticStopTime("A", 1), new StaticStopTime("B", 2), new StaticStopTime("A", 3)));
-
-        var resolved = resolver.resolve(List.of(update("trip", stop(null, "A"), stop(null, "B"), stop(null, "A"))));
+        var resolved = RESOLVER.resolve(
+                List.of(update("trip", stop(null, "A"), stop(null, "B"), stop(null, "A"))),
+                schedule(stops(new StaticStopTime("A", 1), new StaticStopTime("B", 2), new StaticStopTime("A", 3))));
 
         assertEquals(List.of(1, 2, 3), sequences(resolved));
     }
@@ -78,56 +68,43 @@ class StopSequenceResolverTest {
     void fallsBackToMessageOrderWhenOneStopIsNotStatic() {
         // The static trip numbers stops 5 and 9; an unknown stop makes the whole message renumber,
         // because a mixture of real and ordinal sequences would not be a valid trip.
-        var resolver = resolverReturning(stops(new StaticStopTime("A", 5), new StaticStopTime("B", 9)));
-
-        var resolved = resolver.resolve(List.of(update("trip", stop(null, "A"), stop(null, "X"))));
+        var resolved = RESOLVER.resolve(
+                List.of(update("trip", stop(null, "A"), stop(null, "X"))),
+                schedule(stops(new StaticStopTime("A", 5), new StaticStopTime("B", 9))));
 
         assertEquals(List.of(1, 2), sequences(resolved));
     }
 
     @Test
     void frequencyTripWithoutTripIdUsesMessageOrder() {
-        var looked = new AtomicBoolean();
-        var resolver = new StopSequenceResolver(keys -> {
-            looked.set(true);
-            return Map.of();
-        });
-
-        var resolved = resolver.resolve(
-                List.of(new TripUpdateDto(descriptor(null), List.of(stop(null, "A"), stop(null, "B")))));
+        var resolved = RESOLVER.resolve(
+                List.of(new TripUpdateDto(descriptor(null), List.of(stop(null, "A"), stop(null, "B")))), Map.of());
 
         assertEquals(List.of(1, 2), sequences(resolved));
-        assertFalse(looked.get(), "a trip without a trip id has nothing to look up");
     }
 
     @Test
     void tripMissingFromTheStaticRevisionUsesMessageOrder() {
-        var resolver = new StopSequenceResolver(keys -> Map.of());
-
-        var resolved = resolver.resolve(List.of(update("trip", stop(null, "A"), stop(null, "B"))));
+        var resolved = RESOLVER.resolve(List.of(update("trip", stop(null, "A"), stop(null, "B"))), Map.of());
 
         assertEquals(List.of(1, 2), sequences(resolved));
     }
 
     @Test
     void sendsOnlyTripsWithMissingSequencesToTheLookup() {
-        var seen = new java.util.HashSet<TripKey>();
-        var resolver = new StopSequenceResolver(keys -> {
-            seen.addAll(keys);
-            return Map.of();
-        });
+        var keys = StopSequenceResolver.keysNeedingLookup(
+                List.of(update("complete", stop(3, "A")), update("missing", stop(null, "B"))));
 
-        resolver.resolve(List.of(update("complete", stop(3, "A")), update("missing", stop(null, "B"))));
-
-        assertEquals(Set.of(new TripKey("feed", "missing")), seen);
+        assertEquals(Set.of(new TripKey("feed", "missing")), keys);
     }
 
     @Test
     void everyResolvedTripEndsWithDistinctSequences() {
-        var resolver = resolverReturning(stops(new StaticStopTime("A", 1), new StaticStopTime("B", 2)));
-
-        var resolved = resolver.resolve(List.of(
-                update("trip", stop(null, "A"), stop(null, "B")), update("unknown", stop(null, "A"), stop(null, "A"))));
+        var resolved = RESOLVER.resolve(
+                List.of(
+                        update("trip", stop(null, "A"), stop(null, "B")),
+                        update("unknown", stop(null, "A"), stop(null, "A"))),
+                schedule(stops(new StaticStopTime("A", 1), new StaticStopTime("B", 2))));
 
         assertTrue(resolved.stream()
                 .allMatch(update -> update.stopTimeUpdates().stream()
@@ -137,20 +114,12 @@ class StopSequenceResolverTest {
                         == update.stopTimeUpdates().size()));
     }
 
-    private static StopSequenceResolver resolverReturning(List<StaticStopTime> tripStops) {
-        return new StopSequenceResolver(keys -> Map.of(TRIP, tripStops));
-    }
-
-    private static List<StaticStopTime> stops(StaticStopTime... stops) {
-        return List.of(stops);
-    }
-
     @Test
     void namesTheStopsOfASequenceOnlyFeed() {
         // PKP PLK's long-distance feed publishes sequences and no stop ids; the map needs the ids.
-        var resolver = resolverReturning(stops(new StaticStopTime("A", 1), new StaticStopTime("B", 2)));
-
-        var resolved = resolver.resolve(List.of(update("trip", stop(1, null), stop(2, null))));
+        var resolved = RESOLVER.resolve(
+                List.of(update("trip", stop(1, null), stop(2, null))),
+                schedule(stops(new StaticStopTime("A", 1), new StaticStopTime("B", 2))));
 
         assertEquals(List.of(1, 2), sequences(resolved));
         assertEquals(List.of("A", "B"), stopIds(resolved));
@@ -158,27 +127,29 @@ class StopSequenceResolverTest {
 
     @Test
     void looksUpATripThatOnlyNeedsStopIds() {
-        var seen = new java.util.HashSet<TripKey>();
-        var resolver = new StopSequenceResolver(keys -> {
-            seen.addAll(keys);
-            return Map.of(TRIP, stops(new StaticStopTime("A", 1)));
-        });
+        var keys = StopSequenceResolver.keysNeedingLookup(List.of(update("trip", stop(1, null))));
 
-        resolver.resolve(List.of(update("trip", stop(1, null))));
-
-        assertEquals(Set.of(TRIP), seen, "a sequence-only update still needs the static schedule");
+        assertEquals(Set.of(TRIP), keys, "a sequence-only update still needs the static schedule");
     }
 
     @Test
     void doesNotNameStopsFromSyntheticSequences() {
         // The static trip numbers its stops 1 and 2, but both rows arrive unidentified, so the
         // resolver falls back to message order. Looking those numbers up would name the wrong stops.
-        var resolver = resolverReturning(stops(new StaticStopTime("A", 1), new StaticStopTime("B", 2)));
-
-        var resolved = resolver.resolve(List.of(update("trip", stop(null, null), stop(null, null))));
+        var resolved = RESOLVER.resolve(
+                List.of(update("trip", stop(null, null), stop(null, null))),
+                schedule(stops(new StaticStopTime("A", 1), new StaticStopTime("B", 2))));
 
         assertEquals(List.of(1, 2), sequences(resolved));
         assertEquals(Arrays.asList(null, null), stopIds(resolved));
+    }
+
+    private static Map<TripKey, List<StaticStopTime>> schedule(List<StaticStopTime> stops) {
+        return Map.of(TRIP, stops);
+    }
+
+    private static List<StaticStopTime> stops(StaticStopTime... stops) {
+        return List.of(stops);
     }
 
     private static List<String> stopIds(List<TripUpdateDto> updates) {

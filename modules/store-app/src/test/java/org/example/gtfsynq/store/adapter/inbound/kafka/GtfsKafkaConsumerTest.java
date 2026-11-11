@@ -18,6 +18,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.example.gtfsynq.shared.model.dto.TripUpdateDto;
 import org.example.gtfsynq.shared.protocol.BinaryFeedEntityWithMetadata;
+import org.example.gtfsynq.store.adapter.outbound.database.EffectiveDelayResolver;
 import org.example.gtfsynq.store.adapter.outbound.database.StopSequenceResolver;
 import org.example.gtfsynq.store.adapter.outbound.database.TripUpdateBatchMapper;
 import org.example.gtfsynq.store.adapter.outbound.database.TripUpdateRepository;
@@ -32,7 +33,7 @@ class GtfsKafkaConsumerTest {
     private final FakeRepository repository = new FakeRepository();
     private final GtfsTripUpdateSink sink = new GtfsTripUpdateSink(
             repository,
-            new TripUpdateBatchMapper(new StopSequenceResolver(keys -> Map.of())),
+            new TripUpdateBatchMapper(new StopSequenceResolver(), new EffectiveDelayResolver(), keys -> Map.of()),
             new PassthroughDeduplication(),
             new GtfsSinkMetrics(new SimpleMeterRegistry()),
             true,

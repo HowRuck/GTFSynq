@@ -50,6 +50,16 @@ class TripStopTimeUpdateDtoTest {
     }
 
     @Test
+    void derivedValuesDoNotChangeTheHash() {
+        var row = update(Instant.parse("2026-11-01T12:00:10Z"), null);
+
+        var withEffective = row.withEffectiveValues(
+                180, Instant.parse("2026-11-01T12:03:10Z"), Instant.parse("2026-11-01T12:03:40Z"), 180, 150);
+
+        assertEquals(row.hash(), withEffective.hash(), "the hash describes what the producer sent");
+    }
+
+    @Test
     void namingAStopDescribesTheStoredRow() {
         var row = update(Instant.parse("2026-11-01T12:00:10Z"), null);
 
