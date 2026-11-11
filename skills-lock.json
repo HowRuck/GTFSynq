@@ -41,13 +41,13 @@
       "source": "gradle/gradle-skills",
       "sourceType": "github",
       "skillPath": "skills/gradle-best-practices/SKILL.md",
-      "computedHash": ""
+      "computedHash": "4d7858023d2adf43a1fb2f0c818447df2c37a2a9bbef64d3d84db117cb702e80"
     },
     "gradle-wrapper-upgrade": {
       "source": "gradle/gradle-skills",
       "sourceType": "github",
       "skillPath": "skills/gradle-wrapper-upgrade/SKILL.md",
-      "computedHash": ""
+      "computedHash": "e1dd42ffc7bf959d1dace4054be7ff8c974c0ce1bd51919b929aa44a7a619480"
     },
     "grafana-oss": {
       "source": "grafana/skills",
@@ -89,7 +89,7 @@
       "source": "timescale/pg-aiguide",
       "sourceType": "github",
       "skillPath": "skills/postgres/SKILL.md",
-      "computedHash": ""
+      "computedHash": "3d54adf7bd62467c104c2374f795067eeb0d48766edbec04a83e5f8b4e821cc8"
     },
     "postgres-database-migration": {
       "source": "timescale/pg-aiguide",
