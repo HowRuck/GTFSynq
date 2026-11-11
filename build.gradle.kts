@@ -3,6 +3,10 @@ import java.io.File
 plugins {
     id("io.github.ben-manes.versions") version "0.67.0"
     alias(libs.plugins.spotless) apply false
+    // Loads the open-java-format plugin once in the root classloader. Without it, every
+    // subproject that also applies Quarkus/Vaadin gets its own copy of the plugin classes,
+    // and the root-level provider registers its configuration twice.
+    alias(libs.plugins.open.java.format) apply false
 }
 
 // Quarkus apps are packaged by the `io.quarkus` plugin (see modules/*/build.gradle.kts)
