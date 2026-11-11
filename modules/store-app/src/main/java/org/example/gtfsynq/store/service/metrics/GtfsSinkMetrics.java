@@ -5,7 +5,13 @@ import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import jakarta.inject.Singleton;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
+import org.example.gtfsynq.shared.model.dto.TripStopTimeUpdateDto;
 
 @Singleton
 public class GtfsSinkMetrics {
@@ -26,7 +32,21 @@ public class GtfsSinkMetrics {
 
     private final Counter droppedRejectedCounter;
 
+    private final MeterRegistry registry;
+
+    private final ConcurrentMap<DelayKey, Counter> delayCounters = new ConcurrentHashMap<>();
+
+    /** Where a stored delay came from; {@code NONE} rows have no delay to aggregate. */
+    private enum DelaySource {
+        PUBLISHED,
+        DERIVED,
+        NONE
+    }
+
+    private record DelayKey(String feedId, DelaySource source) {}
+
     public GtfsSinkMetrics(MeterRegistry registry) {
+        this.registry = registry;
         this.mapTimer = Timer.builder("gtfs.sink.map.duration")
                 .description("Time to shape a drained batch into per-table rows")
                 .publishPercentileHistogram()
@@ -116,5 +136,32 @@ public class GtfsSinkMetrics {
         if (count > 0) {
             droppedRejectedCounter.increment(count);
         }
+    }
+
+    /**
+     * Counts the stored stop-time rows by where their delay came from, so a feed that cannot be tied
+     * to the static schedule shows up as a growing {@code none} share.
+     */
+    public void recordDelaySources(Collection<TripStopTimeUpdateDto> stopTimes) {
+        var tally = new HashMap<DelayKey, Long>();
+        for (var row : stopTimes) {
+            tally.merge(new DelayKey(row.feedId(), delaySourceOf(row)), 1L, Long::sum);
+        }
+        tally.forEach((key, count) -> delayCounters
+                .computeIfAbsent(
+                        key,
+                        k -> Counter.builder("gtfs.sink.delay")
+                                .description("Stop-time rows by where their stored delay came from")
+                                .tag("feed", k.feedId())
+                                .tag("source", k.source().name().toLowerCase(Locale.ROOT))
+                                .register(registry))
+                .increment(count));
+    }
+
+    private static DelaySource delaySourceOf(TripStopTimeUpdateDto row) {
+        if (row.arrivalDelay() != null || row.departureDelay() != null) {
+            return DelaySource.PUBLISHED;
+        }
+        return row.delaySeconds() != null ? DelaySource.DERIVED : DelaySource.NONE;
     }
 }

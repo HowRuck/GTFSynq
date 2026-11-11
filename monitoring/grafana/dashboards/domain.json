@@ -1300,6 +1300,282 @@
       "description": "Map time versus each database operation, so the slow half of a flush is visible."
     },
     {
+      "id": 52,
+      "type": "timeseries",
+      "title": "Stored delay source",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 67
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum by (source) (rate(gtfs.sink.delay{application=~\"$application\", feed=~\"$feed\"}[$__rate_interval]))",
+          "legendFormat": "{{source}}",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Stop-time rows by where their delay_seconds came from: published by the feed, derived from the static plan, or none."
+    },
+    {
+      "id": 53,
+      "type": "timeseries",
+      "title": "Rows without a delay by feed",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 67
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum by (feed) (rate(gtfs.sink.delay{application=~\"$application\", feed=~\"$feed\", source=\"none\"}[$__rate_interval])) / sum by (feed) (rate(gtfs.sink.delay{application=~\"$application\", feed=~\"$feed\"}[$__rate_interval]))",
+          "legendFormat": "{{feed}}",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Share of rows stored with a NULL delay_seconds. A high share means the feed cannot be tied to the static schedule."
+    },
+    {
+      "id": 54,
+      "type": "timeseries",
+      "title": "Static lookup duration (average / max)",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 67
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(gtfs.sink.static.lookup.duration_sum{application=~\"$application\"}[$__rate_interval])) / sum(rate(gtfs.sink.static.lookup.duration_count{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "avg",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "max(gtfs.sink.static.lookup.duration.max{application=~\"$application\"})",
+          "legendFormat": "max",
+          "range": true,
+          "instant": false,
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Time to read the static stops a flush needs for sequence resolution and delay derivation."
+    },
+    {
+      "id": 55,
+      "type": "timeseries",
+      "title": "Static stops loaded per flush",
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "VictoriaMetrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 75
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(gtfs.sink.static.lookup.stops_sum{application=~\"$application\"}[$__rate_interval])) / sum(rate(gtfs.sink.static.lookup.stops_count{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "avg",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "max(gtfs.sink.static.lookup.stops.max{application=~\"$application\"})",
+          "legendFormat": "max",
+          "range": true,
+          "instant": false,
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Static stop rows loaded per flush; only the stops the batch refers to are read."
+    },
+    {
       "id": 22,
       "type": "row",
       "title": "Off-heap store",
@@ -1308,7 +1584,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 67
+        "y": 83
       },
       "panels": []
     },
@@ -1324,7 +1600,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 68
+        "y": 84
       },
       "targets": [
         {
@@ -1398,7 +1674,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 68
+        "y": 84
       },
       "targets": [
         {
@@ -1460,7 +1736,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 68
+        "y": 84
       },
       "targets": [
         {
@@ -1524,7 +1800,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 76
+        "y": 92
       },
       "targets": [
         {
@@ -1598,7 +1874,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 76
+        "y": 92
       },
       "targets": [
         {
@@ -1665,7 +1941,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 84
+        "y": 100
       },
       "panels": []
     },
@@ -1681,7 +1957,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 85
+        "y": 101
       },
       "targets": [
         {
@@ -1744,7 +2020,7 @@
         "h": 8,
         "w": 6,
         "x": 12,
-        "y": 85
+        "y": 101
       },
       "targets": [
         {
@@ -1811,7 +2087,7 @@
         "h": 8,
         "w": 6,
         "x": 18,
-        "y": 85
+        "y": 101
       },
       "targets": [
         {
@@ -1874,7 +2150,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 93
+        "y": 109
       },
       "targets": [
         {
@@ -1936,7 +2212,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 93
+        "y": 109
       },
       "targets": [
         {
@@ -1998,7 +2274,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 101
+        "y": 117
       },
       "targets": [
         {
@@ -2060,7 +2336,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 101
+        "y": 117
       },
       "targets": [
         {
@@ -2122,7 +2398,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 109
+        "y": 125
       },
       "targets": [
         {
@@ -2184,7 +2460,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 109
+        "y": 125
       },
       "targets": [
         {
@@ -2245,7 +2521,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 117
+        "y": 133
       },
       "panels": []
     },
@@ -2261,7 +2537,7 @@
         "h": 8,
         "w": 6,
         "x": 0,
-        "y": 118
+        "y": 134
       },
       "targets": [
         {
@@ -2324,7 +2600,7 @@
         "h": 8,
         "w": 6,
         "x": 6,
-        "y": 118
+        "y": 134
       },
       "targets": [
         {
@@ -2386,7 +2662,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 118
+        "y": 134
       },
       "targets": [
         {
@@ -2448,7 +2724,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 126
+        "y": 142
       },
       "targets": [
         {
@@ -2511,7 +2787,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 126
+        "y": 142
       },
       "targets": [
         {
@@ -2573,7 +2849,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 134
+        "y": 150
       },
       "targets": [
         {
@@ -2636,7 +2912,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 134
+        "y": 150
       },
       "targets": [
         {
@@ -2699,7 +2975,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 142
+        "y": 158
       },
       "targets": [
         {
@@ -2761,7 +3037,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 142
+        "y": 158
       },
       "targets": [
         {
@@ -2824,7 +3100,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 150
+        "y": 166
       },
       "targets": [
         {
@@ -2886,7 +3162,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 150
+        "y": 166
       },
       "targets": [
         {
@@ -2948,7 +3224,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 158
+        "y": 174
       },
       "targets": [
         {
@@ -3010,7 +3286,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 158
+        "y": 174
       },
       "targets": [
         {

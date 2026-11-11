@@ -315,6 +315,7 @@ public class GtfsTripUpdateSink {
 
         metrics.recordEntities(
                 rows.descriptors().size(), rows.historyStopTimes().size());
+        metrics.recordDelaySources(rows.historyStopTimes());
 
         // One shared-connection write for descriptors, history, and hot tables.
         var timings = tripUpdateRepository.write(rows);
