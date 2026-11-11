@@ -112,9 +112,8 @@ public class GtfsQueryRepository {
                 AT TIME ZONE COALESCE(a.agency_timezone, 'UTC')) AS scheduled_start_at,
                -- The scheduled time of the trip's final static stop, i.e. when the trip ends.
                -- Planned times only: predictions are not used, so a late trip counts as finished
-               -- on schedule. A scalar subquery rather than a join so that Postgres evaluates it
-               -- after sorting and paging: as a lateral join it ran for every live trip, which
-               -- made sorting by trip or route id about 15 times slower.
+               -- on schedule. A scalar subquery, so Postgres evaluates it after sorting and paging
+               -- and it runs for the rows of one page only.
                (SELECT ((m.start_date + COALESCE(st.arrival_time, st.departure_time)
                           + make_interval(days => COALESCE(
                                 st.arrival_time_overflow_days,
