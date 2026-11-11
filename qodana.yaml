@@ -1,21 +1,72 @@
 version: "1.0"
-
 linter: qodana-jvm-community
 
+# Start from the recommended profile; the `include` list below enables further
+# inspections on top of it.
 profile:
   name: qodana.recommended
 
 include:
+  # --- Text, language and encoding --------------------------------------------
   - name: SpellCheckingInspection
   - name: LanguageDetectionInspection
+  # Characters that the file's encoding cannot represent and would lose or garble on save.
+  - name: LossyEncoding
+  # Non-ASCII characters in unusual places: look-alike letters in identifiers, or typographic
+  # dashes and arrows in strings and comments.
+  - name: NonAsciiCharacters
 
+  # --- Code size and complexity -----------------------------------------------
+  - name: CyclomaticComplexityInspection
+  - name: JvmLinesOfCodeInspection
+
+  # --- Gradle: repositories ---------------------------------------------------
+  - name: AvoidRepositoriesInBuildGradle
+  - name: AvoidDuplicateRepositories
+  - name: MultipleRepositoryUrls
+  - name: JCenterRepository
+  - name: BintrayPublishingPlugin
+
+  # --- Gradle: dependencies ---------------------------------------------------
+  - name: AvoidDuplicateDependencies
+  - name: AvoidDependencyNamedArgumentsNotation
+  - name: DependencyNotationArgument
+  - name: DeprecatedConfigurations
+  - name: LatestMinorVersion
+  - name: RedundantKotlinStdLibDependency
+
+  # --- Gradle: plugins and tasks ----------------------------------------------
+  - name: AvoidApplyPluginMethod
+  - name: IncorrectPluginDslStructure
+  - name: ConfigurationAvoidance
+  - name: TaskMissingDescription
+  - name: ForeignDelegate
+
+  # --- Properties files and i18n bundles --------------------------------------
+  # Keys: duplicates, unused and incomplete entries.
+  - name: DuplicatePropertyInspection
+  - name: UnusedProperty
+  - name: IncompleteProperty
+  # Bundles: translations that drifted apart or use unknown locales.
+  - name: InconsistentResourceBundle
+  - name: SuspiciousLocalesLanguages
+  - name: UnusedMessageFormatParameter
+  # Style: ordering, delimiters, whitespace and ellipsis.
+  - name: AlphaUnsortedPropertiesFile
+  - name: WrongPropertyKeyValueDelimiter
+  - name: TrailingSpacesInProperty
+  - name: UseEllipsisInPropertyInspection
+
+# Build output and generated sources are not ours to fix.
 exclude:
   - name: All
     paths:
+      # Build output
       - "**/build/**"
       - "**/bin/**"
       - "**/out/**"
       - "**/target/**"
+      # Generated code, including the protobuf sources unpacked from dependencies
       - "**/generated/**"
       - "**/extracted-protos/**"
       - "**/extracted-include-protos/**"
