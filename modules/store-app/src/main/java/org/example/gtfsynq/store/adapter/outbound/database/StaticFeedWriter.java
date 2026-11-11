@@ -29,6 +29,7 @@ import org.example.gtfsynq.shared.validation.GtfsStaticRows.RouteRow;
 import org.example.gtfsynq.shared.validation.GtfsStaticRows.StopRow;
 import org.example.gtfsynq.shared.validation.GtfsStaticRows.StopTimeRow;
 import org.example.gtfsynq.shared.validation.GtfsStaticRows.TripRow;
+import org.example.gtfsynq.store.service.StaticRevisionEpochs;
 import org.example.gtfsynq.store.service.metrics.StaticPersistenceMetrics;
 import org.postgresql.PGConnection;
 import org.postgresql.copy.CopyIn;
@@ -347,6 +348,8 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
 
     private final StaticPersistenceMetrics metrics;
 
+    private final StaticRevisionEpochs revisionEpochs;
+
     /** Schema holding this revision's not-yet-attached tables; {@code null} when unchanged. */
     private final String stagingSchema;
 
@@ -384,13 +387,15 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
             StaticFeedIngested event,
             boolean unchanged,
             StaticPersistenceMetrics metrics,
-            String stagingSchema) {
+            String stagingSchema,
+            StaticRevisionEpochs revisionEpochs) {
         this.connection = connection;
         this.event = event;
         this.feedId = event.getFeedId();
         this.unchanged = unchanged;
         this.metrics = metrics;
         this.stagingSchema = stagingSchema;
+        this.revisionEpochs = revisionEpochs;
     }
 
     /** Whether the feed already holds this revision, so the archive is discarded instead of written. */
@@ -430,6 +435,8 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
 
             swapRevision();
             committed = true;
+            // Realtime stops stored against the previous plan are rewritten on their next update.
+            revisionEpochs.revisionCommitted(feedId, event.getSha256());
 
             log.info(
                     "Committed static revision for feed {}: {} rows in {} ms ({}). Stop times used COPY ({} rows, {} chunks, {} ms)",

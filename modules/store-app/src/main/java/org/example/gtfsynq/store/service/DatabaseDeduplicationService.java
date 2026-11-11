@@ -1,9 +1,9 @@
 package org.example.gtfsynq.store.service;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gtfsynq.shared.model.dto.TripStopTimeUpdateDto;
 import org.example.gtfsynq.shared.model.dto.TripUpdateDto;
@@ -16,11 +16,24 @@ import org.example.gtfsynq.shared.util.FeedHashing;
  */
 @ApplicationScoped
 @Slf4j
-@RequiredArgsConstructor
 public class DatabaseDeduplicationService {
 
     /** The off-heap hash store used for storing trip update state */
     private final OffHeapHashStore stateStore;
+
+    /** Changes a feed's keys when its static revision does, so its stops are rewritten once. */
+    private final StaticRevisionEpochs revisionEpochs;
+
+    @Inject
+    public DatabaseDeduplicationService(OffHeapHashStore stateStore, StaticRevisionEpochs revisionEpochs) {
+        this.stateStore = stateStore;
+        this.revisionEpochs = revisionEpochs;
+    }
+
+    /** Deduplicates without static revision tracking; for callers that have no static data. */
+    public DatabaseDeduplicationService(OffHeapHashStore stateStore) {
+        this(stateStore, new StaticRevisionEpochs(feedId -> null));
+    }
 
     /**
      * Cleans the state of a trip update by removing duplicate stop time updates
@@ -53,6 +66,10 @@ public class DatabaseDeduplicationService {
             tripDescriptorChanged = true;
         }
 
+        // Epoch zero keeps the original key, so state written before any revision stays valid.
+        var epoch = revisionEpochs.current(tripDescriptor.feedId());
+        var stopKeyPrefix = epoch == 0 ? tripKey + ":" : tripKey + "@" + epoch + ":";
+
         var changedStopTimeUpdates = new ArrayList<TripStopTimeUpdateDto>(
                 feedEntity.stopTimeUpdates().size());
 
@@ -60,7 +77,7 @@ public class DatabaseDeduplicationService {
             // Identify the stop within the trip. stop_sequence is preferred, but feeds are allowed
             // to publish only stop_id, and keying those on the absent sequence put every stop of
             // the trip on the same ":null" key.
-            var keyBytes = (tripKey + ":" + stopIdentity(stopUpdate)).getBytes(StandardCharsets.UTF_8);
+            var keyBytes = (stopKeyPrefix + stopIdentity(stopUpdate)).getBytes(StandardCharsets.UTF_8);
             var keyHash = FeedHashing.hashBytes(keyBytes);
 
             // Get the metadata hash (excluding delays) for comparison

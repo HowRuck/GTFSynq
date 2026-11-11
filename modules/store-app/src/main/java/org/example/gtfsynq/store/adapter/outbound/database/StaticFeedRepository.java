@@ -11,6 +11,7 @@ import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gtfsynq.shared.protocol.StaticFeedIngested;
+import org.example.gtfsynq.store.service.StaticRevisionEpochs;
 import org.example.gtfsynq.store.service.metrics.StaticPersistenceMetrics;
 
 /**
@@ -57,6 +58,8 @@ public class StaticFeedRepository {
 
     private final StaticPersistenceMetrics metrics;
 
+    private final StaticRevisionEpochs revisionEpochs;
+
     /**
      * Opens a writer for the revision an event describes, clearing the feed's current rows first.
      *
@@ -92,7 +95,7 @@ public class StaticFeedRepository {
                         unchanged);
                 StaticFeedWriter writer;
                 if (unchanged) {
-                    writer = new StaticFeedWriter(connection, event, true, metrics, null);
+                    writer = new StaticFeedWriter(connection, event, true, metrics, null, revisionEpochs);
                 } else {
                     log.info(
                             "Loading revision {} of feed {} into a staging schema for {}",
@@ -100,7 +103,7 @@ public class StaticFeedRepository {
                             event.getFeedId(),
                             event.getObjectKey());
                     var stagingSchema = stagingSchema(connection, event);
-                    writer = new StaticFeedWriter(connection, event, false, metrics, stagingSchema);
+                    writer = new StaticFeedWriter(connection, event, false, metrics, stagingSchema, revisionEpochs);
                 }
                 handedOver = true;
                 return writer;

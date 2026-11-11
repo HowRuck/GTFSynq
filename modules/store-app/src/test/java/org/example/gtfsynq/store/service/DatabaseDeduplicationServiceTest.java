@@ -79,6 +79,46 @@ class DatabaseDeduplicationServiceTest {
                 "a delay that moved by more than a minute must be written again");
     }
 
+    @Test
+    void rewritesAFeedsStopsOnceAfterItsStaticRevisionChanges() {
+        var epochs = new StaticRevisionEpochs(feedId -> null);
+        service = new DatabaseDeduplicationService(store, epochs);
+        assertNotNull(service.cleanState(update(PREDICTION, null)));
+        assertNull(service.cleanState(update(PREDICTION, null)), "unchanged before the revision");
+
+        epochs.revisionCommitted(FEED, "digest-2");
+
+        assertNotNull(
+                service.cleanState(update(PREDICTION, null)),
+                "the stop was stored against the old plan, so it is written again");
+        assertNull(service.cleanState(update(PREDICTION, null)), "and only once");
+    }
+
+    @Test
+    void leavesOtherFeedsAloneWhenOneFeedsRevisionChanges() {
+        var epochs = new StaticRevisionEpochs(feedId -> null);
+        service = new DatabaseDeduplicationService(store, epochs);
+        assertNotNull(service.cleanState(update(PREDICTION, null)));
+
+        epochs.revisionCommitted("some-other-feed", "digest-1");
+
+        assertNull(service.cleanState(update(PREDICTION, null)));
+    }
+
+    @Test
+    void keepsItsKeysAcrossARestartBecauseTheEpochComesFromTheStoredDigest() {
+        service = new DatabaseDeduplicationService(store, new StaticRevisionEpochs(feedId -> "digest-1"));
+        assertNotNull(service.cleanState(update(PREDICTION, null)));
+
+        // A new process reads the same digest from the database, so nothing is rewritten.
+        service = new DatabaseDeduplicationService(store, new StaticRevisionEpochs(feedId -> "digest-1"));
+        assertNull(service.cleanState(update(PREDICTION, null)));
+
+        // A different revision in the database does rewrite the stop.
+        service = new DatabaseDeduplicationService(store, new StaticRevisionEpochs(feedId -> "digest-2"));
+        assertNotNull(service.cleanState(update(PREDICTION, null)));
+    }
+
     private static TripUpdateDto update(Instant arrival, Integer delay) {
         // HSL's shape: route, start date and start time, but no trip id.
         var descriptor = TripDescriptorDto.fromEntity(
