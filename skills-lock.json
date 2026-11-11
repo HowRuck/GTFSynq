@@ -1,167 +1,173 @@
 {
-  "version": 1,
+  "version": 2,
   "skills": {
     "aura-theme": {
       "source": "vaadin/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/aura-theme/SKILL.md",
-      "computedHash": "3ca0d9fc49619561dd6efe10d082efe55723e8fa6fc3b9f216a2b5a0712c98ca"
+      "computedHash": "e2105e8a44b34f8cf2d52978cb6f549525ed6ae74c95d3faffcc03b8eaef504c"
     },
     "dashboarding": {
       "source": "grafana/skills",
       "sourceType": "github",
       "skillPath": "skills/grafana-core/dashboarding/SKILL.md",
-      "computedHash": "f9ad2b49a4b91cecad7d76c86f5e8d1b36c7ba1c932284289715fa8935ccb7c7"
+      "computedHash": "4fbaa0ef1b4d80df923a0960de0b17fc0ba394b3c262389499b8a744a65291bf"
     },
     "datasources-provisioning": {
       "source": "grafana/skills",
       "sourceType": "github",
       "skillPath": "skills/grafana-datasources/datasources-provisioning/SKILL.md",
-      "computedHash": "3b45321e5eb57f512e484eacc2c77a3c71ecc460df4643b6f1816481c61c4c03"
+      "computedHash": "656a5a5fb4c0727d24bf5de674a30444e8a58860f205cdeb73fbbcd44b1dd867"
     },
     "design-postgis-tables": {
       "source": "timescale/pg-aiguide",
       "sourceType": "github",
       "skillPath": "skills/design-postgis-tables/SKILL.md",
-      "computedHash": "54b10ad9c978b475e12073fa7a9c0bbced2edabed5d599b2c214878ec2f08493"
+      "computedHash": "6be506240a60a30f733c64128e150b1125f1b6f348d8f298a6ea4f0308b4010e"
     },
     "design-postgres-tables": {
       "source": "timescale/pg-aiguide",
       "sourceType": "github",
       "skillPath": "skills/design-postgres-tables/SKILL.md",
-      "computedHash": "6b44a27f3c448af8da01562da39f32846222f5ad53ee61a7d12f520c83df56b1"
+      "computedHash": "426c3a46bb52d6460e426e193fd97411c217587eb6b5830d996955eef754855b"
     },
     "find-hypertable-candidates": {
       "source": "timescale/pg-aiguide",
       "sourceType": "github",
       "skillPath": "skills/find-hypertable-candidates/SKILL.md",
-      "computedHash": "b405eb4cad7f67b64acc3f25f85e877df3663519f93e75dad026d7d41df27aa5"
+      "computedHash": "6d4c3c08353393e854cd2c898419498a745ba9e3828f4c20bf3e92d194a7084c"
     },
     "gradle-best-practices": {
       "source": "gradle/gradle-skills",
       "sourceType": "github",
       "skillPath": "skills/gradle-best-practices/SKILL.md",
-      "computedHash": "b09ae5efef7d30c7c2802026db580ef727aba1e08c610810fe4daa9464b2328d"
+      "computedHash": ""
     },
     "gradle-wrapper-upgrade": {
       "source": "gradle/gradle-skills",
       "sourceType": "github",
       "skillPath": "skills/gradle-wrapper-upgrade/SKILL.md",
-      "computedHash": "fe67a0ec5f69c05d4e4e9ed354e9460b511491a8d823a664579c871bc95f5df7"
+      "computedHash": ""
     },
     "grafana-oss": {
       "source": "grafana/skills",
       "sourceType": "github",
       "skillPath": "skills/grafana-core/grafana-oss/SKILL.md",
-      "computedHash": "6638b23a0e6ee2cb2c35fa5c3646b78c183ca018209f9b37efeb5b7e6a71e8af"
+      "computedHash": "1f7d5cd7960686d534407584293df4e71de010a626d3be60b6b5df975f558897"
+    },
+    "java-conventions": {
+      "source": "AdamBien/airails",
+      "sourceType": "github",
+      "skillPath": "java/java-conventions/SKILL.md",
+      "computedHash": "7ba12d464e28e10f057637859416011acd9501e6ee8f153a6d69f0199adfdca1"
     },
     "migrate-postgres-tables-to-hypertables": {
       "source": "timescale/pg-aiguide",
       "sourceType": "github",
       "skillPath": "skills/migrate-postgres-tables-to-hypertables/SKILL.md",
-      "computedHash": "932e88b5789317f95052e681a095758411baad70a7d76147d1d5caaa8117913a"
+      "computedHash": "7738c655f7e253a9cfaabd76a8af5b020ef111c552358a47e4095e3086b09715"
     },
     "migrate-spring-to-quarkus": {
       "source": "quarkusio/skills",
       "sourceType": "github",
       "skillPath": "skills/migrate-spring-to-quarkus/SKILL.md",
-      "computedHash": "fb844ebbdf7e224610eb2af3204348c24af454079e61f341238ecc815f2c465b"
+      "computedHash": "9b8132a62fc06254d5dd217d793700a2c394413c75666f9ae8f3e787f34945e6"
     },
     "opentelemetry": {
       "source": "grafana/skills",
       "sourceType": "github",
       "skillPath": "skills/grafana-core/opentelemetry/SKILL.md",
-      "computedHash": "abdf5df50836781e22422495d92d5a8cf66906e72bccf1aebaa211058a292401"
+      "computedHash": "e4302d3369cb60e2cfc300624b8f686537251f13a6dc3f0c86d1b16e3c7d0b22"
     },
     "pgvector-semantic-search": {
       "source": "timescale/pg-aiguide",
       "sourceType": "github",
       "skillPath": "skills/pgvector-semantic-search/SKILL.md",
-      "computedHash": "ea00b6af03fd3565dca37b282de9b786bd00711db190b671e6e729d9d9972622"
+      "computedHash": "384b5812d18f33054df915d9d30a71e74ebbf68fb55f7bb2b4cf8bd7ece3a7e5"
     },
     "postgres": {
       "source": "timescale/pg-aiguide",
       "sourceType": "github",
       "skillPath": "skills/postgres/SKILL.md",
-      "computedHash": "f4e49a29027d2d1d822f2f32b22809c121b01bb6d38fdb7e801623e242068b94"
+      "computedHash": ""
     },
     "postgres-database-migration": {
       "source": "timescale/pg-aiguide",
       "sourceType": "github",
       "skillPath": "skills/postgres-database-migration/SKILL.md",
-      "computedHash": "a9295c7f3f9b8b8b836af8d98b708d1728011f4bb4b13a20352aba9a8df36c28"
+      "computedHash": "4f5a408b5129a19191888c1badc5b830dce755eb5dc3866cd66c59800baac111"
     },
     "postgres-hybrid-text-search": {
       "source": "timescale/pg-aiguide",
       "sourceType": "github",
       "skillPath": "skills/postgres-hybrid-text-search/SKILL.md",
-      "computedHash": "38477f02bfa87a76e2438dadb150f678ebde45b5a4c327faf1b673dc13cfcbf2"
+      "computedHash": "85cc2eb89c5d164e06abf3463d64f04ae834204d710fc98d6f283351472f81cb"
     },
     "prometheus": {
       "source": "grafana/skills",
       "sourceType": "github",
       "skillPath": "skills/grafana-lgtm/prometheus/SKILL.md",
-      "computedHash": "bd3152772f8a77010dd30ee9d589a97ed14950843ed41c2d11291366a5b45218"
+      "computedHash": "11459f6990a2d0a7b31df2954e99c7d9b3dee0b3e01653d00c6c6e12df6a31bd"
     },
     "promql": {
       "source": "grafana/skills",
       "sourceType": "github",
       "skillPath": "skills/grafana-core/promql/SKILL.md",
-      "computedHash": "0d45e3db2b92907b99aa41a645d5e685cdac5bc6fa6741189c54aad7ca5b2322"
+      "computedHash": "cd2734ebf460270c3c0b17abe568f7283f77e2336c3ffc5687ccb7dcc1de08e1"
     },
     "quarkus-update": {
       "source": "quarkusio/skills",
       "sourceType": "github",
       "skillPath": "skills/quarkus-update/SKILL.md",
-      "computedHash": "d8ece887dde1dc31d9a455ba0770bb70434e4c5f513597fa361cf32e08568539"
+      "computedHash": "06b9d625ce4ebef2629f03d7a1c848f37647df2df7fec71398ec8c912245e43d"
     },
     "scaffold-quarkus-mcp-server": {
       "source": "quarkusio/skills",
       "sourceType": "github",
       "skillPath": "skills/scaffold-quarkus-mcp-server/SKILL.md",
-      "computedHash": "6f24276d070ddbe16ea15733ba361218491032a3e69e660a56c17c68049f4bc1"
+      "computedHash": "e8c4e2105922bdd7c82bd0e2159495e5138295927183129624b56ba47f4c669d"
     },
     "schema-exploration": {
       "source": "timescale/pg-aiguide",
       "sourceType": "github",
       "skillPath": "skills/schema-exploration/SKILL.md",
-      "computedHash": "4de9c1264c045a7c6622b6827e4421912ace3d7b6f569c182e04efe462f0fef2"
+      "computedHash": "1e0bc5abd4ddbd6d917d79394b58c955c00665484c840f3987020ae0080da8d0"
     },
     "setup-timescaledb-hypertables": {
       "source": "timescale/pg-aiguide",
       "sourceType": "github",
       "skillPath": "skills/setup-timescaledb-hypertables/SKILL.md",
-      "computedHash": "aa653ac968541c1457940711be92fbe9b971ba0ba05c03d97be1353b1122baef"
+      "computedHash": "3e1f8fea2a25af5471ce84d805a4d85c1529225e9a37cb5f197f541e6e2137a4"
     },
     "timescaledb-hyperfunctions": {
       "source": "timescale/pg-aiguide",
       "sourceType": "github",
       "skillPath": "skills/timescaledb-hyperfunctions/SKILL.md",
-      "computedHash": "a1948017849e76277ca82e34744f9a4917a94d2e164a7c4ffcd3f347c89f8c9d"
+      "computedHash": "8ac294371341c7386e93ab0ccfb59eeaa6010be6e8df5d41e75a4d9bdd0f9bc6"
     },
     "typescript-clean-code-cookbook": {
       "source": "cressie176/cressie176-claude-marketplace",
       "sourceType": "github",
       "skillPath": "plugins/typescript-clean-code-cookbook/skills/typescript-clean-code-cookbook/SKILL.md",
-      "computedHash": "82429e52f6e89650218d97461b1870dcb56356cf5a99f7b8742697f2792907ae"
+      "computedHash": "7a5cd6620855575e4d09ddeb9465c36ab68201c2f75e783225dbbcbbd3025dd5"
     },
     "typescript-pragmatic-programmer": {
       "source": "cressie176/cressie176-claude-marketplace",
       "sourceType": "github",
       "skillPath": "plugins/typescript-pragmatic-programmer/skills/typescript-pragmatic-programmer/SKILL.md",
-      "computedHash": "26f1e4b13df66d6f6520d744f065c82875f2459c3fc3e1e06357a36efca454bb"
+      "computedHash": "e6f6b0f5f697091f145eb344eaa682f964502a73ba38c9efe48c5d34184cefa7"
     },
     "vaadin-form-layout": {
       "source": "vaadin/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/vaadin-form-layout/SKILL.md",
-      "computedHash": "8a0a8d989049b23933d21142a6c4d0f9625fa678d3d289c2ddb0c4cd952cda62"
+      "computedHash": "db2fcd4f3389cdaa2cb9c027d1ea68308d941a56879d3b66b4d336e565541beb"
     },
     "vaadin-frontend-design": {
       "source": "vaadin/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/vaadin-frontend-design/SKILL.md",
-      "computedHash": "b5422faf32fd597d4ad330956ea51fb9d6872a3a7affa6a4607a8935fec5f505"
+      "computedHash": "efbf24af70379486a6ae836ff7f6bb93420a2b70ee1cc12c420d4cb50ae1b577"
     }
   }
 }
