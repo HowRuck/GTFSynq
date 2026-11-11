@@ -1,6 +1,8 @@
 package org.example.gtfsynq.ui.component;
 
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.badge.Badge;
+import com.vaadin.flow.component.badge.BadgeVariant;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.Grid.Column;
 import com.vaadin.flow.component.grid.HeaderRow;
@@ -208,14 +210,23 @@ public final class Columns {
         row.join(columns).setText(grid.getTranslation(groupKey));
     }
 
-    /** Trip status badge text; the hover title explains the statuses that are only inferred. */
-    private static Span tripStatus(Grid<TripUpdate> grid, TripUpdate trip) {
+    /** Trip status as a badge; the hover title explains the statuses that are only inferred. */
+    private static Badge tripStatus(Grid<TripUpdate> grid, TripUpdate trip) {
         var status = TripStatus.of(trip, Instant.now());
-        var span = new Span(grid.getTranslation(status.labelKey()));
-        if (status.titleKey() != null) {
-            span.setTitle(grid.getTranslation(status.titleKey()));
+        var badge = new Badge(grid.getTranslation(status.labelKey()));
+        badge.addThemeVariants(BadgeVariant.SMALL);
+        switch (status) {
+            case UNDERWAY -> badge.addThemeVariants(BadgeVariant.SUCCESS);
+            case STALE -> badge.addThemeVariants(BadgeVariant.WARNING);
+            case FINISHED -> badge.addThemeVariants(BadgeVariant.CONTRAST);
+            case SCHEDULED -> {
+                // The default colour: the trip has not started, so nothing is wrong or running.
+            }
         }
-        return span;
+        if (status.titleKey() != null) {
+            badge.getElement().setAttribute("title", grid.getTranslation(status.titleKey()));
+        }
+        return badge;
     }
 
     /**
