@@ -113,16 +113,16 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
         clock.getElement().setAttribute("role", "timer");
         clock.getElement().setAttribute("aria-live", "off");
         clock.getElement().executeJs("""
-                const clock = this;
-                const formatter = new Intl.DateTimeFormat(undefined, {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
-                const tick = () => clock.textContent = formatter.format(new Date());
-                tick();
-                setInterval(tick, 1000);
-                """);
+            const clock = this;
+            const formatter = new Intl.DateTimeFormat(undefined, {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            const tick = () => clock.textContent = formatter.format(new Date());
+            tick();
+            setInterval(tick, 1000);
+            """);
         return clock;
     }
 

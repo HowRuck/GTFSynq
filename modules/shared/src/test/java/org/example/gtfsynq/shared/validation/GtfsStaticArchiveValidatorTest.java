@@ -14,24 +14,24 @@ import org.junit.jupiter.api.Test;
 class GtfsStaticArchiveValidatorTest {
 
     private static final String AGENCY = """
-            agency_id,agency_name,agency_url,agency_timezone
-            TA,Test Agency,https://example.com,Europe/Berlin
-            """;
+        agency_id,agency_name,agency_url,agency_timezone
+        TA,Test Agency,https://example.com,Europe/Berlin
+        """;
 
     private static final String STOPS = """
-            stop_id,stop_name,stop_lat,stop_lon
-            S1,Central,52.5,13.4
-            """;
+        stop_id,stop_name,stop_lat,stop_lon
+        S1,Central,52.5,13.4
+        """;
 
     private static final String ROUTES = """
-            route_id,route_short_name,route_long_name,route_type
-            R1,1,Line 1,3
-            """;
+        route_id,route_short_name,route_long_name,route_type
+        R1,1,Line 1,3
+        """;
 
     private static final String CALENDAR = """
-            service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date
-            serviceA,1,1,1,1,1,0,0,20240101,20241231
-            """;
+        service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date
+        serviceA,1,1,1,1,1,0,0,20240101,20241231
+        """;
 
     private static Path archive(String... files) throws Exception {
         var path = Files.createTempFile("gtfs-static-test-", ".zip");
@@ -59,23 +59,23 @@ class GtfsStaticArchiveValidatorTest {
     }
 
     private static final String SINGLE_TRIP = """
-            route_id,service_id,trip_id
-            R1,serviceA,trip1
-            """;
+        route_id,service_id,trip_id
+        R1,serviceA,trip1
+        """;
 
     private static final String TWO_TRIPS = """
-            route_id,service_id,trip_id
-            R1,serviceA,trip1
-            R1,serviceA,trip2
-            """;
+        route_id,service_id,trip_id
+        R1,serviceA,trip1
+        R1,serviceA,trip2
+        """;
 
     @Test
     void validArchivePasses() throws Exception {
         var path = archive(feed(SINGLE_TRIP, """
-                trip_id,arrival_time,departure_time,stop_id,stop_sequence
-                trip1,08:00:00,08:00:00,S1,1
-                trip1,08:05:00,08:05:00,S1,2
-                """));
+            trip_id,arrival_time,departure_time,stop_id,stop_sequence
+            trip1,08:00:00,08:00:00,S1,1
+            trip1,08:05:00,08:05:00,S1,2
+            """));
         var report = new GtfsStaticArchiveValidator().validate(path);
         assertTrue(report.valid(), () -> report.toString());
         assertEquals(7, report.rowsChecked());
@@ -303,11 +303,11 @@ class GtfsStaticArchiveValidatorTest {
     void interleavedDecreaseIsDetected() throws Exception {
         // trip1 appears in two non-contiguous runs; a single cursor would miss the decrease.
         var path = archive(feed(TWO_TRIPS, """
-                trip_id,arrival_time,departure_time,stop_id,stop_sequence
-                trip1,08:00:00,08:00:00,S1,5
-                trip2,09:00:00,09:00:00,S1,1
-                trip1,08:30:00,08:30:00,S1,3
-                """));
+            trip_id,arrival_time,departure_time,stop_id,stop_sequence
+            trip1,08:00:00,08:00:00,S1,5
+            trip2,09:00:00,09:00:00,S1,1
+            trip1,08:30:00,08:30:00,S1,3
+            """));
         var report = new GtfsStaticArchiveValidator().validate(path);
         assertFalse(report.valid());
         var stopTimes = report.files().get("stop_times.txt");
@@ -322,12 +322,12 @@ class GtfsStaticArchiveValidatorTest {
     void interleavedButIncreasingIsValid() throws Exception {
         // Escalating to per-trip tracking must not invent violations for out-of-order grouping.
         var path = archive(feed(TWO_TRIPS, """
-                trip_id,arrival_time,departure_time,stop_id,stop_sequence
-                trip1,08:00:00,08:00:00,S1,1
-                trip2,09:00:00,09:00:00,S1,1
-                trip1,08:30:00,08:30:00,S1,2
-                trip2,09:30:00,09:30:00,S1,2
-                """));
+            trip_id,arrival_time,departure_time,stop_id,stop_sequence
+            trip1,08:00:00,08:00:00,S1,1
+            trip2,09:00:00,09:00:00,S1,1
+            trip1,08:30:00,08:30:00,S1,2
+            trip2,09:30:00,09:30:00,S1,2
+            """));
         var report = new GtfsStaticArchiveValidator().validate(path);
         assertTrue(report.valid(), () -> report.toString());
         assertTrue(report.files().get("stop_times.txt").complete());
@@ -337,11 +337,11 @@ class GtfsStaticArchiveValidatorTest {
     @Test
     void trackingCapReportsIncompleteInsteadOfGrowing() throws Exception {
         var path = archive(feed(TWO_TRIPS, """
-                trip_id,arrival_time,departure_time,stop_id,stop_sequence
-                trip1,08:00:00,08:00:00,S1,1
-                trip2,09:00:00,09:00:00,S1,1
-                trip1,08:30:00,08:30:00,S1,2
-                """));
+            trip_id,arrival_time,departure_time,stop_id,stop_sequence
+            trip1,08:00:00,08:00:00,S1,1
+            trip2,09:00:00,09:00:00,S1,1
+            trip1,08:30:00,08:30:00,S1,2
+            """));
         var report = new GtfsStaticArchiveValidator(1, HashedIdIndex.DEFAULT_MAX_TRACKED_IDS).validate(path);
         assertTrue(report.valid(), () -> report.toString());
         assertFalse(report.files().get("stop_times.txt").complete());

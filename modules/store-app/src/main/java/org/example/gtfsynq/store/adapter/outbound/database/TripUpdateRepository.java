@@ -30,104 +30,104 @@ public class TripUpdateRepository {
     private static final int BATCH_SIZE = 5000;
 
     private static final String UPSERT_TRIP_DESCRIPTORS_SQL = """
-            INSERT INTO rt_trip_updates_meta (
-                entity_id,
-                feed_id,
-                id,
-                trip_id,
-                route_id,
-                start_date,
-                start_time,
-                start_time_overflow_days,
-                feed_ts
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT (id) DO UPDATE SET
-                entity_id = EXCLUDED.entity_id,
-                feed_id = EXCLUDED.feed_id,
-                trip_id = EXCLUDED.trip_id,
-                route_id = EXCLUDED.route_id,
-                start_date = EXCLUDED.start_date,
-                start_time = EXCLUDED.start_time,
-                start_time_overflow_days = EXCLUDED.start_time_overflow_days,
-                feed_ts = EXCLUDED.feed_ts
-            """;
+        INSERT INTO rt_trip_updates_meta (
+            entity_id,
+            feed_id,
+            id,
+            trip_id,
+            route_id,
+            start_date,
+            start_time,
+            start_time_overflow_days,
+            feed_ts
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT (id) DO UPDATE SET
+            entity_id = EXCLUDED.entity_id,
+            feed_id = EXCLUDED.feed_id,
+            trip_id = EXCLUDED.trip_id,
+            route_id = EXCLUDED.route_id,
+            start_date = EXCLUDED.start_date,
+            start_time = EXCLUDED.start_time,
+            start_time_overflow_days = EXCLUDED.start_time_overflow_days,
+            feed_ts = EXCLUDED.feed_ts
+        """;
 
     private static final String APPEND_STOP_TIME_UPDATES_SQL = """
-            INSERT INTO rt_stop_time_updates_ht (
-                trip_update_id,
-                feed_id,
-                feed_ts,
-                stop_sequence,
-                stop_id,
-                arrival_time,
-                arrival_delay,
-                scheduled_arrival_time,
-                departure_time,
-                departure_delay,
-                scheduled_departure_time,
-                schedule_relationship,
-                assigned_stop_id,
-                delay_seconds,
-                effective_arrival_time,
-                effective_departure_time,
-                effective_arrival_delay,
-                effective_departure_delay
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT (trip_update_id, feed_ts, stop_sequence) DO NOTHING
-            """;
+        INSERT INTO rt_stop_time_updates_ht (
+            trip_update_id,
+            feed_id,
+            feed_ts,
+            stop_sequence,
+            stop_id,
+            arrival_time,
+            arrival_delay,
+            scheduled_arrival_time,
+            departure_time,
+            departure_delay,
+            scheduled_departure_time,
+            schedule_relationship,
+            assigned_stop_id,
+            delay_seconds,
+            effective_arrival_time,
+            effective_departure_time,
+            effective_arrival_delay,
+            effective_departure_delay
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT (trip_update_id, feed_ts, stop_sequence) DO NOTHING
+        """;
 
     private static final String UPSERT_HOT_TRIPS_SQL = """
-            INSERT INTO rt_trip_updates_hot (
-                trip_update_id,
-                feed_id,
-                feed_ts
-            ) VALUES (?, ?, ?)
-            ON CONFLICT (trip_update_id) DO UPDATE SET
-                feed_id = EXCLUDED.feed_id,
-                feed_ts = EXCLUDED.feed_ts,
-                last_seen_at = NOW()
-            """;
+        INSERT INTO rt_trip_updates_hot (
+            trip_update_id,
+            feed_id,
+            feed_ts
+        ) VALUES (?, ?, ?)
+        ON CONFLICT (trip_update_id) DO UPDATE SET
+            feed_id = EXCLUDED.feed_id,
+            feed_ts = EXCLUDED.feed_ts,
+            last_seen_at = NOW()
+        """;
 
     private static final String UPSERT_HOT_STOP_TIME_UPDATES_SQL = """
-            INSERT INTO rt_stop_time_updates_hot (
-                trip_update_id,
-                feed_id,
-                feed_ts,
-                stop_sequence,
-                stop_id,
-                arrival_time,
-                arrival_delay,
-                scheduled_arrival_time,
-                departure_time,
-                departure_delay,
-                scheduled_departure_time,
-                schedule_relationship,
-                assigned_stop_id,
-                delay_seconds,
-                effective_arrival_time,
-                effective_departure_time,
-                effective_arrival_delay,
-                effective_departure_delay
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT (trip_update_id, stop_sequence) DO UPDATE SET
-                feed_id = EXCLUDED.feed_id,
-                feed_ts = EXCLUDED.feed_ts,
-                stop_id = EXCLUDED.stop_id,
-                arrival_time = EXCLUDED.arrival_time,
-                arrival_delay = EXCLUDED.arrival_delay,
-                scheduled_arrival_time = EXCLUDED.scheduled_arrival_time,
-                departure_time = EXCLUDED.departure_time,
-                departure_delay = EXCLUDED.departure_delay,
-                scheduled_departure_time = EXCLUDED.scheduled_departure_time,
-                schedule_relationship = EXCLUDED.schedule_relationship,
-                assigned_stop_id = EXCLUDED.assigned_stop_id,
-                delay_seconds = EXCLUDED.delay_seconds,
-                effective_arrival_time = EXCLUDED.effective_arrival_time,
-                effective_departure_time = EXCLUDED.effective_departure_time,
-                effective_arrival_delay = EXCLUDED.effective_arrival_delay,
-                effective_departure_delay = EXCLUDED.effective_departure_delay,
-                last_seen_at = NOW()
-            """;
+        INSERT INTO rt_stop_time_updates_hot (
+            trip_update_id,
+            feed_id,
+            feed_ts,
+            stop_sequence,
+            stop_id,
+            arrival_time,
+            arrival_delay,
+            scheduled_arrival_time,
+            departure_time,
+            departure_delay,
+            scheduled_departure_time,
+            schedule_relationship,
+            assigned_stop_id,
+            delay_seconds,
+            effective_arrival_time,
+            effective_departure_time,
+            effective_arrival_delay,
+            effective_departure_delay
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT (trip_update_id, stop_sequence) DO UPDATE SET
+            feed_id = EXCLUDED.feed_id,
+            feed_ts = EXCLUDED.feed_ts,
+            stop_id = EXCLUDED.stop_id,
+            arrival_time = EXCLUDED.arrival_time,
+            arrival_delay = EXCLUDED.arrival_delay,
+            scheduled_arrival_time = EXCLUDED.scheduled_arrival_time,
+            departure_time = EXCLUDED.departure_time,
+            departure_delay = EXCLUDED.departure_delay,
+            scheduled_departure_time = EXCLUDED.scheduled_departure_time,
+            schedule_relationship = EXCLUDED.schedule_relationship,
+            assigned_stop_id = EXCLUDED.assigned_stop_id,
+            delay_seconds = EXCLUDED.delay_seconds,
+            effective_arrival_time = EXCLUDED.effective_arrival_time,
+            effective_departure_time = EXCLUDED.effective_departure_time,
+            effective_arrival_delay = EXCLUDED.effective_arrival_delay,
+            effective_departure_delay = EXCLUDED.effective_departure_delay,
+            last_seen_at = NOW()
+        """;
 
     private final DataSource dataSource;
 
@@ -179,9 +179,9 @@ public class TripUpdateRepository {
 
     public int deleteAllByLastSeenAtBefore(LocalDateTime lastSeenAt) {
         var sql = """
-                DELETE FROM rt_trip_updates_hot
-                WHERE last_seen_at < ?
-                """;
+            DELETE FROM rt_trip_updates_hot
+            WHERE last_seen_at < ?
+            """;
 
         try (Connection connection = dataSource.getConnection();
                 PreparedStatement preparedStatement = connection.prepareStatement(sql)) {

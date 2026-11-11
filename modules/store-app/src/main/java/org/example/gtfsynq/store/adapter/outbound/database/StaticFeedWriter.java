@@ -88,7 +88,166 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
      * load; COPY avoids both.
      */
     private static final String STOP_TIMES_COPY_SQL = """
-            COPY static_stop_times (
+        COPY static_stop_times (
+            feed_id,
+            trip_id,
+            stop_sequence,
+            stop_id,
+            arrival_time,
+            arrival_time_overflow_days,
+            departure_time,
+            departure_time_overflow_days,
+            pickup_type,
+            drop_off_type,
+            shape_dist_traveled,
+            timepoint,
+            location_group_id,
+            location_id,
+            stop_headsign,
+            start_pickup_drop_off_window,
+            start_pickup_drop_off_window_overflow_days,
+            end_pickup_drop_off_window,
+            end_pickup_drop_off_window_overflow_days,
+            continuous_pickup,
+            continuous_drop_off,
+            pickup_booking_rule_id,
+            drop_off_booking_rule_id
+        ) FROM STDIN WITH (FORMAT csv)
+        """;
+
+    private static Map<String, String> upserts() {
+        var sql = new LinkedHashMap<String, String>();
+
+        sql.put(AGENCY, """
+            INSERT INTO static_agency (
+                feed_id,
+                agency_id,
+                agency_name,
+                agency_url,
+                agency_timezone,
+                agency_lang,
+                agency_fare_url,
+                agency_email,
+                agency_phone,
+                cemv_support
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (feed_id, agency_id) DO UPDATE SET
+                agency_name = EXCLUDED.agency_name,
+                agency_url = EXCLUDED.agency_url,
+                agency_timezone = EXCLUDED.agency_timezone,
+                agency_lang = EXCLUDED.agency_lang,
+                agency_fare_url = EXCLUDED.agency_fare_url,
+                agency_email = EXCLUDED.agency_email,
+                agency_phone = EXCLUDED.agency_phone,
+                cemv_support = EXCLUDED.cemv_support
+            """);
+
+        sql.put(STOPS, """
+            INSERT INTO static_stops (
+                feed_id,
+                stop_id,
+                stop_name,
+                stop_lat,
+                stop_lon,
+                stop_url,
+                location_type,
+                parent_station,
+                stop_timezone,
+                wheelchair_boarding,
+                stop_code,
+                tts_stop_name,
+                stop_desc,
+                zone_id,
+                level_id,
+                platform_code,
+                stop_access
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (feed_id, stop_id) DO UPDATE SET
+                stop_name = EXCLUDED.stop_name,
+                stop_lat = EXCLUDED.stop_lat,
+                stop_lon = EXCLUDED.stop_lon,
+                stop_url = EXCLUDED.stop_url,
+                location_type = EXCLUDED.location_type,
+                parent_station = EXCLUDED.parent_station,
+                stop_timezone = EXCLUDED.stop_timezone,
+                wheelchair_boarding = EXCLUDED.wheelchair_boarding,
+                stop_code = EXCLUDED.stop_code,
+                tts_stop_name = EXCLUDED.tts_stop_name,
+                stop_desc = EXCLUDED.stop_desc,
+                zone_id = EXCLUDED.zone_id,
+                level_id = EXCLUDED.level_id,
+                platform_code = EXCLUDED.platform_code,
+                stop_access = EXCLUDED.stop_access
+            """);
+
+        sql.put(ROUTES, """
+            INSERT INTO static_routes (
+                feed_id,
+                route_id,
+                route_short_name,
+                route_long_name,
+                route_type,
+                route_url,
+                route_color,
+                route_text_color,
+                route_sort_order,
+                continuous_pickup,
+                continuous_drop_off,
+                agency_id,
+                route_desc,
+                network_id,
+                cemv_support
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (feed_id, route_id) DO UPDATE SET
+                route_short_name = EXCLUDED.route_short_name,
+                route_long_name = EXCLUDED.route_long_name,
+                route_type = EXCLUDED.route_type,
+                route_url = EXCLUDED.route_url,
+                route_color = EXCLUDED.route_color,
+                route_text_color = EXCLUDED.route_text_color,
+                route_sort_order = EXCLUDED.route_sort_order,
+                continuous_pickup = EXCLUDED.continuous_pickup,
+                continuous_drop_off = EXCLUDED.continuous_drop_off,
+                agency_id = EXCLUDED.agency_id,
+                route_desc = EXCLUDED.route_desc,
+                network_id = EXCLUDED.network_id,
+                cemv_support = EXCLUDED.cemv_support
+            """);
+
+        sql.put(TRIPS, """
+            INSERT INTO static_trips (
+                feed_id,
+                trip_id,
+                route_id,
+                service_id,
+                direction_id,
+                wheelchair_accessible,
+                bikes_allowed,
+                trip_headsign,
+                trip_short_name,
+                block_id,
+                shape_id,
+                cars_allowed,
+                safe_duration_factor,
+                safe_duration_offset
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (feed_id, trip_id) DO UPDATE SET
+                route_id = EXCLUDED.route_id,
+                service_id = EXCLUDED.service_id,
+                direction_id = EXCLUDED.direction_id,
+                wheelchair_accessible = EXCLUDED.wheelchair_accessible,
+                bikes_allowed = EXCLUDED.bikes_allowed,
+                trip_headsign = EXCLUDED.trip_headsign,
+                trip_short_name = EXCLUDED.trip_short_name,
+                block_id = EXCLUDED.block_id,
+                shape_id = EXCLUDED.shape_id,
+                cars_allowed = EXCLUDED.cars_allowed,
+                safe_duration_factor = EXCLUDED.safe_duration_factor,
+                safe_duration_offset = EXCLUDED.safe_duration_offset
+            """);
+
+        sql.put(STOP_TIMES, """
+            INSERT INTO static_stop_times (
                 feed_id,
                 trip_id,
                 stop_sequence,
@@ -112,227 +271,68 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
                 continuous_drop_off,
                 pickup_booking_rule_id,
                 drop_off_booking_rule_id
-            ) FROM STDIN WITH (FORMAT csv)
-            """;
-
-    private static Map<String, String> upserts() {
-        var sql = new LinkedHashMap<String, String>();
-
-        sql.put(AGENCY, """
-                INSERT INTO static_agency (
-                    feed_id,
-                    agency_id,
-                    agency_name,
-                    agency_url,
-                    agency_timezone,
-                    agency_lang,
-                    agency_fare_url,
-                    agency_email,
-                    agency_phone,
-                    cemv_support
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT (feed_id, agency_id) DO UPDATE SET
-                    agency_name = EXCLUDED.agency_name,
-                    agency_url = EXCLUDED.agency_url,
-                    agency_timezone = EXCLUDED.agency_timezone,
-                    agency_lang = EXCLUDED.agency_lang,
-                    agency_fare_url = EXCLUDED.agency_fare_url,
-                    agency_email = EXCLUDED.agency_email,
-                    agency_phone = EXCLUDED.agency_phone,
-                    cemv_support = EXCLUDED.cemv_support
-                """);
-
-        sql.put(STOPS, """
-                INSERT INTO static_stops (
-                    feed_id,
-                    stop_id,
-                    stop_name,
-                    stop_lat,
-                    stop_lon,
-                    stop_url,
-                    location_type,
-                    parent_station,
-                    stop_timezone,
-                    wheelchair_boarding,
-                    stop_code,
-                    tts_stop_name,
-                    stop_desc,
-                    zone_id,
-                    level_id,
-                    platform_code,
-                    stop_access
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT (feed_id, stop_id) DO UPDATE SET
-                    stop_name = EXCLUDED.stop_name,
-                    stop_lat = EXCLUDED.stop_lat,
-                    stop_lon = EXCLUDED.stop_lon,
-                    stop_url = EXCLUDED.stop_url,
-                    location_type = EXCLUDED.location_type,
-                    parent_station = EXCLUDED.parent_station,
-                    stop_timezone = EXCLUDED.stop_timezone,
-                    wheelchair_boarding = EXCLUDED.wheelchair_boarding,
-                    stop_code = EXCLUDED.stop_code,
-                    tts_stop_name = EXCLUDED.tts_stop_name,
-                    stop_desc = EXCLUDED.stop_desc,
-                    zone_id = EXCLUDED.zone_id,
-                    level_id = EXCLUDED.level_id,
-                    platform_code = EXCLUDED.platform_code,
-                    stop_access = EXCLUDED.stop_access
-                """);
-
-        sql.put(ROUTES, """
-                INSERT INTO static_routes (
-                    feed_id,
-                    route_id,
-                    route_short_name,
-                    route_long_name,
-                    route_type,
-                    route_url,
-                    route_color,
-                    route_text_color,
-                    route_sort_order,
-                    continuous_pickup,
-                    continuous_drop_off,
-                    agency_id,
-                    route_desc,
-                    network_id,
-                    cemv_support
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT (feed_id, route_id) DO UPDATE SET
-                    route_short_name = EXCLUDED.route_short_name,
-                    route_long_name = EXCLUDED.route_long_name,
-                    route_type = EXCLUDED.route_type,
-                    route_url = EXCLUDED.route_url,
-                    route_color = EXCLUDED.route_color,
-                    route_text_color = EXCLUDED.route_text_color,
-                    route_sort_order = EXCLUDED.route_sort_order,
-                    continuous_pickup = EXCLUDED.continuous_pickup,
-                    continuous_drop_off = EXCLUDED.continuous_drop_off,
-                    agency_id = EXCLUDED.agency_id,
-                    route_desc = EXCLUDED.route_desc,
-                    network_id = EXCLUDED.network_id,
-                    cemv_support = EXCLUDED.cemv_support
-                """);
-
-        sql.put(TRIPS, """
-                INSERT INTO static_trips (
-                    feed_id,
-                    trip_id,
-                    route_id,
-                    service_id,
-                    direction_id,
-                    wheelchair_accessible,
-                    bikes_allowed,
-                    trip_headsign,
-                    trip_short_name,
-                    block_id,
-                    shape_id,
-                    cars_allowed,
-                    safe_duration_factor,
-                    safe_duration_offset
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT (feed_id, trip_id) DO UPDATE SET
-                    route_id = EXCLUDED.route_id,
-                    service_id = EXCLUDED.service_id,
-                    direction_id = EXCLUDED.direction_id,
-                    wheelchair_accessible = EXCLUDED.wheelchair_accessible,
-                    bikes_allowed = EXCLUDED.bikes_allowed,
-                    trip_headsign = EXCLUDED.trip_headsign,
-                    trip_short_name = EXCLUDED.trip_short_name,
-                    block_id = EXCLUDED.block_id,
-                    shape_id = EXCLUDED.shape_id,
-                    cars_allowed = EXCLUDED.cars_allowed,
-                    safe_duration_factor = EXCLUDED.safe_duration_factor,
-                    safe_duration_offset = EXCLUDED.safe_duration_offset
-                """);
-
-        sql.put(STOP_TIMES, """
-                INSERT INTO static_stop_times (
-                    feed_id,
-                    trip_id,
-                    stop_sequence,
-                    stop_id,
-                    arrival_time,
-                    arrival_time_overflow_days,
-                    departure_time,
-                    departure_time_overflow_days,
-                    pickup_type,
-                    drop_off_type,
-                    shape_dist_traveled,
-                    timepoint,
-                    location_group_id,
-                    location_id,
-                    stop_headsign,
-                    start_pickup_drop_off_window,
-                    start_pickup_drop_off_window_overflow_days,
-                    end_pickup_drop_off_window,
-                    end_pickup_drop_off_window_overflow_days,
-                    continuous_pickup,
-                    continuous_drop_off,
-                    pickup_booking_rule_id,
-                    drop_off_booking_rule_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT (feed_id, trip_id, stop_sequence) DO UPDATE SET
-                    stop_id = EXCLUDED.stop_id,
-                    arrival_time = EXCLUDED.arrival_time,
-                    arrival_time_overflow_days = EXCLUDED.arrival_time_overflow_days,
-                    departure_time = EXCLUDED.departure_time,
-                    departure_time_overflow_days = EXCLUDED.departure_time_overflow_days,
-                    pickup_type = EXCLUDED.pickup_type,
-                    drop_off_type = EXCLUDED.drop_off_type,
-                    shape_dist_traveled = EXCLUDED.shape_dist_traveled,
-                    timepoint = EXCLUDED.timepoint,
-                    location_group_id = EXCLUDED.location_group_id,
-                    location_id = EXCLUDED.location_id,
-                    stop_headsign = EXCLUDED.stop_headsign,
-                    start_pickup_drop_off_window = EXCLUDED.start_pickup_drop_off_window,
-                    start_pickup_drop_off_window_overflow_days =
-                        EXCLUDED.start_pickup_drop_off_window_overflow_days,
-                    end_pickup_drop_off_window = EXCLUDED.end_pickup_drop_off_window,
-                    end_pickup_drop_off_window_overflow_days =
-                        EXCLUDED.end_pickup_drop_off_window_overflow_days,
-                    continuous_pickup = EXCLUDED.continuous_pickup,
-                    continuous_drop_off = EXCLUDED.continuous_drop_off,
-                    pickup_booking_rule_id = EXCLUDED.pickup_booking_rule_id,
-                    drop_off_booking_rule_id = EXCLUDED.drop_off_booking_rule_id
-                """);
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (feed_id, trip_id, stop_sequence) DO UPDATE SET
+                stop_id = EXCLUDED.stop_id,
+                arrival_time = EXCLUDED.arrival_time,
+                arrival_time_overflow_days = EXCLUDED.arrival_time_overflow_days,
+                departure_time = EXCLUDED.departure_time,
+                departure_time_overflow_days = EXCLUDED.departure_time_overflow_days,
+                pickup_type = EXCLUDED.pickup_type,
+                drop_off_type = EXCLUDED.drop_off_type,
+                shape_dist_traveled = EXCLUDED.shape_dist_traveled,
+                timepoint = EXCLUDED.timepoint,
+                location_group_id = EXCLUDED.location_group_id,
+                location_id = EXCLUDED.location_id,
+                stop_headsign = EXCLUDED.stop_headsign,
+                start_pickup_drop_off_window = EXCLUDED.start_pickup_drop_off_window,
+                start_pickup_drop_off_window_overflow_days =
+                    EXCLUDED.start_pickup_drop_off_window_overflow_days,
+                end_pickup_drop_off_window = EXCLUDED.end_pickup_drop_off_window,
+                end_pickup_drop_off_window_overflow_days =
+                    EXCLUDED.end_pickup_drop_off_window_overflow_days,
+                continuous_pickup = EXCLUDED.continuous_pickup,
+                continuous_drop_off = EXCLUDED.continuous_drop_off,
+                pickup_booking_rule_id = EXCLUDED.pickup_booking_rule_id,
+                drop_off_booking_rule_id = EXCLUDED.drop_off_booking_rule_id
+            """);
 
         sql.put(CALENDAR, """
-                INSERT INTO static_calendar (
-                    feed_id,
-                    service_id,
-                    monday,
-                    tuesday,
-                    wednesday,
-                    thursday,
-                    friday,
-                    saturday,
-                    sunday,
-                    start_date,
-                    end_date
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT (feed_id, service_id) DO UPDATE SET
-                    monday = EXCLUDED.monday,
-                    tuesday = EXCLUDED.tuesday,
-                    wednesday = EXCLUDED.wednesday,
-                    thursday = EXCLUDED.thursday,
-                    friday = EXCLUDED.friday,
-                    saturday = EXCLUDED.saturday,
-                    sunday = EXCLUDED.sunday,
-                    start_date = EXCLUDED.start_date,
-                    end_date = EXCLUDED.end_date
-                """);
+            INSERT INTO static_calendar (
+                feed_id,
+                service_id,
+                monday,
+                tuesday,
+                wednesday,
+                thursday,
+                friday,
+                saturday,
+                sunday,
+                start_date,
+                end_date
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (feed_id, service_id) DO UPDATE SET
+                monday = EXCLUDED.monday,
+                tuesday = EXCLUDED.tuesday,
+                wednesday = EXCLUDED.wednesday,
+                thursday = EXCLUDED.thursday,
+                friday = EXCLUDED.friday,
+                saturday = EXCLUDED.saturday,
+                sunday = EXCLUDED.sunday,
+                start_date = EXCLUDED.start_date,
+                end_date = EXCLUDED.end_date
+            """);
 
         sql.put(CALENDAR_DATES, """
-                INSERT INTO static_calendar_dates (
-                    feed_id,
-                    service_id,
-                    date,
-                    exception_type
-                ) VALUES (?, ?, ?, ?)
-                ON CONFLICT (feed_id, service_id, date) DO UPDATE SET
-                    exception_type = EXCLUDED.exception_type
-                """);
+            INSERT INTO static_calendar_dates (
+                feed_id,
+                service_id,
+                date,
+                exception_type
+            ) VALUES (?, ?, ?, ?)
+            ON CONFLICT (feed_id, service_id, date) DO UPDATE SET
+                exception_type = EXCLUDED.exception_type
+            """);
 
         return Map.copyOf(sql);
     }
@@ -439,7 +439,8 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
             revisionEpochs.revisionCommitted(feedId, event.getSha256());
 
             log.info(
-                    "Committed static revision for feed {}: {} rows in {} ms ({}). Stop times used COPY ({} rows, {} chunks, {} ms)",
+                    "Committed static revision for feed {}: {} rows in {} ms ({}). Stop times used COPY ({} rows, {}"
+                            + " chunks, {} ms)",
                     feedId,
                     rowsByTable.values().stream().mapToLong(Long::longValue).sum(),
                     (System.nanoTime() - startedAt) / 1_000_000,
@@ -538,14 +539,14 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
 
     private void detachCurrentPartition(Statement statement, String table, Set<String> oldSchemas) throws SQLException {
         String sql = """
-                SELECT c.oid::regclass::text AS partition, n2.nspname AS child_schema
-                FROM pg_inherits i
-                JOIN pg_class c ON c.oid = i.inhrelid
-                JOIN pg_namespace n2 ON n2.oid = c.relnamespace
-                JOIN pg_class p ON p.oid = i.inhparent
-                JOIN pg_namespace n ON n.oid = p.relnamespace
-                WHERE n.nspname = 'public' AND p.relname = ? AND pg_get_expr(c.relpartbound, c.oid) LIKE ?
-                """;
+            SELECT c.oid::regclass::text AS partition, n2.nspname AS child_schema
+            FROM pg_inherits i
+            JOIN pg_class c ON c.oid = i.inhrelid
+            JOIN pg_namespace n2 ON n2.oid = c.relnamespace
+            JOIN pg_class p ON p.oid = i.inhparent
+            JOIN pg_namespace n ON n.oid = p.relnamespace
+            WHERE n.nspname = 'public' AND p.relname = ? AND pg_get_expr(c.relpartbound, c.oid) LIKE ?
+            """;
         try (var query = connection.prepareStatement(sql)) {
             query.setString(1, table);
             query.setString(2, "%" + feedId.replace("'", "''") + "%");
@@ -662,12 +663,12 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
      */
     private void updateRevisionMetadata() throws SQLException {
         var sql = """
-                UPDATE static_feeds
-                SET object_etag = COALESCE(?, object_etag),
-                    source_etag = COALESCE(?, source_etag),
-                    source_last_modified = COALESCE(?, source_last_modified)
-                WHERE feed_id = ?
-                """;
+            UPDATE static_feeds
+            SET object_etag = COALESCE(?, object_etag),
+                source_etag = COALESCE(?, source_etag),
+                source_last_modified = COALESCE(?, source_last_modified)
+            WHERE feed_id = ?
+            """;
 
         try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             preparedStatement.setString(1, emptyToNull(event.getEtag()));
@@ -680,37 +681,37 @@ public final class StaticFeedWriter implements StaticRowSink, AutoCloseable {
 
     private void recordRevision() throws SQLException {
         var sql = """
-                INSERT INTO static_feeds (
-                    feed_id,
-                    sha256,
-                    bucket,
-                    object_key,
-                    source_url,
-                    object_etag,
-                    source_etag,
-                    source_last_modified,
-                    size_bytes,
-                    route_count,
-                    stop_count,
-                    trip_count,
-                    ingested_at,
-                    loaded_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-                ON CONFLICT (feed_id) DO UPDATE SET
-                    sha256 = EXCLUDED.sha256,
-                    bucket = EXCLUDED.bucket,
-                    object_key = EXCLUDED.object_key,
-                    source_url = EXCLUDED.source_url,
-                    object_etag = EXCLUDED.object_etag,
-                    source_etag = EXCLUDED.source_etag,
-                    source_last_modified = EXCLUDED.source_last_modified,
-                    size_bytes = EXCLUDED.size_bytes,
-                    route_count = EXCLUDED.route_count,
-                    stop_count = EXCLUDED.stop_count,
-                    trip_count = EXCLUDED.trip_count,
-                    ingested_at = EXCLUDED.ingested_at,
-                    loaded_at = NOW()
-                """;
+            INSERT INTO static_feeds (
+                feed_id,
+                sha256,
+                bucket,
+                object_key,
+                source_url,
+                object_etag,
+                source_etag,
+                source_last_modified,
+                size_bytes,
+                route_count,
+                stop_count,
+                trip_count,
+                ingested_at,
+                loaded_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            ON CONFLICT (feed_id) DO UPDATE SET
+                sha256 = EXCLUDED.sha256,
+                bucket = EXCLUDED.bucket,
+                object_key = EXCLUDED.object_key,
+                source_url = EXCLUDED.source_url,
+                object_etag = EXCLUDED.object_etag,
+                source_etag = EXCLUDED.source_etag,
+                source_last_modified = EXCLUDED.source_last_modified,
+                size_bytes = EXCLUDED.size_bytes,
+                route_count = EXCLUDED.route_count,
+                stop_count = EXCLUDED.stop_count,
+                trip_count = EXCLUDED.trip_count,
+                ingested_at = EXCLUDED.ingested_at,
+                loaded_at = NOW()
+            """;
 
         try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             preparedStatement.setObject(1, feedId, Types.OTHER);

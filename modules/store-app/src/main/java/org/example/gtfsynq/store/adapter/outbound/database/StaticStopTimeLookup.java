@@ -39,38 +39,38 @@ import org.example.gtfsynq.store.service.metrics.StaticLookupMetrics;
 public class StaticStopTimeLookup implements StaticStopTimes {
 
     private static final String STOPS_SQL = """
-            SELECT trip_id, stop_id, stop_sequence,
-                   arrival_time, arrival_time_overflow_days,
-                   departure_time, departure_time_overflow_days
-            FROM static_stop_times
-            WHERE feed_id = CAST(? AS feed_id_enum)
-              AND trip_id = ANY(?)
-              AND (stop_id = ANY(?) OR stop_sequence = ANY(?))
-            ORDER BY trip_id, stop_sequence
-            """;
+        SELECT trip_id, stop_id, stop_sequence,
+               arrival_time, arrival_time_overflow_days,
+               departure_time, departure_time_overflow_days
+        FROM static_stop_times
+        WHERE feed_id = CAST(? AS feed_id_enum)
+          AND trip_id = ANY(?)
+          AND (stop_id = ANY(?) OR stop_sequence = ANY(?))
+        ORDER BY trip_id, stop_sequence
+        """;
 
     /** One row per trip, so the agency lookup is paid per trip and not per stop. */
     private static final String TIMEZONES_SQL = """
-            SELECT t.trip_id, a.agency_timezone
-            FROM static_trips t
-            JOIN static_routes r
-              ON r.feed_id = t.feed_id
-             AND r.route_id = t.route_id
-            JOIN static_agency a
-              ON a.feed_id = r.feed_id
-             AND a.agency_id = COALESCE(r.agency_id, '')
-            WHERE t.feed_id = CAST(? AS feed_id_enum)
-              AND t.trip_id = ANY(?)
-            """;
+        SELECT t.trip_id, a.agency_timezone
+        FROM static_trips t
+        JOIN static_routes r
+          ON r.feed_id = t.feed_id
+         AND r.route_id = t.route_id
+        JOIN static_agency a
+          ON a.feed_id = r.feed_id
+         AND a.agency_id = COALESCE(r.agency_id, '')
+        WHERE t.feed_id = CAST(? AS feed_id_enum)
+          AND t.trip_id = ANY(?)
+        """;
 
     /** Single-agency feeds may omit {@code agency_id}; the first agency then speaks for the feed. */
     private static final String FEED_TIMEZONE_SQL = """
-            SELECT agency_timezone
-            FROM static_agency
-            WHERE feed_id = CAST(? AS feed_id_enum)
-            ORDER BY agency_id
-            LIMIT 1
-            """;
+        SELECT agency_timezone
+        FROM static_agency
+        WHERE feed_id = CAST(? AS feed_id_enum)
+        ORDER BY agency_id
+        LIMIT 1
+        """;
 
     private final DataSource dataSource;
 

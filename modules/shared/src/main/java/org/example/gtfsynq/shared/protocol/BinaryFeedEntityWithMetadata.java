@@ -72,10 +72,7 @@ public record BinaryFeedEntityWithMetadata(byte[] bytes, long type, long ts) {
     @Override
     public String toString() {
         // Human-readable string representation of the record
-        return "BinaryFeedEntityWithMetadata{" + "bytes="
-                + Arrays.toString(bytes) + ", type="
-                + type + ", ts="
-                + ts + '}';
+        return "BinaryFeedEntityWithMetadata{bytes=" + Arrays.toString(bytes) + ", type=" + type + ", ts=" + ts + '}';
     }
 
     @Override

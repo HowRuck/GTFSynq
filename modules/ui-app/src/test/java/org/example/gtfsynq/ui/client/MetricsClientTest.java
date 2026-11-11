@@ -12,11 +12,11 @@ class MetricsClientTest {
     @Test
     void parsesEverySeriesAndDerivesItsName() {
         var series = MetricsClient.parse("""
-                {"status":"success","data":{"resultType":"matrix","result":[
-                  {"metric":{"outcome":"success"},"values":[[1700000000,"1.5"],[1700000060,"2"]]},
-                  {"metric":{"__name__":"up"},"values":[[1700000000,"1"]]}
-                ]}}
-                """);
+            {"status":"success","data":{"resultType":"matrix","result":[
+              {"metric":{"outcome":"success"},"values":[[1700000000,"1.5"],[1700000060,"2"]]},
+              {"metric":{"__name__":"up"},"values":[[1700000000,"1"]]}
+            ]}}
+            """);
 
         assertEquals(2, series.size());
         assertEquals("success", series.get(0).name());
@@ -30,10 +30,10 @@ class MetricsClientTest {
     @Test
     void skipsValuesThatAreNotNumbers() {
         var series = MetricsClient.parse("""
-                {"status":"success","data":{"resultType":"matrix","result":[
-                  {"metric":{"result":"valid"},"values":[[1700000000,"NaN"],[1700000060,"3"]]}
-                ]}}
-                """);
+            {"status":"success","data":{"resultType":"matrix","result":[
+              {"metric":{"result":"valid"},"values":[[1700000000,"NaN"],[1700000060,"3"]]}
+            ]}}
+            """);
 
         assertEquals(1, series.get(0).points().size());
         assertEquals(3.0, series.get(0).points().get(0).value());
@@ -50,10 +50,10 @@ class MetricsClientTest {
     @Test
     void namesASeriesAfterItsTypeLabel() {
         var series = MetricsClient.parse("""
-                {"status":"success","data":{"resultType":"matrix","result":[
-                  {"metric":{"type":"stop_times"},"values":[[1700000000,"12"]]}
-                ]}}
-                """);
+            {"status":"success","data":{"resultType":"matrix","result":[
+              {"metric":{"type":"stop_times"},"values":[[1700000000,"12"]]}
+            ]}}
+            """);
 
         assertEquals("stop_times", series.get(0).name());
     }
@@ -61,10 +61,10 @@ class MetricsClientTest {
     @Test
     void namesASeriesWithoutGroupingLabelsAfterItsMetric() {
         var series = MetricsClient.parse("""
-                {"status":"success","data":{"resultType":"matrix","result":[
-                  {"metric":{"__name__":"kafka_consumergroup_lag"},"values":[[1700000000,"4"]]}
-                ]}}
-                """);
+            {"status":"success","data":{"resultType":"matrix","result":[
+              {"metric":{"__name__":"kafka_consumergroup_lag"},"values":[[1700000000,"4"]]}
+            ]}}
+            """);
 
         assertEquals("kafka_consumergroup_lag", series.get(0).name());
     }

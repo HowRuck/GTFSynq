@@ -47,15 +47,15 @@ public class HeaderUsage extends Button {
      * puts the container name on the info metric by default.
      */
     private static final String USAGE_QUERY = """
-            label_set(sum(process.cpu.usage) * 100, 'metric', 'app_cpu')
-            or label_set(sum(jvm.memory.used{area="heap"}), 'metric', 'app_memory')
-            or label_set(sum(pg_stat_database_numbackends{datname="gtfsynq"}), 'metric', 'db_connections')
-            or label_set(pg_database_size_bytes{datname="gtfsynq"}, 'metric', 'db_size')
-            or label_set(sum(rate(podman_container_cpu_seconds_total[1m])
-                   * on(id) group_left(name) podman_container_info{name="timescaledb"}) * 100, 'metric', 'db_cpu')
-            or label_set(sum(podman_container_mem_usage_bytes
-                   * on(id) group_left(name) podman_container_info{name="timescaledb"}), 'metric', 'db_memory')
-            """;
+        label_set(sum(process.cpu.usage) * 100, 'metric', 'app_cpu')
+        or label_set(sum(jvm.memory.used{area="heap"}), 'metric', 'app_memory')
+        or label_set(sum(pg_stat_database_numbackends{datname="gtfsynq"}), 'metric', 'db_connections')
+        or label_set(pg_database_size_bytes{datname="gtfsynq"}, 'metric', 'db_size')
+        or label_set(sum(rate(podman_container_cpu_seconds_total[1m])
+               * on(id) group_left(name) podman_container_info{name="timescaledb"}) * 100, 'metric', 'db_cpu')
+        or label_set(sum(podman_container_mem_usage_bytes
+               * on(id) group_left(name) podman_container_info{name="timescaledb"}), 'metric', 'db_memory')
+        """;
 
     private static final Duration LOOKBACK = Duration.ofMinutes(1);
 

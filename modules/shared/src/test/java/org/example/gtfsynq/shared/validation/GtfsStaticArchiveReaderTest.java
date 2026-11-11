@@ -18,25 +18,25 @@ import org.junit.jupiter.api.Test;
 class GtfsStaticArchiveReaderTest {
 
     private static final String AGENCY = """
-            agency_id,agency_name,agency_url,agency_timezone
-            TA,Test Agency,https://example.com,Europe/Berlin
-            """;
+        agency_id,agency_name,agency_url,agency_timezone
+        TA,Test Agency,https://example.com,Europe/Berlin
+        """;
 
     private static final String STOPS = """
-            stop_id,stop_name,stop_lat,stop_lon,wheelchair_boarding
-            S1,Central,52.5,13.4,
-            S2,North,52.6,13.5,1
-            """;
+        stop_id,stop_name,stop_lat,stop_lon,wheelchair_boarding
+        S1,Central,52.5,13.4,
+        S2,North,52.6,13.5,1
+        """;
 
     private static final String CALENDAR = """
-            service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date
-            serviceA,1,1,1,1,1,0,0,20240101,20241231
-            """;
+        service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date
+        serviceA,1,1,1,1,1,0,0,20240101,20241231
+        """;
 
     private static final String CALENDAR_DATES = """
-            service_id,date,exception_type
-            serviceA,20240701,2
-            """;
+        service_id,date,exception_type
+        serviceA,20240701,2
+        """;
 
     /** Collects everything the reader hands over, keeping the order the callbacks arrived in. */
     private static final class RecordingSink implements GtfsStaticArchiveReader.StaticRowSink {
@@ -110,13 +110,13 @@ class GtfsStaticArchiveReaderTest {
             "agency.txt", AGENCY,
             "stops.txt", STOPS,
             "routes.txt", """
-                    route_id,route_short_name,route_long_name,route_type
-                    R1,1,Central - North,3
-                    """,
+                route_id,route_short_name,route_long_name,route_type
+                R1,1,Central - North,3
+                """,
             "trips.txt", """
-                    route_id,service_id,trip_id,trip_short_name
-                    R1,serviceA,trip1,Trip 1
-                    """,
+                route_id,service_id,trip_id,trip_short_name
+                R1,serviceA,trip1,Trip 1
+                """,
             "stop_times.txt", stopTimes,
             "calendar.txt", CALENDAR,
             "calendar_dates.txt", CALENDAR_DATES
@@ -124,10 +124,10 @@ class GtfsStaticArchiveReaderTest {
     }
 
     private static final String TWO_STOP_TIMES = """
-            trip_id,arrival_time,departure_time,stop_id,stop_sequence
-            trip1,08:00:00,08:00:00,S1,1
-            trip1,25:10:00,25:10:00,S2,2
-            """;
+        trip_id,arrival_time,departure_time,stop_id,stop_sequence
+        trip1,08:00:00,08:00:00,S1,1
+        trip1,25:10:00,25:10:00,S2,2
+        """;
 
     @Test
     void readsEveryFileInValidatorOrder() throws Exception {

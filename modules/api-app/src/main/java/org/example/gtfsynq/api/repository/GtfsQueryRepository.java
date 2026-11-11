@@ -64,15 +64,16 @@ public class GtfsQueryRepository {
      * columns for feeds without a static match. {@code NULL} means the row says nothing about time.
      */
     private static final String STOP_EVENT_TIME = """
-            COALESCE(
-                s.effective_arrival_time,
-                s.effective_departure_time,
-                s.arrival_time,
-                s.departure_time,
-                s.scheduled_arrival_time + make_interval(secs => s.arrival_delay),
-                s.scheduled_departure_time + make_interval(secs => s.departure_delay),
-                s.scheduled_arrival_time,
-                s.scheduled_departure_time)""";
+        COALESCE(
+            s.effective_arrival_time,
+            s.effective_departure_time,
+            s.arrival_time,
+            s.departure_time,
+            s.scheduled_arrival_time + make_interval(secs => s.arrival_delay),
+            s.scheduled_departure_time + make_interval(secs => s.departure_delay),
+            s.scheduled_arrival_time,
+            s.scheduled_departure_time)\
+        """;
 
     private static final Map<String, String> STOP_SORTS =
             Map.of("stopId", "stop_id", "stopName", "stop_name", "locationType", "location_type");
@@ -88,49 +89,49 @@ public class GtfsQueryRepository {
 
     /** Shared projection of a live trip update, used by the page query and the single-row lookup. */
     private static final String LIVE_TRIP_UPDATE_SELECT = """
-            SELECT h.trip_update_id, h.feed_id::text AS feed_id, h.feed_ts, h.last_seen_at,
-                   m.entity_id, m.trip_id, m.route_id, m.start_date, m.start_time,
-                   t.trip_short_name, r.route_short_name, r.route_long_name, r.route_type, a.agency_name,
-                   (SELECT count(*) FROM rt_stop_time_updates_hot s
-                    WHERE s.trip_update_id = h.trip_update_id) AS stop_time_update_count,
-                   (SELECT s.delay_seconds
-                    -- delay_seconds is stored by the sink: the published delay, else the
-                    -- prediction minus the static plan for the same stop.
-                    FROM rt_stop_time_updates_hot s
-                    WHERE s.trip_update_id = h.trip_update_id
-                      AND s.delay_seconds IS NOT NULL
-                    -- The last stop that reports a delay, not the first: the lowest stop
-                    -- sequence is often a stale value for a stop the trip has already passed.
-                    ORDER BY s.stop_sequence DESC
-                    LIMIT 1) AS current_delay,
-                   latest.stop_lat AS latest_stop_lat,
-                   latest.stop_lon AS latest_stop_lon,
-                   latest.stop_name AS latest_stop_name
-            FROM rt_trip_updates_hot h
-            LEFT JOIN rt_trip_updates_meta m ON m.id = h.trip_update_id
-            LEFT JOIN static_trips t ON t.feed_id = h.feed_id AND t.trip_id = m.trip_id
-            LEFT JOIN static_routes r
-                   ON r.feed_id = h.feed_id AND r.route_id = COALESCE(t.route_id, m.route_id)
-            LEFT JOIN static_agency a
-                   ON a.feed_id = h.feed_id AND a.agency_id = COALESCE(r.agency_id, '')
-            -- The most advanced stop with static coordinates: the best available position for
-            -- a trip that only publishes stop time predictions. Index-only on the hot table's
-            -- primary key and a primary-key lookup on static_stops, so it stays cheap per row.
-            -- Every hot stop row is considered, not only the ones written by the latest flush:
-            -- deduplication keeps an unchanged stop out of later writes, so its last_seen_at is
-            -- older than the trip's even though it still describes the current trip.
-            LEFT JOIN LATERAL (
-                SELECT st.stop_name, st.stop_lat, st.stop_lon
-                FROM static_stops st
-                WHERE st.feed_id = h.feed_id
-                  AND st.stop_id = (
-                      SELECT COALESCE(s.assigned_stop_id, s.stop_id)
-                      FROM rt_stop_time_updates_hot s
-                      WHERE s.trip_update_id = h.trip_update_id
-                      ORDER BY s.stop_sequence DESC
-                      LIMIT 1)
-            ) latest ON TRUE
-            """;
+        SELECT h.trip_update_id, h.feed_id::text AS feed_id, h.feed_ts, h.last_seen_at,
+               m.entity_id, m.trip_id, m.route_id, m.start_date, m.start_time,
+               t.trip_short_name, r.route_short_name, r.route_long_name, r.route_type, a.agency_name,
+               (SELECT count(*) FROM rt_stop_time_updates_hot s
+                WHERE s.trip_update_id = h.trip_update_id) AS stop_time_update_count,
+               (SELECT s.delay_seconds
+                -- delay_seconds is stored by the sink: the published delay, else the
+                -- prediction minus the static plan for the same stop.
+                FROM rt_stop_time_updates_hot s
+                WHERE s.trip_update_id = h.trip_update_id
+                  AND s.delay_seconds IS NOT NULL
+                -- The last stop that reports a delay, not the first: the lowest stop
+                -- sequence is often a stale value for a stop the trip has already passed.
+                ORDER BY s.stop_sequence DESC
+                LIMIT 1) AS current_delay,
+               latest.stop_lat AS latest_stop_lat,
+               latest.stop_lon AS latest_stop_lon,
+               latest.stop_name AS latest_stop_name
+        FROM rt_trip_updates_hot h
+        LEFT JOIN rt_trip_updates_meta m ON m.id = h.trip_update_id
+        LEFT JOIN static_trips t ON t.feed_id = h.feed_id AND t.trip_id = m.trip_id
+        LEFT JOIN static_routes r
+               ON r.feed_id = h.feed_id AND r.route_id = COALESCE(t.route_id, m.route_id)
+        LEFT JOIN static_agency a
+               ON a.feed_id = h.feed_id AND a.agency_id = COALESCE(r.agency_id, '')
+        -- The most advanced stop with static coordinates: the best available position for
+        -- a trip that only publishes stop time predictions. Index-only on the hot table's
+        -- primary key and a primary-key lookup on static_stops, so it stays cheap per row.
+        -- Every hot stop row is considered, not only the ones written by the latest flush:
+        -- deduplication keeps an unchanged stop out of later writes, so its last_seen_at is
+        -- older than the trip's even though it still describes the current trip.
+        LEFT JOIN LATERAL (
+            SELECT st.stop_name, st.stop_lat, st.stop_lon
+            FROM static_stops st
+            WHERE st.feed_id = h.feed_id
+              AND st.stop_id = (
+                  SELECT COALESCE(s.assigned_stop_id, s.stop_id)
+                  FROM rt_stop_time_updates_hot s
+                  WHERE s.trip_update_id = h.trip_update_id
+                  ORDER BY s.stop_sequence DESC
+                  LIMIT 1)
+        ) latest ON TRUE
+        """;
 
     private final DataSource dataSource;
 
@@ -159,13 +160,13 @@ public class GtfsQueryRepository {
         // Static counts are maintained on static_feeds by the store app, so only the two
         // current-state tables still need a scan here.
         String sql = """
-                SELECT (SELECT count(*) FROM static_feeds),
-                       (SELECT coalesce(sum(route_count), 0) FROM static_feeds),
-                       (SELECT coalesce(sum(stop_count), 0) FROM static_feeds),
-                       (SELECT coalesce(sum(trip_count), 0) FROM static_feeds),
-                       (SELECT count(*) FROM rt_trip_updates_hot),
-                       (SELECT count(*) FROM rt_stop_time_updates_hot)
-                """;
+            SELECT (SELECT count(*) FROM static_feeds),
+                   (SELECT coalesce(sum(route_count), 0) FROM static_feeds),
+                   (SELECT coalesce(sum(stop_count), 0) FROM static_feeds),
+                   (SELECT coalesce(sum(trip_count), 0) FROM static_feeds),
+                   (SELECT count(*) FROM rt_trip_updates_hot),
+                   (SELECT count(*) FROM rt_stop_time_updates_hot)
+            """;
         try (Connection connection = dataSource.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql);
                 ResultSet rs = statement.executeQuery()) {
@@ -183,12 +184,12 @@ public class GtfsQueryRepository {
     public List<String> feedIds() {
         // Probe the five enum values instead of scanning the (potentially large) hot table.
         String sql = """
-                SELECT e::text
-                FROM unnest(enum_range(NULL::feed_id_enum)) AS e
-                WHERE EXISTS (SELECT 1 FROM static_feeds f WHERE f.feed_id = e)
-                   OR EXISTS (SELECT 1 FROM rt_trip_updates_hot h WHERE h.feed_id = e)
-                ORDER BY 1
-                """;
+            SELECT e::text
+            FROM unnest(enum_range(NULL::feed_id_enum)) AS e
+            WHERE EXISTS (SELECT 1 FROM static_feeds f WHERE f.feed_id = e)
+               OR EXISTS (SELECT 1 FROM rt_trip_updates_hot h WHERE h.feed_id = e)
+            ORDER BY 1
+            """;
         List<String> feedIds = new ArrayList<>();
         try (Connection connection = dataSource.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql);
@@ -206,16 +207,16 @@ public class GtfsQueryRepository {
         // A feed may describe several agencies, so they are aggregated into one array beside the
         // feed's row instead of widening the page by one row per agency.
         String select = """
-                SELECT f.feed_id::text, f.sha256, f.bucket, f.object_key, f.source_url,
-                       f.object_etag, f.source_etag, f.source_last_modified, f.size_bytes,
-                       f.ingested_at, f.loaded_at, a.agency_names
-                FROM static_feeds f
-                LEFT JOIN LATERAL (
-                    SELECT array_agg(agency_name ORDER BY agency_id) AS agency_names
-                    FROM static_agency
-                    WHERE feed_id = f.feed_id
-                ) a ON TRUE
-                """;
+            SELECT f.feed_id::text, f.sha256, f.bucket, f.object_key, f.source_url,
+                   f.object_etag, f.source_etag, f.source_last_modified, f.size_bytes,
+                   f.ingested_at, f.loaded_at, a.agency_names
+            FROM static_feeds f
+            LEFT JOIN LATERAL (
+                SELECT array_agg(agency_name ORDER BY agency_id) AS agency_names
+                FROM static_agency
+                WHERE feed_id = f.feed_id
+            ) a ON TRUE
+            """;
         String count = "SELECT count(*) FROM static_feeds";
         return page(
                 select,
@@ -276,7 +277,8 @@ public class GtfsQueryRepository {
         var searchTerm = normalizedSearch(search);
         if (searchTerm != null) {
             conditions.add(
-                    "(route_id || ' ' || coalesce(route_short_name, '') || ' ' || coalesce(route_long_name, '')) ILIKE ? ESCAPE '\\'");
+                    "(route_id || ' ' || coalesce(route_short_name, '') || ' ' || coalesce(route_long_name, '')) ILIKE"
+                            + " ? ESCAPE '\\'");
             addLike(parameters, searchTerm);
         }
         if (routeType != null) {
@@ -285,9 +287,9 @@ public class GtfsQueryRepository {
         }
 
         String select = """
-                SELECT feed_id::text, route_id, route_short_name, route_long_name, route_type, route_color, route_text_color
-                FROM static_routes
-                """;
+            SELECT feed_id::text, route_id, route_short_name, route_long_name, route_type, route_color, route_text_color
+            FROM static_routes
+            """;
         String count = "SELECT count(*) FROM static_routes";
         String order = sortColumn(ROUTE_SORTS, sort, "route_id") + " " + direction(direction) + ", route_id ASC";
         return page(
@@ -327,9 +329,9 @@ public class GtfsQueryRepository {
         }
 
         String select = """
-                SELECT feed_id::text, stop_id, stop_name, stop_lat, stop_lon, location_type, parent_station
-                FROM static_stops
-                """;
+            SELECT feed_id::text, stop_id, stop_name, stop_lat, stop_lon, location_type, parent_station
+            FROM static_stops
+            """;
         String count = "SELECT count(*) FROM static_stops";
         String order = sortColumn(STOP_SORTS, sort, "stop_name") + " " + direction(direction) + ", stop_id ASC";
         return page(
@@ -369,9 +371,9 @@ public class GtfsQueryRepository {
         }
 
         String select = """
-                SELECT feed_id::text, trip_id, route_id, service_id, direction_id
-                FROM static_trips
-                """;
+            SELECT feed_id::text, trip_id, route_id, service_id, direction_id
+            FROM static_trips
+            """;
         String count = "SELECT count(*) FROM static_trips";
         String order = sortColumn(TRIP_SORTS, sort, "trip_id") + " " + direction(direction) + ", trip_id ASC";
         return page(
@@ -410,7 +412,8 @@ public class GtfsQueryRepository {
         var searchTerm = normalizedSearch(search);
         if (searchTerm != null) {
             conditions.add(
-                    "(coalesce(m.entity_id, '') || ' ' || coalesce(m.trip_id, '') || ' ' || coalesce(m.route_id, '')) ILIKE ? ESCAPE '\\'");
+                    "(coalesce(m.entity_id, '') || ' ' || coalesce(m.trip_id, '') || ' ' || coalesce(m.route_id, ''))"
+                            + " ILIKE ? ESCAPE '\\'");
             addLike(parameters, searchTerm);
         }
         if (hasText(agency)) {
@@ -429,14 +432,14 @@ public class GtfsQueryRepository {
         // The agency condition reaches static_agency through the trip and route joins; only widen
         // the count query when that filter is actually in use.
         String count = hasText(agency) || hasText(route) || routeType != null ? """
-                SELECT count(*) FROM rt_trip_updates_hot h
-                LEFT JOIN rt_trip_updates_meta m ON m.id = h.trip_update_id
-                LEFT JOIN static_trips t ON t.feed_id = h.feed_id AND t.trip_id = m.trip_id
-                LEFT JOIN static_routes r
-                       ON r.feed_id = h.feed_id AND r.route_id = COALESCE(t.route_id, m.route_id)
-                LEFT JOIN static_agency a
-                       ON a.feed_id = h.feed_id AND a.agency_id = COALESCE(r.agency_id, '')
-                """ : """
+            SELECT count(*) FROM rt_trip_updates_hot h
+            LEFT JOIN rt_trip_updates_meta m ON m.id = h.trip_update_id
+            LEFT JOIN static_trips t ON t.feed_id = h.feed_id AND t.trip_id = m.trip_id
+            LEFT JOIN static_routes r
+                   ON r.feed_id = h.feed_id AND r.route_id = COALESCE(t.route_id, m.route_id)
+            LEFT JOIN static_agency a
+                   ON a.feed_id = h.feed_id AND a.agency_id = COALESCE(r.agency_id, '')
+            """ : """
                 SELECT count(*) FROM rt_trip_updates_hot h
                 LEFT JOIN rt_trip_updates_meta m ON m.id = h.trip_update_id
                 """;
@@ -526,83 +529,83 @@ public class GtfsQueryRepository {
      */
     public List<TripMarkerDto> liveTripMarkers() {
         String sql = """
-                SELECT h.feed_id::text AS feed_id, h.trip_update_id,
-                       latest_stop.stop_time, latest_stop.stop_sequence,
-                       latest.stop_lat, latest.stop_lon, latest.stop_name,
-                       r.route_short_name, r.route_type, t.trip_short_name,
-                       m.route_id, m.trip_id, m.entity_id,
-                       COALESCE(
-                           latest_stop.stop_delay,
-                           (SELECT s.delay_seconds
-                            FROM rt_stop_time_updates_hot s
-                            WHERE s.trip_update_id = h.trip_update_id
-                              AND s.delay_seconds IS NOT NULL
-                              AND (${stop_time} IS NULL
-                                   OR ${stop_time} <= now())
-                            ORDER BY s.stop_sequence DESC
-                            LIMIT 1)) AS current_delay
-                FROM rt_trip_updates_hot h
-                LEFT JOIN rt_trip_updates_meta m ON m.id = h.trip_update_id
-                LEFT JOIN static_trips t ON t.feed_id = h.feed_id AND t.trip_id = m.trip_id
-                LEFT JOIN static_routes r
-                       ON r.feed_id = h.feed_id AND r.route_id = COALESCE(t.route_id, m.route_id)
-                LEFT JOIN static_agency a
-                       ON a.feed_id = h.feed_id AND a.agency_id = COALESCE(r.agency_id, '')
-                LEFT JOIN LATERAL (
-                    SELECT COALESCE(s.assigned_stop_id, s.stop_id) AS stop_id,
-                           s.delay_seconds AS stop_delay,
-                           ${stop_time} AS stop_time,
-                           s.stop_sequence
-                    FROM rt_stop_time_updates_hot s
-                    LEFT JOIN static_stop_times st
-                           ON st.feed_id = s.feed_id
-                          AND st.trip_id = m.trip_id
-                          AND st.stop_sequence = s.stop_sequence
-                    WHERE s.trip_update_id = h.trip_update_id
-                      -- A trip whose static schedule is loaded may only use stops that still
-                      -- exist in it. That drops a stop sequence left behind by an older static
-                      -- revision without also dropping the unchanged stops of a later update.
-                      AND (t.trip_id IS NULL OR st.stop_sequence IS NOT NULL)
-                      AND (${stop_time} IS NULL
-                           OR ${stop_time} <= now())
-                    ORDER BY s.stop_sequence DESC
-                    LIMIT 1
-                ) latest_stop ON TRUE
-                LEFT JOIN static_stops latest
-                       ON latest.feed_id = h.feed_id AND latest.stop_id = latest_stop.stop_id
-                -- The trip's final static stop, used to tell a running trip from one that has
-                -- already finished. The hot tables keep an ended trip for the retention window
-                -- (one hour by default) after its last update, so the map has to stop drawing it
-                -- from the schedule rather than wait for the row to be pruned.
-                LEFT JOIN LATERAL (
-                    SELECT st.stop_sequence AS last_stop_sequence,
-                           ((m.start_date + COALESCE(st.arrival_time, st.departure_time)
-                              + make_interval(days => COALESCE(
-                                    st.arrival_time_overflow_days,
-                                    st.departure_time_overflow_days,
-                                    0)))
-                            AT TIME ZONE COALESCE(a.agency_timezone, 'UTC')) AS planned_time
-                    FROM static_stop_times st
-                    WHERE st.feed_id = h.feed_id
+            SELECT h.feed_id::text AS feed_id, h.trip_update_id,
+                   latest_stop.stop_time, latest_stop.stop_sequence,
+                   latest.stop_lat, latest.stop_lon, latest.stop_name,
+                   r.route_short_name, r.route_type, t.trip_short_name,
+                   m.route_id, m.trip_id, m.entity_id,
+                   COALESCE(
+                       latest_stop.stop_delay,
+                       (SELECT s.delay_seconds
+                        FROM rt_stop_time_updates_hot s
+                        WHERE s.trip_update_id = h.trip_update_id
+                          AND s.delay_seconds IS NOT NULL
+                          AND (${stop_time} IS NULL
+                               OR ${stop_time} <= now())
+                        ORDER BY s.stop_sequence DESC
+                        LIMIT 1)) AS current_delay
+            FROM rt_trip_updates_hot h
+            LEFT JOIN rt_trip_updates_meta m ON m.id = h.trip_update_id
+            LEFT JOIN static_trips t ON t.feed_id = h.feed_id AND t.trip_id = m.trip_id
+            LEFT JOIN static_routes r
+                   ON r.feed_id = h.feed_id AND r.route_id = COALESCE(t.route_id, m.route_id)
+            LEFT JOIN static_agency a
+                   ON a.feed_id = h.feed_id AND a.agency_id = COALESCE(r.agency_id, '')
+            LEFT JOIN LATERAL (
+                SELECT COALESCE(s.assigned_stop_id, s.stop_id) AS stop_id,
+                       s.delay_seconds AS stop_delay,
+                       ${stop_time} AS stop_time,
+                       s.stop_sequence
+                FROM rt_stop_time_updates_hot s
+                LEFT JOIN static_stop_times st
+                       ON st.feed_id = s.feed_id
                       AND st.trip_id = m.trip_id
-                    ORDER BY st.stop_sequence DESC
-                    LIMIT 1
-                ) terminal ON TRUE
-                -- A trip without a static stop has no position; filtering here keeps those rows off
-                -- the wire instead of dropping them in the UI.
-                WHERE latest.stop_lat IS NOT NULL AND latest.stop_lon IS NOT NULL
-                  -- Once the reached stop is the final one and its predicted (or, when the feed
-                  -- publishes no prediction there, its planned) time has passed, the trip is over.
-                  -- The grace period keeps a trip visible while it is arriving, even though the
-                  -- terminal time has just gone by.
-                  AND NOT (
-                      terminal.last_stop_sequence IS NOT NULL
-                      AND latest_stop.stop_sequence >= terminal.last_stop_sequence
-                      AND COALESCE(latest_stop.stop_time, terminal.planned_time) IS NOT NULL
-                      AND COALESCE(latest_stop.stop_time, terminal.planned_time)
-                          < now() - make_interval(secs => ?)
-                  )
-                """.replace("${stop_time}", STOP_EVENT_TIME);
+                      AND st.stop_sequence = s.stop_sequence
+                WHERE s.trip_update_id = h.trip_update_id
+                  -- A trip whose static schedule is loaded may only use stops that still
+                  -- exist in it. That drops a stop sequence left behind by an older static
+                  -- revision without also dropping the unchanged stops of a later update.
+                  AND (t.trip_id IS NULL OR st.stop_sequence IS NOT NULL)
+                  AND (${stop_time} IS NULL
+                       OR ${stop_time} <= now())
+                ORDER BY s.stop_sequence DESC
+                LIMIT 1
+            ) latest_stop ON TRUE
+            LEFT JOIN static_stops latest
+                   ON latest.feed_id = h.feed_id AND latest.stop_id = latest_stop.stop_id
+            -- The trip's final static stop, used to tell a running trip from one that has
+            -- already finished. The hot tables keep an ended trip for the retention window
+            -- (one hour by default) after its last update, so the map has to stop drawing it
+            -- from the schedule rather than wait for the row to be pruned.
+            LEFT JOIN LATERAL (
+                SELECT st.stop_sequence AS last_stop_sequence,
+                       ((m.start_date + COALESCE(st.arrival_time, st.departure_time)
+                          + make_interval(days => COALESCE(
+                                st.arrival_time_overflow_days,
+                                st.departure_time_overflow_days,
+                                0)))
+                        AT TIME ZONE COALESCE(a.agency_timezone, 'UTC')) AS planned_time
+                FROM static_stop_times st
+                WHERE st.feed_id = h.feed_id
+                  AND st.trip_id = m.trip_id
+                ORDER BY st.stop_sequence DESC
+                LIMIT 1
+            ) terminal ON TRUE
+            -- A trip without a static stop has no position; filtering here keeps those rows off
+            -- the wire instead of dropping them in the UI.
+            WHERE latest.stop_lat IS NOT NULL AND latest.stop_lon IS NOT NULL
+              -- Once the reached stop is the final one and its predicted (or, when the feed
+              -- publishes no prediction there, its planned) time has passed, the trip is over.
+              -- The grace period keeps a trip visible while it is arriving, even though the
+              -- terminal time has just gone by.
+              AND NOT (
+                  terminal.last_stop_sequence IS NOT NULL
+                  AND latest_stop.stop_sequence >= terminal.last_stop_sequence
+                  AND COALESCE(latest_stop.stop_time, terminal.planned_time) IS NOT NULL
+                  AND COALESCE(latest_stop.stop_time, terminal.planned_time)
+                      < now() - make_interval(secs => ?)
+              )
+            """.replace("${stop_time}", STOP_EVENT_TIME);
         try (Connection connection = dataSource.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setDouble(1, endedGraceSeconds);
@@ -689,25 +692,25 @@ public class GtfsQueryRepository {
     /** Live stop time updates of one trip, with static stop names resolved. */
     private List<StopTimeUpdateDto> liveStopTimes(long tripUpdateId) {
         String sql = """
-                SELECT s.trip_update_id, s.stop_sequence, s.stop_id,
-                       s.arrival_time,
-                       -- Each event's stored delay; a feed that publishes predictions only (PKP PLK,
-                       -- HSL) has none of its own, so the sink stored the implied one.
-                       COALESCE(s.effective_arrival_delay, s.arrival_delay) AS arrival_delay,
-                       s.scheduled_arrival_time,
-                       s.departure_time,
-                       COALESCE(s.effective_departure_delay, s.departure_delay) AS departure_delay,
-                       s.scheduled_departure_time,
-                       s.schedule_relationship::text AS schedule_relationship, s.assigned_stop_id,
-                       s.last_seen_at,
-                       st.stop_name, st.stop_lat, st.stop_lon
-                FROM rt_stop_time_updates_hot s
-                LEFT JOIN static_stops st
-                       ON st.feed_id = s.feed_id
-                      AND st.stop_id = COALESCE(s.stop_id, s.assigned_stop_id)
-                WHERE s.trip_update_id = ?
-                ORDER BY s.stop_sequence ASC
-                """;
+            SELECT s.trip_update_id, s.stop_sequence, s.stop_id,
+                   s.arrival_time,
+                   -- Each event's stored delay; a feed that publishes predictions only (PKP PLK,
+                   -- HSL) has none of its own, so the sink stored the implied one.
+                   COALESCE(s.effective_arrival_delay, s.arrival_delay) AS arrival_delay,
+                   s.scheduled_arrival_time,
+                   s.departure_time,
+                   COALESCE(s.effective_departure_delay, s.departure_delay) AS departure_delay,
+                   s.scheduled_departure_time,
+                   s.schedule_relationship::text AS schedule_relationship, s.assigned_stop_id,
+                   s.last_seen_at,
+                   st.stop_name, st.stop_lat, st.stop_lon
+            FROM rt_stop_time_updates_hot s
+            LEFT JOIN static_stops st
+                   ON st.feed_id = s.feed_id
+                  AND st.stop_id = COALESCE(s.stop_id, s.assigned_stop_id)
+            WHERE s.trip_update_id = ?
+            ORDER BY s.stop_sequence ASC
+            """;
         try (Connection connection = dataSource.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setLong(1, tripUpdateId);
@@ -752,16 +755,16 @@ public class GtfsQueryRepository {
         }
 
         String sql = """
-                SELECT st.stop_sequence, st.stop_id,
-                       st.arrival_time, st.arrival_time_overflow_days,
-                       st.departure_time, st.departure_time_overflow_days,
-                       s.stop_name, s.stop_lat, s.stop_lon
-                FROM static_stop_times st
-                LEFT JOIN static_stops s
-                       ON s.feed_id = st.feed_id AND s.stop_id = st.stop_id
-                WHERE st.feed_id = CAST(? AS feed_id_enum) AND st.trip_id = ?
-                ORDER BY st.stop_sequence ASC
-                """;
+            SELECT st.stop_sequence, st.stop_id,
+                   st.arrival_time, st.arrival_time_overflow_days,
+                   st.departure_time, st.departure_time_overflow_days,
+                   s.stop_name, s.stop_lat, s.stop_lon
+            FROM static_stop_times st
+            LEFT JOIN static_stops s
+                   ON s.feed_id = st.feed_id AND s.stop_id = st.stop_id
+            WHERE st.feed_id = CAST(? AS feed_id_enum) AND st.trip_id = ?
+            ORDER BY st.stop_sequence ASC
+            """;
         try (Connection connection = dataSource.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, context.feedId());
@@ -808,20 +811,20 @@ public class GtfsQueryRepository {
      */
     private TripContext tripContext(long tripUpdateId) {
         String sql = """
-                SELECT h.feed_id::text AS feed_id, m.trip_id, m.start_date,
-                       COALESCE(
-                           (SELECT a.agency_timezone FROM static_agency a
-                             WHERE a.feed_id = h.feed_id
-                               AND a.agency_id = COALESCE(r.agency_id, '')),
-                           (SELECT a.agency_timezone FROM static_agency a
-                             WHERE a.feed_id = h.feed_id LIMIT 1),
-                           'UTC') AS time_zone
-                FROM rt_trip_updates_hot h
-                LEFT JOIN rt_trip_updates_meta m ON m.id = h.trip_update_id
-                LEFT JOIN static_routes r
-                       ON r.feed_id = h.feed_id AND r.route_id = m.route_id
-                WHERE h.trip_update_id = ?
-                """;
+            SELECT h.feed_id::text AS feed_id, m.trip_id, m.start_date,
+                   COALESCE(
+                       (SELECT a.agency_timezone FROM static_agency a
+                         WHERE a.feed_id = h.feed_id
+                           AND a.agency_id = COALESCE(r.agency_id, '')),
+                       (SELECT a.agency_timezone FROM static_agency a
+                         WHERE a.feed_id = h.feed_id LIMIT 1),
+                       'UTC') AS time_zone
+            FROM rt_trip_updates_hot h
+            LEFT JOIN rt_trip_updates_meta m ON m.id = h.trip_update_id
+            LEFT JOIN static_routes r
+                   ON r.feed_id = h.feed_id AND r.route_id = m.route_id
+            WHERE h.trip_update_id = ?
+            """;
         try (Connection connection = dataSource.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setLong(1, tripUpdateId);

@@ -57,7 +57,7 @@ class GtfsQueryMapperTest {
 
         assertFalse(
                 update.hasLatestStopLat(),
-                "a trip without a static stop has no position, and mapper must" + " not fabricate 0,0");
+                "a trip without a static stop has no position, and mapper must not fabricate 0,0");
         assertFalse(update.hasLatestStopLon());
         assertFalse(update.hasLatestStopName());
     }

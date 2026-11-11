@@ -53,21 +53,25 @@ class PostgresQueriesTest {
         dataSource = source;
         cleanUp();
         execute("""
-                INSERT INTO static_agency (feed_id, agency_id, agency_name, agency_url, agency_timezone)
-                VALUES ('entur', 'pgtest-agency', 'Test', 'http://x', 'Europe/Warsaw')""", """
-                INSERT INTO static_routes (feed_id, route_id, route_type, agency_id)
-                VALUES ('entur', 'pgtest-route', 2, 'pgtest-agency'),
-                       ('entur', 'pgtest-route-no-agency', 2, NULL)""", """
-                INSERT INTO static_trips (feed_id, trip_id, route_id, service_id)
-                VALUES ('entur', 'pgtest-t1', 'pgtest-route', 's'),
-                       ('entur', 'pgtest-t2', 'pgtest-route-no-agency', 's')""", """
-                INSERT INTO static_stop_times
-                    (feed_id, trip_id, stop_sequence, stop_id,
-                     arrival_time, arrival_time_overflow_days, departure_time, departure_time_overflow_days)
-                VALUES ('entur', 'pgtest-t1', 1, 'pgtest-a', '10:00', 0, '10:01', 0),
-                       ('entur', 'pgtest-t1', 2, 'pgtest-b', '10:30', 0, '10:31', 0),
-                       ('entur', 'pgtest-t1', 3, 'pgtest-c', '01:00', 1, '01:00', 1),
-                       ('entur', 'pgtest-t2', 1, 'pgtest-a', '09:00', 0, '09:00', 0)""");
+            INSERT INTO static_agency (feed_id, agency_id, agency_name, agency_url, agency_timezone)
+            VALUES ('entur', 'pgtest-agency', 'Test', 'http://x', 'Europe/Warsaw')\
+            """, """
+            INSERT INTO static_routes (feed_id, route_id, route_type, agency_id)
+            VALUES ('entur', 'pgtest-route', 2, 'pgtest-agency'),
+                   ('entur', 'pgtest-route-no-agency', 2, NULL)\
+            """, """
+            INSERT INTO static_trips (feed_id, trip_id, route_id, service_id)
+            VALUES ('entur', 'pgtest-t1', 'pgtest-route', 's'),
+                   ('entur', 'pgtest-t2', 'pgtest-route-no-agency', 's')\
+            """, """
+            INSERT INTO static_stop_times
+                (feed_id, trip_id, stop_sequence, stop_id,
+                 arrival_time, arrival_time_overflow_days, departure_time, departure_time_overflow_days)
+            VALUES ('entur', 'pgtest-t1', 1, 'pgtest-a', '10:00', 0, '10:01', 0),
+                   ('entur', 'pgtest-t1', 2, 'pgtest-b', '10:30', 0, '10:31', 0),
+                   ('entur', 'pgtest-t1', 3, 'pgtest-c', '01:00', 1, '01:00', 1),
+                   ('entur', 'pgtest-t2', 1, 'pgtest-a', '09:00', 0, '09:00', 0)\
+            """);
     }
 
     @AfterEach
@@ -164,9 +168,8 @@ class PostgresQueriesTest {
                 "history keeps the first write");
         assertEquals(
                 "300|310",
-                single(
-                        "SELECT effective_arrival_delay || '|' || effective_departure_delay FROM rt_stop_time_updates_hot"
-                                + " WHERE trip_update_id = " + descriptor.id()),
+                single("SELECT effective_arrival_delay || '|' || effective_departure_delay FROM"
+                        + " rt_stop_time_updates_hot WHERE trip_update_id = " + descriptor.id()),
                 "hot is overwritten by the second write");
         assertNull(
                 single("SELECT arrival_delay::text FROM rt_stop_time_updates_hot WHERE trip_update_id = "

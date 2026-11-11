@@ -45,14 +45,14 @@ public class StaticFeedRepository {
 
     /** Session-scoped lock: the revision spans two transactions (load, then swap). */
     private static final String LOCK_FEED_SQL = """
-            SELECT pg_advisory_lock(hashtext(?))
-            """;
+        SELECT pg_advisory_lock(hashtext(?))
+        """;
 
     private static final String CURRENT_DIGEST_SQL = """
-            SELECT sha256
-            FROM static_feeds
-            WHERE feed_id = ?
-            """;
+        SELECT sha256
+        FROM static_feeds
+        WHERE feed_id = ?
+        """;
 
     private final DataSource dataSource;
 
