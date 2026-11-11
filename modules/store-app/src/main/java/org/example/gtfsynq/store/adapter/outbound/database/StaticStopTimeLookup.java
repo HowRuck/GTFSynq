@@ -52,7 +52,7 @@ public class StaticStopTimeLookup implements StaticStopTimes {
                 loadFeed(connection, entry.getKey(), entry.getValue(), stops);
             }
         } catch (SQLException e) {
-            throw new RuntimeException(SqlLogSanitizer.sanitize(e));
+            throw new PersistenceException(SqlLogSanitizer.sanitize(e));
         }
         return stops;
     }

@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import org.example.gtfsynq.shared.model.FeedEntityWithMetadata;
 import org.example.gtfsynq.shared.model.dto.TripUpdateDto;
+import org.example.gtfsynq.store.adapter.outbound.database.PersistenceException;
 import org.example.gtfsynq.store.adapter.outbound.database.StopSequenceResolver;
 import org.example.gtfsynq.store.adapter.outbound.database.TripUpdateBatchMapper;
 import org.example.gtfsynq.store.adapter.outbound.database.TripUpdateRepository;
@@ -54,7 +55,7 @@ class GtfsTripUpdateSinkTest {
         repository.transientFailure = true;
 
         sink.accept("good-feed", entity(3));
-        assertThrows(RuntimeException.class, sink::flushNow, "a connection failure is not the update's fault");
+        assertThrows(PersistenceException.class, sink::flushNow, "a connection failure is not the update's fault");
 
         repository.transientFailure = false;
         sink.flushNow();
@@ -94,12 +95,12 @@ class GtfsTripUpdateSinkTest {
         @Override
         public FlushTimings write(TripUpdateRows rows) {
             if (transientFailure) {
-                throw new RuntimeException(new SQLException("connection reset", "08006"));
+                throw new PersistenceException(new SQLException("connection reset", "08006"));
             }
             var containsRejectedFeed =
                     rows.descriptors().stream().anyMatch(descriptor -> rejectedFeeds.contains(descriptor.feedId()));
             if (containsRejectedFeed) {
-                throw new RuntimeException(new SQLException("invalid input value for enum feed_id_enum", "22P02"));
+                throw new PersistenceException(new SQLException("invalid input value for enum feed_id_enum", "22P02"));
             }
             rows.descriptors().forEach(descriptor -> written.add(descriptor.tripId()));
             return new FlushTimings(0, 0, 0, 0);

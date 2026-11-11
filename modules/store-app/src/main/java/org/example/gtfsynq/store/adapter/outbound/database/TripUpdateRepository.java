@@ -158,7 +158,7 @@ public class TripUpdateRepository {
 
             return new FlushTimings(descriptorsNanos, stopTimesNanos, hotTripRowsNanos, hotStopTimesNanos);
         } catch (SQLException e) {
-            throw new RuntimeException(SqlLogSanitizer.sanitize(e));
+            throw new PersistenceException(SqlLogSanitizer.sanitize(e));
         }
     }
 
@@ -173,7 +173,7 @@ public class TripUpdateRepository {
             preparedStatement.setObject(1, lastSeenAt);
             return preparedStatement.executeUpdate();
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            throw new PersistenceException(e);
         }
     }
 
