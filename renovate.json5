@@ -223,16 +223,11 @@
       // untouched -- only the Quarkus build's frontend step does, so that is what
       // runs here, with tests skipped.
       //
-      // That step ends in `pnpm install`, which fails for a package released
-      // within pnpm's minimumReleaseAge (24h). The files are written before the
-      // install runs, so the failure is tolerated; a genuinely broken bump is
-      // still caught by the PR checks.
-      //
       // pnpm-lock.yaml is deliberately not listed: it is gitignored.
       matchManagers: ["custom.regex"],
       matchFileNames: ["modules/ui-app/src/main/java/**"],
       postUpgradeTasks: {
-        commands: ["./gradlew :ui-app:quarkusBuild -x test --console=plain || true"],
+        commands: ["./gradlew :ui-app:quarkusBuild -x test --console=plain"],
         fileFilters: [
           "modules/ui-app/package.json",
           "modules/ui-app/pnpm-workspace.yaml",
@@ -245,7 +240,7 @@
       matchManagers: ["gradle"],
       matchPackageNames: ["com.vaadin*"],
       postUpgradeTasks: {
-        commands: ["./gradlew :ui-app:quarkusBuild -x test --console=plain || true"],
+        commands: ["./gradlew :ui-app:quarkusBuild -x test --console=plain"],
         fileFilters: [
           "modules/ui-app/package.json",
           "modules/ui-app/pnpm-workspace.yaml",
