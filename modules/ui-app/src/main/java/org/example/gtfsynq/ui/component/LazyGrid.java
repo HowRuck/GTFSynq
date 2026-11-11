@@ -2,7 +2,6 @@ package org.example.gtfsynq.ui.component;
 
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridSortOrder;
-import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.data.provider.Query;
 import com.vaadin.flow.data.provider.SortDirection;
@@ -22,7 +21,7 @@ import org.example.gtfsynq.ui.client.PageQuery;
  * the visible slice is ever held in memory. Totals are not needed for this; the grid stops asking
  * when the backend returns an empty page.
  */
-public class LazyGrid<T> extends Grid<T> {
+public class LazyGrid<T> extends ConsoleGrid<T> {
 
     private static final int MIN_SEARCH_LENGTH = 3;
 
@@ -43,20 +42,12 @@ public class LazyGrid<T> extends Grid<T> {
             String defaultSort,
             SortDirection defaultDirection,
             Consumer<Grid<T>> columnConfigurer) {
+        super(columnConfigurer);
         this.loader = loader;
         this.defaultSort = defaultSort;
         this.defaultDirection = defaultDirection;
         // Resolve the localised pattern on the UI thread; fetch() may run during a backend load.
         this.loadErrorPattern = getTranslation("grid.error.load", "{0}");
-
-        setWidthFull();
-        setMultiSort(false);
-        setSelectionMode(Grid.SelectionMode.NONE);
-        addThemeVariants(GridVariant.ROW_STRIPES);
-        columnConfigurer.accept(this);
-        // Size each column to its content, then let the columns share any remaining width.
-        // Resizable lets users widen a truncated column by dragging its header edge.
-        getColumns().forEach(column -> column.setAutoWidth(true).setFlexGrow(1).setResizable(true));
 
         setItems(this::fetch);
         getColumns().stream()

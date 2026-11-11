@@ -4,9 +4,8 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
-import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.combobox.ComboBoxVariant;
 import com.vaadin.flow.component.grid.GridSortOrder;
-import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.textfield.TextFieldVariant;
@@ -29,7 +28,7 @@ import org.example.gtfsynq.ui.client.GtfsQueryClient;
  * instead of expanding the row into a tree. Trips are loaded lazily page by page, and a poll
  * replaces the visible page while keeping the open trip highlighted.
  */
-public class LiveUpdatesGrid extends Grid<TripUpdate> {
+public class LiveUpdatesGrid extends ConsoleGrid<TripUpdate> {
 
     private final LiveUpdatesDataProvider provider;
     private final String loadErrorPattern;
@@ -38,21 +37,14 @@ public class LiveUpdatesGrid extends Grid<TripUpdate> {
     private SerializableConsumer<TripUpdate> openTripHandler = trip -> {};
 
     public LiveUpdatesGrid(GtfsQueryClient client, String defaultSort, SortDirection defaultDirection) {
+        super(Columns::liveUpdates);
         // Resolve translations while the component is constructed on the UI thread; the data
         // provider and component renderers can run during a fetch, where VaadinService is absent.
         loadErrorPattern = getTranslation("grid.error.load", "{0}");
         provider = new LiveUpdatesDataProvider(client, defaultSort, defaultDirection, this::errorMessage);
 
-        setWidthFull();
-        setMultiSort(false);
-        setSelectionMode(Grid.SelectionMode.NONE);
-        addThemeVariants(GridVariant.ROW_STRIPES);
         // Rows open the trip detail pane, so they read as clickable.
         addClassName("live-trips");
-        Columns.liveUpdates(this);
-        // Size each column to its content, then let the columns share any remaining width.
-        // Resizable lets users widen a truncated column by dragging its header edge.
-        getColumns().forEach(column -> column.setAutoWidth(true).setFlexGrow(1).setResizable(true));
         openTripColumn();
 
         // The open trip stays marked while the polling view reloads the page underneath it.
@@ -146,7 +138,7 @@ public class LiveUpdatesGrid extends Grid<TripUpdate> {
         select.setClearButtonVisible(true);
         select.setAllowCustomValue(false);
         select.setWidthFull();
-        select.addThemeName("small");
+        select.addThemeVariants(ComboBoxVariant.SMALL);
         select.addValueChangeListener(event -> onChange.accept(event.getValue()));
         return select;
     }

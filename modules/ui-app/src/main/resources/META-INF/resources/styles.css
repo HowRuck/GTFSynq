@@ -150,6 +150,18 @@ html {
 }
 
 /*
+ * Table sizing is a single contract, enforced by ConsoleGrid: every table keeps the Aura default
+ * row height and cell and header font size, and none sets a height, font size or density variant.
+ * Aura has no dense grid variant - GridVariant.LUMO_COMPACT is Lumo-only - so a per-table override
+ * is the only way to change density and would make one table the odd one out.
+ *
+ * Filter controls are the one component sized explicitly, and they use the small variant everywhere
+ * (Filters and the live table's inline header row), so the controls above and inside the tables
+ * share one height. If the base size is ever raised, recheck that the small controls still meet
+ * WCAG 2.2 SC 2.5.8, which requires targets of at least 24x24 CSS px.
+ */
+
+/*
  * Live updates tree: color arrival and departure delay cells by how early or
  * late the predicted stop event is. The part names come from
  * Columns.delayPart(); the tokens are Aura's accessible text colors, so they

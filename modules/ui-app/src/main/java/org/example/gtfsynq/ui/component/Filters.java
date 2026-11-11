@@ -2,7 +2,9 @@ package org.example.gtfsynq.ui.component;
 
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.combobox.ComboBoxVariant;
 import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.component.textfield.TextFieldVariant;
 import com.vaadin.flow.data.value.ValueChangeMode;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -13,7 +15,12 @@ import java.util.function.Function;
 import org.example.gtfsynq.ui.client.DataAccessException;
 import org.example.gtfsynq.ui.client.GtfsQueryClient;
 
-/** Reusable filter controls for the table views. */
+/**
+ * Reusable filter controls for the table views.
+ *
+ * <p>Every filter uses the small variant, including the ones the live table places inside its
+ * header row, so the controls above and inside the tables share one height and font size.
+ */
 public final class Filters {
 
     /**
@@ -32,6 +39,7 @@ public final class Filters {
         feed.setClearButtonVisible(true);
         feed.setAllowCustomValue(false);
         feed.setWidth("12rem");
+        feed.addThemeVariants(ComboBoxVariant.SMALL);
         feed.addValueChangeListener(event -> onChange.accept(event.getValue()));
 
         // Load the feed ids off the session-lock thread, like the overview stats.
@@ -58,6 +66,7 @@ public final class Filters {
         agency.setClearButtonVisible(true);
         agency.setAllowCustomValue(false);
         agency.setWidth("16rem");
+        agency.addThemeVariants(ComboBoxVariant.SMALL);
         agency.addValueChangeListener(event -> onChange.accept(event.getValue()));
 
         var ui = UI.getCurrent();
@@ -81,6 +90,7 @@ public final class Filters {
         search.getElement().setAttribute("aria-label", placeholder);
         search.setClearButtonVisible(true);
         search.setWidth("18rem");
+        search.addThemeVariants(TextFieldVariant.SMALL);
         search.setValueChangeMode(ValueChangeMode.LAZY);
         search.setValueChangeTimeout(250);
         search.addValueChangeListener(event -> onChange.accept(event.getValue()));
@@ -125,6 +135,7 @@ public final class Filters {
         select.setClearButtonVisible(true);
         select.setAllowCustomValue(false);
         select.setWidth(width);
+        select.addThemeVariants(ComboBoxVariant.SMALL);
         select.setItems(options.keySet());
         select.setItemLabelGenerator(options::get);
         select.addValueChangeListener(event -> onChange.accept(event.getValue()));
