@@ -635,13 +635,17 @@ is rewritten, so its hot row stays fresh and the map follows the vehicle. The co
 delay path pays nothing - a time-only feed writes each stop again whenever its prediction moves, so
 its history grows with its update rate rather than staying flat.
 
-A feed that publishes a prediction and no delay still shows one where the plan is known: the live
-table, the map markers and the trip detail derive it as `time - static_stop_times` for the same
-stop, using the descriptor's `start_date` and the agency's timezone (and the overflow days of a
-GTFS time that passes midnight). The derivation happens on read, so the stored row keeps `NULL` in
-the delay columns and stays a faithful copy of what the producer sent; a feed whose stops cannot be
-tied to a static trip - HSL, whose descriptors carry no `trip_id` - is left without a derived delay,
-and a published delay always wins over the derived one.
+A feed that publishes a prediction and no delay still shows one where the plan is known: the sink
+derives it at write time and stores it in `delay_seconds` (published `arrival_delay`, else
+`departure_delay`, else `time - static_stop_times` for the same stop), and resolves
+`effective_arrival_time` / `effective_departure_time` from the published time, else the static plan
+shifted by the delay. The derivation uses the descriptor's `start_date` and the agency's timezone
+(and the overflow days of a GTFS time that passes midnight). A feed whose stops cannot be tied to a
+static trip - HSL, whose descriptors carry no `trip_id` - keeps `NULL`. The published columns stay
+untouched, so the stored row remains a faithful copy of what the producer sent. The read path no
+longer derives anything: the live table, the map markers and the trip detail read `delay_seconds`.
+Rows written before the columns existed stay `NULL` and show no delay until they age out of the hot
+tables; history aggregates are only valid from the migration's deploy time onward.
 
 | Property | Default | Purpose |
 |---|---|---|
