@@ -6,8 +6,9 @@ plugins {
 
 // The Quarkus extension still owns the production frontend build; the Vaadin
 // plugin exposes `vaadinPrepareFrontend` and `vaadinBuildFrontend` for running
-// the frontend toolchain directly. Keep it on pnpm, matching the .npmrc
-// lockfile and .npmrc.
+// the frontend toolchain directly. Keep it on pnpm, matching .npmrc and
+// pnpm-workspace.yaml. Neither task rewrites those files after a Vaadin bump;
+// the Quarkus build does (see renovate.json5).
 vaadin {
     pnpmEnable = true
 }
