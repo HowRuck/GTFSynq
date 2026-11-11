@@ -226,8 +226,9 @@ message TripUpdate {
   optional double latest_stop_lon = 18;
   // Name of that stop, so a map popup needs no second lookup.
   optional string latest_stop_name = 19;
-  // Absolute start of the trip: service date plus start time, with overflow days, in the
-  // agency's timezone. Absent without a start date and time.
+  // Absolute start of the trip: service date plus the published start time, else the departure
+  // from the first static stop, with overflow days, in the agency's timezone. Absent without a
+  // start date or any time to derive it from.
   optional google.protobuf.Timestamp scheduled_start_at = 20;
   // Absolute scheduled time of the trip's final static stop. Absent when the trip has no
   // static stop times. A trip whose final stop time has passed is finished.

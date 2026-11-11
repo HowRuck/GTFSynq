@@ -107,9 +107,25 @@ public class GtfsQueryRepository {
                latest.stop_lat AS latest_stop_lat,
                latest.stop_lon AS latest_stop_lon,
                latest.stop_name AS latest_stop_name,
-               ((m.start_date + m.start_time
-                  + make_interval(days => COALESCE(m.start_time_overflow_days, 0)))
-                AT TIME ZONE COALESCE(a.agency_timezone, 'UTC')) AS scheduled_start_at,
+               -- The start the feed publishes, else the departure from the first static stop: many
+               -- feeds leave start_time out of the trip descriptor, and without a start a trip that
+               -- has not begun could not be told from one that is running.
+               COALESCE(
+                   ((m.start_date + m.start_time
+                      + make_interval(days => COALESCE(m.start_time_overflow_days, 0)))
+                    AT TIME ZONE COALESCE(a.agency_timezone, 'UTC')),
+                   (SELECT ((m.start_date + COALESCE(st.departure_time, st.arrival_time)
+                              + make_interval(days => COALESCE(
+                                    CASE WHEN st.departure_time IS NOT NULL
+                                         THEN st.departure_time_overflow_days
+                                         ELSE st.arrival_time_overflow_days END,
+                                    0)))
+                            AT TIME ZONE COALESCE(a.agency_timezone, 'UTC'))
+                    FROM static_stop_times st
+                    WHERE st.feed_id = h.feed_id
+                      AND st.trip_id = m.trip_id
+                    ORDER BY st.stop_sequence ASC
+                    LIMIT 1)) AS scheduled_start_at,
                -- The scheduled time of the trip's final static stop, i.e. when the trip ends.
                -- Planned times only: predictions are not used, so a late trip counts as finished
                -- on schedule. A scalar subquery, so Postgres evaluates it after sorting and paging
