@@ -26,7 +26,7 @@ import java.util.List;
  * offline deployment shows markers instead of a blank map.
  */
 @Tag("live-map")
-@NpmPackage(value = "maplibre-gl", version = "6.17.0")
+@NpmPackage(value = "maplibre-gl", version = "6.18.0")
 @JsModule("./live-map.ts")
 public class LiveMap extends Component {
 
