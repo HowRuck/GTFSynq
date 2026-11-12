@@ -291,6 +291,8 @@ message TripMarker {
 
 message TripMarkersReply {
   repeated TripMarker items = 1;
+  // When the API computed this snapshot, so a client can tell how old the cached markers are.
+  google.protobuf.Timestamp computed_at = 2;
 }
 
 message StopTimeUpdate {

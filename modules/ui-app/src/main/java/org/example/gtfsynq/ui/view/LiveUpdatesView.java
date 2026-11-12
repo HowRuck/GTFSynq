@@ -6,6 +6,8 @@ import com.vaadin.flow.component.Key;
 import com.vaadin.flow.component.Shortcuts;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.card.Card;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
@@ -57,6 +59,9 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
      * the others - and the other sessions - which the common ForkJoinPool does once a few
      * multi-second gRPC calls are in flight.
      */
+    /** Markers older than this are too out of date to trust, so the map is locked until a refresh. */
+    static final Duration MAX_MARKER_AGE = Duration.ofMinutes(15);
+
     private static final ExecutorService BACKGROUND_LOADS = Executors.newVirtualThreadPerTaskExecutor();
 
     private final GtfsQueryClient client;
@@ -65,6 +70,7 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
     private final SplitLayout layout = new SplitLayout(SplitLayout.Orientation.HORIZONTAL);
     private final TripDetailPanel detail = new TripDetailPanel();
     private final Div loadingOverlay;
+    private final Div staleOverlay;
 
     // Optional is the MicroProfile Config way to read a property that may be absent: an empty
     // value in application.yaml counts as absent for a plain String injection.
@@ -83,6 +89,8 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
     private long markerRequest;
     private boolean markersLoaded;
     private long lastMarkersFingerprint;
+    // When the markers on screen were computed by the API; null until a snapshot has been loaded.
+    private Instant markersComputedAt;
     private String lastMapError;
     private TripUpdate selectedTrip;
     private long tripLookupRequest;
@@ -97,13 +105,7 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
         table = new LiveUpdatesGrid(client, "lastSeenAt", SortDirection.DESCENDING);
 
         // Feed, agency, route and route type are inline header filters inside the grid.
-        var refresh = new Button(getTranslation("live.refresh"), event -> {
-            table.refresh();
-            getUI().ifPresent(ui -> {
-                loadMarkers(ui, true);
-                loadTripDetail(ui, false);
-            });
-        });
+        var refresh = new Button(getTranslation("live.refresh"), event -> refreshAll());
         refresh.setIcon(VaadinIcon.REFRESH.create());
 
         map.getElement().setAttribute("aria-label", getTranslation("live.map.aria"));
@@ -125,9 +127,26 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
         loadingOverlay.addClassName("live-map-loading");
         loadingOverlay.setVisible(false);
 
-        // The overlay is a sibling of the map, so the map keeps ownership of its canvas and the
-        // loading card uses regular Vaadin components and theme colours.
-        var mapArea = new Div(map, loadingOverlay);
+        var staleCard = new Card();
+        staleCard.setTitle(getTranslation("live.map.stale.title"));
+        staleCard.setSubtitle(getTranslation("live.map.stale.text", (int) MAX_MARKER_AGE.toMinutes()));
+        staleCard.setHeaderPrefix(VaadinIcon.CLOCK.create());
+        var staleRefresh =
+                new Button(getTranslation("live.refresh"), VaadinIcon.REFRESH.create(), event -> refreshAll());
+        staleRefresh.addThemeVariants(ButtonVariant.PRIMARY);
+        staleCard.addToFooter(staleRefresh);
+        staleCard.addClassName("live-map-stale-card");
+        staleCard.getElement().setAttribute("role", "alert");
+
+        // A blurred, interaction-blocking screen: the map stays visible but unusable while its
+        // markers are too old, and the poll keeps retrying in the background to lift it.
+        staleOverlay = new Div(staleCard);
+        staleOverlay.addClassName("live-map-stale");
+        staleOverlay.setVisible(false);
+
+        // The overlays are siblings of the map, so the map keeps ownership of its canvas and the
+        // cards use regular Vaadin components and theme colours.
+        var mapArea = new Div(map, loadingOverlay, staleOverlay);
         mapArea.getStyle().set("position", "relative").set("width", "100%").set("height", "100%");
         mapArea.setMinHeight("16rem");
 
@@ -168,6 +187,15 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
         setFlexShrink(0, header);
         add(header, layout);
         setFlexGrow(1, layout);
+    }
+
+    /** Reloads the table, the markers and the open trip; shared by both refresh buttons. */
+    private void refreshAll() {
+        table.refresh();
+        getUI().ifPresent(ui -> {
+            loadMarkers(ui, true);
+            loadTripDetail(ui, false);
+        });
     }
 
     /**
@@ -342,9 +370,16 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
         CompletableFuture.runAsync(
                         () -> {
                             List<TripMarker> markers;
+                            Instant computedAt = Instant.now();
                             DataAccessException failure = null;
                             try {
-                                markers = client.tripMarkers();
+                                var reply = client.tripMarkers();
+                                markers = reply.getItemsList();
+                                if (reply.hasComputedAt()) {
+                                    computedAt = Instant.ofEpochSecond(
+                                            reply.getComputedAt().getSeconds(),
+                                            reply.getComputedAt().getNanos());
+                                }
                             } catch (DataAccessException e) {
                                 failure = e;
                                 markers = List.of();
@@ -359,7 +394,8 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
                             // here keeps the UI thread free for the rest of the session.
                             var fingerprint = error == null ? fingerprint(loaded) : 0L;
                             var json = error == null ? LiveMap.json(markers(loaded, texts)) : null;
-                            ui.access(() -> finishMarkers(request, fingerprint, json, error));
+                            var snapshotAt = computedAt;
+                            ui.access(() -> finishMarkers(request, fingerprint, json, snapshotAt, error));
                         },
                         BACKGROUND_LOADS)
                 .orTimeout(client.markerDeadlineSeconds() + 5, TimeUnit.SECONDS)
@@ -376,7 +412,8 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
                 });
     }
 
-    private void finishMarkers(long request, long fingerprint, String markersJson, DataAccessException error) {
+    private void finishMarkers(
+            long request, long fingerprint, String markersJson, Instant computedAt, DataAccessException error) {
         if (request != markerRequest) {
             return;
         }
@@ -386,7 +423,9 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
             return;
         }
         if (error != null) {
-            // Keep the last good markers on screen rather than blanking the map.
+            // Keep the last good markers on screen rather than blanking the map, but lock it once
+            // they have aged out.
+            updateStaleLock();
             report(error);
             return;
         }
@@ -395,7 +434,27 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
             map.setMarkersJson(markersJson);
         }
         markersLoaded = true;
+        markersComputedAt = computedAt;
         lastMapError = null;
+        updateStaleLock();
+    }
+
+    /** Whether markers computed at {@code computedAt} are too old to show at {@code now}. */
+    static boolean isStale(Instant computedAt, Instant now) {
+        return computedAt != null && Duration.between(computedAt, now).compareTo(MAX_MARKER_AGE) > 0;
+    }
+
+    /**
+     * Locks the map while the markers on screen are older than {@link #MAX_MARKER_AGE}, and unlocks it
+     * as soon as a snapshot fresh enough arrives.
+     *
+     * <p>{@code inert} takes the map out of pointer and keyboard interaction, so a stale marker cannot
+     * be clicked or focused behind the blur.
+     */
+    private void updateStaleLock() {
+        var stale = isStale(markersComputedAt, Instant.now());
+        staleOverlay.setVisible(stale);
+        map.getElement().setAttribute("inert", stale);
     }
 
     /**
@@ -408,6 +467,7 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
         }
         markersLoading = false;
         loadingOverlay.setVisible(false);
+        updateStaleLock();
         if (attached) {
             report(new DataAccessException(getTranslation("error.api.deadline", client.markerDeadlineSeconds()), null));
         }

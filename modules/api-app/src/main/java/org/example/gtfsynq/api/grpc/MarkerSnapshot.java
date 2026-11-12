@@ -1,11 +1,13 @@
 package org.example.gtfsynq.api.grpc;
 
+import com.google.protobuf.Timestamp;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -118,7 +120,12 @@ public class MarkerSnapshot {
                 return current;
             }
             try {
-                var reply = GtfsQueryMapper.tripMarkersReply(repository.liveTripMarkers());
+                var now = Instant.now();
+                var reply = GtfsQueryMapper.tripMarkersReply(repository.liveTripMarkers()).toBuilder()
+                        .setComputedAt(Timestamp.newBuilder()
+                                .setSeconds(now.getEpochSecond())
+                                .setNanos(now.getNano()))
+                        .build();
                 snapshot = reply;
                 refreshedAt = System.nanoTime();
                 return reply;

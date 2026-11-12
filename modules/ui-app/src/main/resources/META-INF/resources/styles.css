@@ -314,6 +314,34 @@ vaadin-grid::part(delay-severe) {
 }
 
 /*
+ * Stale-marker lock: when the cached markers are older than the freshness limit, a blurred screen
+ * covers the map, blocks interaction and explains why. LiveUpdatesView shows it until a fresh
+ * snapshot arrives.
+ */
+.live-map-stale {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--vaadin-padding-m);
+    backdrop-filter: blur(6px);
+    background: color-mix(in srgb, var(--vaadin-background-color) 55%, transparent);
+    cursor: not-allowed;
+}
+
+.live-map-stale-card {
+    max-width: 24rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .live-map-stale {
+        backdrop-filter: none;
+    }
+}
+
+/*
  * The theme paints the splitter with the container-strong colour, which reads as a shaded
  * strip between the panes. The splitter is a divider, so give it the plain background and
  * let the handle stay as the grab affordance.

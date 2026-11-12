@@ -26,7 +26,7 @@ import org.example.gtfsynq.shared.protocol.query.StopTimeUpdate;
 import org.example.gtfsynq.shared.protocol.query.StopTimeUpdatesRequest;
 import org.example.gtfsynq.shared.protocol.query.StopsRequest;
 import org.example.gtfsynq.shared.protocol.query.Trip;
-import org.example.gtfsynq.shared.protocol.query.TripMarker;
+import org.example.gtfsynq.shared.protocol.query.TripMarkersReply;
 import org.example.gtfsynq.shared.protocol.query.TripMarkersRequest;
 import org.example.gtfsynq.shared.protocol.query.TripUpdate;
 import org.example.gtfsynq.shared.protocol.query.TripUpdateRequest;
@@ -179,12 +179,13 @@ public class GtfsQueryClient {
                 .build()));
     }
 
-    /** Every live trip that has a position, for the map; unpaged on purpose. */
-    public List<TripMarker> tripMarkers() {
+    /**
+     * Every live trip that has a position, for the map; unpaged on purpose. The reply also says when
+     * the API computed the snapshot, so the view can tell how old the cached markers are.
+     */
+    public TripMarkersReply tripMarkers() {
         return call(
-                () -> stub(markerDeadlineSeconds)
-                        .listTripMarkers(TripMarkersRequest.getDefaultInstance())
-                        .getItemsList(),
+                () -> stub(markerDeadlineSeconds).listTripMarkers(TripMarkersRequest.getDefaultInstance()),
                 markerDeadlineSeconds);
     }
 

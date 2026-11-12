@@ -20,6 +20,15 @@ import org.junit.jupiter.api.Test;
 class LiveUpdatesViewTest {
 
     @Test
+    void markersOlderThanFifteenMinutesAreStale() {
+        var now = Instant.parse("2026-01-01T12:00:00Z");
+
+        assertFalse(LiveUpdatesView.isStale(null, now));
+        assertFalse(LiveUpdatesView.isStale(now.minusSeconds(15 * 60), now));
+        assertTrue(LiveUpdatesView.isStale(now.minusSeconds(15 * 60 + 1), now));
+    }
+
+    @Test
     void prefixesTheRouteWithItsTranslatedType() {
         withView(view -> {
             var marker = view.marker(marker(3, "10", "Trip 1")).orElseThrow();
