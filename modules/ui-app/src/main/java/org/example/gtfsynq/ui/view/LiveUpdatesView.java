@@ -9,11 +9,9 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.card.Card;
 import com.vaadin.flow.component.html.Div;
-import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
-import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
-import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.progressbar.ProgressBar;
 import com.vaadin.flow.component.splitlayout.SplitLayout;
@@ -69,8 +67,11 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
     private final LiveMap map = new LiveMap();
     private final SplitLayout layout = new SplitLayout(SplitLayout.Orientation.HORIZONTAL);
     private final TripDetailPanel detail = new TripDetailPanel();
-    private final Div loadingOverlay;
-    private final Div staleOverlay;
+    private final Div lockOverlay;
+    private final Card lockCard;
+    private final Icon lockIcon;
+    private final ProgressBar lockProgress;
+    private final Button lockRefresh;
 
     // Optional is the MicroProfile Config way to read a property that may be absent: an empty
     // value in application.yaml counts as absent for a plain String injection.
@@ -87,6 +88,8 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
     // leave the guard set and block every later poll.
     private volatile boolean markersLoading;
     private long markerRequest;
+    // Whether the running load should show the lock; polls stay silent once markers are on screen.
+    private boolean showMarkerLoading;
     private boolean markersLoaded;
     private long lastMarkersFingerprint;
     // When the markers on screen were computed by the API; null until a snapshot has been loaded.
@@ -113,40 +116,28 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
         map.setOpenTripText(getTranslation("live.map.openTrip"));
         map.addTripOpenListener(this::openTripFromMap);
 
-        var progress = new ProgressBar();
-        progress.setIndeterminate(true);
-        progress.setWidth("5rem");
+        // One blurred, interaction-blocking screen covers the map whenever it has no trustworthy
+        // markers: while they load, when they could not be fetched, and once they have aged out.
+        // Its content follows the state (see updateMapLock).
+        lockCard = new Card();
+        lockIcon = VaadinIcon.CLOCK.create();
+        lockCard.setHeaderPrefix(lockIcon);
+        lockProgress = new ProgressBar();
+        lockProgress.setIndeterminate(true);
+        lockCard.add(lockProgress);
+        lockRefresh = new Button(getTranslation("live.refresh"), VaadinIcon.REFRESH.create(), event -> refreshAll());
+        lockRefresh.addThemeVariants(ButtonVariant.PRIMARY);
+        lockCard.addToFooter(lockRefresh);
+        lockCard.addClassName("live-map-lock-card");
+        lockCard.getElement().setAttribute("role", "alert");
 
-        var loadingCard = new HorizontalLayout(progress, new Span(getTranslation("live.map.loading")));
-        loadingCard.setPadding(false);
-        loadingCard.setSpacing(false);
-        loadingCard.setAlignItems(Alignment.CENTER);
-        loadingCard.addClassName("live-map-loading-card");
+        lockOverlay = new Div(lockCard);
+        lockOverlay.addClassName("live-map-lock");
+        lockOverlay.setVisible(false);
 
-        loadingOverlay = new Div(loadingCard);
-        loadingOverlay.addClassName("live-map-loading");
-        loadingOverlay.setVisible(false);
-
-        var staleCard = new Card();
-        staleCard.setTitle(getTranslation("live.map.stale.title"));
-        staleCard.setSubtitle(getTranslation("live.map.stale.text", (int) MAX_MARKER_AGE.toMinutes()));
-        staleCard.setHeaderPrefix(VaadinIcon.CLOCK.create());
-        var staleRefresh =
-                new Button(getTranslation("live.refresh"), VaadinIcon.REFRESH.create(), event -> refreshAll());
-        staleRefresh.addThemeVariants(ButtonVariant.PRIMARY);
-        staleCard.addToFooter(staleRefresh);
-        staleCard.addClassName("live-map-stale-card");
-        staleCard.getElement().setAttribute("role", "alert");
-
-        // A blurred, interaction-blocking screen: the map stays visible but unusable while its
-        // markers are too old, and the poll keeps retrying in the background to lift it.
-        staleOverlay = new Div(staleCard);
-        staleOverlay.addClassName("live-map-stale");
-        staleOverlay.setVisible(false);
-
-        // The overlays are siblings of the map, so the map keeps ownership of its canvas and the
-        // cards use regular Vaadin components and theme colours.
-        var mapArea = new Div(map, loadingOverlay, staleOverlay);
+        // The overlay is a sibling of the map, so the map keeps ownership of its canvas and the
+        // card uses regular Vaadin components and theme colours.
+        var mapArea = new Div(map, lockOverlay);
         mapArea.getStyle().set("position", "relative").set("width", "100%").set("height", "100%");
         mapArea.setMinHeight("16rem");
 
@@ -359,10 +350,9 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
         }
         markersLoading = true;
         var request = ++markerRequest;
-        // Polls must not flicker the overlay; it stays for the initial load and manual refreshes.
-        if (showLoading || !markersLoaded) {
-            loadingOverlay.setVisible(true);
-        }
+        // Polls must not flicker the lock; it shows for the initial load and manual refreshes.
+        showMarkerLoading = showLoading || !markersLoaded;
+        updateMapLock();
         // Translations need the UI thread, so they are captured up front: the background task can
         // then fingerprint, build and serialise the whole payload without touching the UI.
         var texts = markerTexts();
@@ -418,14 +408,14 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
             return;
         }
         markersLoading = false;
-        loadingOverlay.setVisible(false);
+        showMarkerLoading = false;
         if (!attached) {
             return;
         }
         if (error != null) {
             // Keep the last good markers on screen rather than blanking the map, but lock it once
             // they have aged out.
-            updateStaleLock();
+            updateMapLock();
             report(error);
             return;
         }
@@ -436,7 +426,7 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
         markersLoaded = true;
         markersComputedAt = computedAt;
         lastMapError = null;
-        updateStaleLock();
+        updateMapLock();
     }
 
     /** Whether markers computed at {@code computedAt} are too old to show at {@code now}. */
@@ -445,16 +435,36 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
     }
 
     /**
-     * Locks the map while the markers on screen are older than {@link #MAX_MARKER_AGE}, and unlocks it
-     * as soon as a snapshot fresh enough arrives.
+     * Shows or hides the lock screen and sets its content for the current state: loading wins, then
+     * markers that aged out past {@link #MAX_MARKER_AGE}, then no markers at all because a fetch
+     * failed. A poll that is merely refreshing good markers stays silent.
      *
      * <p>{@code inert} takes the map out of pointer and keyboard interaction, so a stale marker cannot
      * be clicked or focused behind the blur.
      */
-    private void updateStaleLock() {
+    private void updateMapLock() {
+        var loading = showMarkerLoading && markersLoading;
         var stale = isStale(markersComputedAt, Instant.now());
-        staleOverlay.setVisible(stale);
-        map.getElement().setAttribute("inert", stale);
+        var unavailable = !markersLoaded && !markersLoading;
+        var locked = loading || stale || unavailable;
+        lockOverlay.setVisible(locked);
+        map.getElement().setAttribute("inert", locked);
+        if (!locked) {
+            return;
+        }
+        lockProgress.setVisible(loading);
+        lockRefresh.setVisible(!loading);
+        lockIcon.setVisible(!loading);
+        if (loading) {
+            lockCard.setTitle(getTranslation("live.map.loading"));
+            lockCard.setSubtitle("");
+        } else if (stale) {
+            lockCard.setTitle(getTranslation("live.map.stale.title"));
+            lockCard.setSubtitle(getTranslation("live.map.stale.text", (int) MAX_MARKER_AGE.toMinutes()));
+        } else {
+            lockCard.setTitle(getTranslation("live.map.unavailable.title"));
+            lockCard.setSubtitle(getTranslation("live.map.unavailable.text"));
+        }
     }
 
     /**
@@ -466,8 +476,8 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
             return;
         }
         markersLoading = false;
-        loadingOverlay.setVisible(false);
-        updateStaleLock();
+        showMarkerLoading = false;
+        updateMapLock();
         if (attached) {
             report(new DataAccessException(getTranslation("error.api.deadline", client.markerDeadlineSeconds()), null));
         }

@@ -286,39 +286,11 @@ vaadin-grid::part(delay-severe) {
 }
 
 /*
- * Live map loading state: a Vaadin ProgressBar in a centered card, overlaid on the map so the
- * basemap keeps painting underneath. LiveUpdatesView toggles the overlay's visibility around the
- * marker fetch.
+ * Live map lock: a blurred screen over the map that blocks interaction and explains why, while the
+ * markers load, when they are unavailable, or when they are older than the freshness limit.
+ * LiveUpdatesView shows it until fresh markers arrive.
  */
-.live-map-loading {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    pointer-events: none;
-}
-
-.live-map-loading-card {
-    display: flex;
-    align-items: center;
-    gap: var(--vaadin-gap-s);
-    padding: var(--vaadin-padding-s) var(--vaadin-padding-m);
-    border: 1px solid var(--vaadin-border-color);
-    border-radius: var(--vaadin-radius-m);
-    background: var(--vaadin-background-color);
-    color: var(--vaadin-text-color);
-    box-shadow: var(--aura-shadow-xs);
-    font-size: var(--aura-font-size-s);
-}
-
-/*
- * Stale-marker lock: when the cached markers are older than the freshness limit, a blurred screen
- * covers the map, blocks interaction and explains why. LiveUpdatesView shows it until a fresh
- * snapshot arrives.
- */
-.live-map-stale {
+.live-map-lock {
     position: absolute;
     inset: 0;
     z-index: 2;
@@ -331,12 +303,12 @@ vaadin-grid::part(delay-severe) {
     cursor: not-allowed;
 }
 
-.live-map-stale-card {
+.live-map-lock-card {
     max-width: 24rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .live-map-stale {
+    .live-map-lock {
         backdrop-filter: none;
     }
 }
