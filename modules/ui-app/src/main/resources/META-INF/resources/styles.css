@@ -304,7 +304,11 @@ vaadin-grid::part(delay-severe) {
 }
 
 .live-map-lock-card {
-    max-width: 24rem;
+    /* A fixed measure keeps the text wrapping at a readable width instead of breaking mid-word. */
+    width: min(24rem, 100%);
+    box-sizing: border-box;
+    text-align: start;
+    overflow-wrap: break-word;
 }
 
 @media (prefers-reduced-motion: reduce) {
