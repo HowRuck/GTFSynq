@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import org.example.gtfsynq.ui.client.MetricsClient;
-import org.example.gtfsynq.ui.component.HeaderUsage;
+import org.example.gtfsynq.ui.component.metrics.HeaderUsage;
 import org.example.gtfsynq.ui.view.FeedsView;
 import org.example.gtfsynq.ui.view.LiveUpdatesView;
 import org.example.gtfsynq.ui.view.MetricsView;

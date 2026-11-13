@@ -1,4 +1,4 @@
-package org.example.gtfsynq.ui.component;
+package org.example.gtfsynq.ui.component.grid;
 
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridSortOrder;

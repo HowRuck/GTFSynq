@@ -1,4 +1,4 @@
-package org.example.gtfsynq.ui.component;
+package org.example.gtfsynq.ui.component.live;
 
 /**
  * Minimal JSON writing shared by the map elements.

@@ -7,10 +7,10 @@ import jakarta.inject.Inject;
 import org.example.gtfsynq.shared.protocol.query.Route;
 import org.example.gtfsynq.ui.MainLayout;
 import org.example.gtfsynq.ui.client.GtfsQueryClient;
-import org.example.gtfsynq.ui.component.Columns;
-import org.example.gtfsynq.ui.component.Filters;
-import org.example.gtfsynq.ui.component.LazyGrid;
 import org.example.gtfsynq.ui.component.PageHeader;
+import org.example.gtfsynq.ui.component.grid.Columns;
+import org.example.gtfsynq.ui.component.grid.Filters;
+import org.example.gtfsynq.ui.component.grid.LazyGrid;
 
 /** Static GTFS routes. */
 @com.vaadin.flow.router.Route(value = "routes", layout = MainLayout.class)

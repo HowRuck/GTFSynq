@@ -1,4 +1,4 @@
-package org.example.gtfsynq.ui.component;
+package org.example.gtfsynq.ui.component.metrics;
 
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.DetachEvent;

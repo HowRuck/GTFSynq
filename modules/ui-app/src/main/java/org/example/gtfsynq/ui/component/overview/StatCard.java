@@ -1,4 +1,4 @@
-package org.example.gtfsynq.ui.component;
+package org.example.gtfsynq.ui.component.overview;
 
 import com.vaadin.flow.component.card.Card;
 import com.vaadin.flow.component.html.Div;

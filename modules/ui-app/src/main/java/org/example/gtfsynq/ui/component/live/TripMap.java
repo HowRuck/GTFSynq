@@ -1,4 +1,4 @@
-package org.example.gtfsynq.ui.component;
+package org.example.gtfsynq.ui.component.live;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.Tag;

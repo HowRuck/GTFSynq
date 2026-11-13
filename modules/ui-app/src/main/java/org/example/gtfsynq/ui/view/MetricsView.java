@@ -19,8 +19,8 @@ import java.util.concurrent.CompletableFuture;
 import org.example.gtfsynq.ui.MainLayout;
 import org.example.gtfsynq.ui.client.MetricsClient;
 import org.example.gtfsynq.ui.client.MetricsClient.Series;
-import org.example.gtfsynq.ui.component.MetricsChart;
 import org.example.gtfsynq.ui.component.PageHeader;
+import org.example.gtfsynq.ui.component.metrics.MetricsChart;
 
 /**
  * Charts a few cluster-wide metrics from VictoriaMetrics.

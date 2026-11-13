@@ -1,4 +1,4 @@
-package org.example.gtfsynq.ui.component;
+package org.example.gtfsynq.ui.component.live;
 
 import com.google.protobuf.Timestamp;
 import com.vaadin.flow.component.Component;
@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Locale;
 import org.example.gtfsynq.shared.protocol.query.StopTimeUpdate;
 import org.example.gtfsynq.shared.protocol.query.TripUpdate;
+import org.example.gtfsynq.ui.component.grid.Columns;
 import org.example.gtfsynq.ui.format.UiFormat;
 
 /**

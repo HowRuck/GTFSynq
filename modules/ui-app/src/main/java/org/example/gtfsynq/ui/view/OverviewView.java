@@ -27,9 +27,9 @@ import org.example.gtfsynq.shared.protocol.query.StaticFeed;
 import org.example.gtfsynq.ui.MainLayout;
 import org.example.gtfsynq.ui.client.DataAccessException;
 import org.example.gtfsynq.ui.client.GtfsQueryClient;
-import org.example.gtfsynq.ui.component.FeedHealthTile;
 import org.example.gtfsynq.ui.component.PageHeader;
-import org.example.gtfsynq.ui.component.StatCard;
+import org.example.gtfsynq.ui.component.overview.FeedHealthTile;
+import org.example.gtfsynq.ui.component.overview.StatCard;
 import org.example.gtfsynq.ui.format.TripStatus;
 import org.example.gtfsynq.ui.format.UiFormat;
 

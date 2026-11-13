@@ -1,4 +1,4 @@
-package org.example.gtfsynq.ui.component;
+package org.example.gtfsynq.ui.component.overview;
 
 import com.vaadin.flow.component.card.Card;
 import com.vaadin.flow.component.html.Div;
@@ -8,6 +8,7 @@ import java.time.Duration;
 import java.time.Instant;
 import org.example.gtfsynq.shared.protocol.PollStatus;
 import org.example.gtfsynq.shared.protocol.query.StaticFeed;
+import org.example.gtfsynq.ui.component.UiComponents;
 import org.example.gtfsynq.ui.format.UiFormat;
 
 /**

@@ -40,11 +40,11 @@ import org.example.gtfsynq.shared.protocol.query.TripUpdate;
 import org.example.gtfsynq.ui.MainLayout;
 import org.example.gtfsynq.ui.client.DataAccessException;
 import org.example.gtfsynq.ui.client.GtfsQueryClient;
-import org.example.gtfsynq.ui.component.Filters;
-import org.example.gtfsynq.ui.component.LiveMap;
-import org.example.gtfsynq.ui.component.LiveUpdatesGrid;
 import org.example.gtfsynq.ui.component.PageHeader;
-import org.example.gtfsynq.ui.component.TripDetailPanel;
+import org.example.gtfsynq.ui.component.grid.Filters;
+import org.example.gtfsynq.ui.component.grid.LiveUpdatesGrid;
+import org.example.gtfsynq.ui.component.live.LiveMap;
+import org.example.gtfsynq.ui.component.live.TripDetailPanel;
 
 /** Live trip updates, refreshed while the view is attached. */
 @Route(value = "live", layout = MainLayout.class)

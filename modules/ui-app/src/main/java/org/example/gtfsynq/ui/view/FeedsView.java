@@ -11,10 +11,10 @@ import jakarta.inject.Inject;
 import org.example.gtfsynq.shared.protocol.query.StaticFeed;
 import org.example.gtfsynq.ui.MainLayout;
 import org.example.gtfsynq.ui.client.GtfsQueryClient;
-import org.example.gtfsynq.ui.component.Columns;
-import org.example.gtfsynq.ui.component.Filters;
-import org.example.gtfsynq.ui.component.LazyGrid;
 import org.example.gtfsynq.ui.component.PageHeader;
+import org.example.gtfsynq.ui.component.grid.Columns;
+import org.example.gtfsynq.ui.component.grid.Filters;
+import org.example.gtfsynq.ui.component.grid.LazyGrid;
 
 /** Static feeds (current revision) and polled realtime feeds (latest poll). */
 @Route(value = "feeds", layout = MainLayout.class)

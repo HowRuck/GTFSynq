@@ -1,4 +1,4 @@
-package org.example.gtfsynq.ui.component;
+package org.example.gtfsynq.ui.component.grid;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.badge.Badge;
@@ -14,6 +14,7 @@ import org.example.gtfsynq.shared.protocol.query.Stop;
 import org.example.gtfsynq.shared.protocol.query.StopTimeUpdate;
 import org.example.gtfsynq.shared.protocol.query.Trip;
 import org.example.gtfsynq.shared.protocol.query.TripUpdate;
+import org.example.gtfsynq.ui.component.UiComponents;
 import org.example.gtfsynq.ui.format.TripStatus;
 import org.example.gtfsynq.ui.format.UiFormat;
 
@@ -269,7 +270,7 @@ public final class Columns {
      * <p>A stop time update only carries a stop id; the name is resolved from the static schedule
      * and is absent when no static stop matches. The stop id stays available as the tooltip.
      */
-    static String stopName(StopTimeUpdate stop) {
+    public static String stopName(StopTimeUpdate stop) {
         return stop.hasStopName() ? stop.getStopName() : UiFormat.text(stopId(stop));
     }
 
@@ -279,7 +280,7 @@ public final class Columns {
      * <p>GTFS makes {@code trip_short_name} optional, so most feeds fall back to the id; the live
      * grid shows the name when the feed publishes one.
      */
-    static String tripName(TripUpdate trip) {
+    public static String tripName(TripUpdate trip) {
         return trip.hasTripShortName() ? trip.getTripShortName() : trip.getTripId();
     }
 
@@ -289,7 +290,7 @@ public final class Columns {
      * <p>GTFS requires at least one of the two names, but a feed may publish only one, and a live
      * trip whose static trip is unknown has neither.
      */
-    static String routeName(TripUpdate trip) {
+    public static String routeName(TripUpdate trip) {
         if (trip.hasRouteLongName()) {
             return trip.getRouteLongName();
         }
@@ -315,7 +316,7 @@ public final class Columns {
      * red with extra weight once the delay reaches five minutes. Shared with the trip timeline so
      * both views read the same way.
      */
-    static String delayPart(Integer seconds) {
+    public static String delayPart(Integer seconds) {
         if (seconds == null) {
             return null;
         }

@@ -1,4 +1,4 @@
-package org.example.gtfsynq.ui.component;
+package org.example.gtfsynq.ui.component.overview;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
