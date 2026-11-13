@@ -65,9 +65,7 @@ quarkus:
   # default in native images. JDK 25 Mandrel removed the parallel GC, so the
   # default serial GC is used (valid --gc values are epsilon and serial).
   native:
-    # -O3 enables all optimizations (the default is -O2). Not -march=native: the executable must
-    # run on CPUs other than the build machine (default target is x86-64-v3).
-    additional-build-args: "-O3,-H:+UnlockExperimentalVMOptions,-H:+SharedArenaSupport"
+    additional-build-args: "-H:+UnlockExperimentalVMOptions,-H:+SharedArenaSupport"
 
 # ---- Kafka producer ------------------------------------------------------
 kafka:

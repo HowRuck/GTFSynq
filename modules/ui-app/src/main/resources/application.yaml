@@ -63,12 +63,6 @@ quarkus:
     group: howruck
     name: gtfsynq-ui-app
 
-  # ---- Native image --------------------------------------------------------
-  native:
-    # -O3 enables all optimizations (the default is -O2). Not -march=native: the executable must
-    # run on CPUs other than the build machine (default target is x86-64-v3).
-    additional-build-args: "-O3"
-
 # ---- Session-lock diagnostics ---------------------------------------------
 # Every request and every ui.access() runs under the browser session's lock, and Vaadin does not
 # time out a lock wait. A holder that never releases it freezes the session; these thresholds make

@@ -80,12 +80,6 @@ quarkus:
     group: howruck
     name: gtfsynq-api-app
 
-  # ---- Native image --------------------------------------------------------
-  native:
-    # -O3 enables all optimizations (the default is -O2). Not -march=native: the executable must
-    # run on CPUs other than the build machine (default target is x86-64-v3).
-    additional-build-args: "-O3"
-
 # ---- Live map snapshot ----------------------------------------------------
 # The marker query is the console's heaviest read: every positioned trip in one unpaged reply,
 # with per-trip work on the hot table. It runs in the background and requests read the snapshot
