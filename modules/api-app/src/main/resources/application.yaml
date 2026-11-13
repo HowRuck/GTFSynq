@@ -83,8 +83,7 @@ quarkus:
   # ---- Native image --------------------------------------------------------
   native:
     # Build with upstream GraalVM CE rather than the default Mandrel builder image.
-    builder-image:
-      image: graalvm
+    builder-image: graalvm
 
 # ---- Live map snapshot ----------------------------------------------------
 # The marker query is the console's heaviest read: every positioned trip in one unpaged reply,

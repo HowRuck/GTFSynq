@@ -66,8 +66,7 @@ quarkus:
   # ---- Native image --------------------------------------------------------
   native:
     # Build with upstream GraalVM CE rather than the default Mandrel builder image.
-    builder-image:
-      image: graalvm
+    builder-image: graalvm
 
 # ---- Session-lock diagnostics ---------------------------------------------
 # Every request and every ui.access() runs under the browser session's lock, and Vaadin does not

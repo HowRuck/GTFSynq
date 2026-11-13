@@ -774,7 +774,7 @@ binary you need GraalVM 25 on `PATH`:
 ```
 
 Alternatively let Quarkus run the native build in a container (the upstream GraalVM CE
-builder image, set via `quarkus.native.builder-image.image` in each `application.yaml`; Docker/Podman
+builder image, set via `quarkus.native.builder-image` in each `application.yaml`; Docker/Podman
 required, ~8 GB RAM recommended, first build takes 5-15 min per service):
 
 ```bash
