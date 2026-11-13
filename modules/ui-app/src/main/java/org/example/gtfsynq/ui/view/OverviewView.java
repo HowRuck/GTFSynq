@@ -6,6 +6,7 @@ import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.JustifyContentMode;
@@ -26,7 +27,6 @@ import org.example.gtfsynq.shared.protocol.query.StaticFeed;
 import org.example.gtfsynq.ui.MainLayout;
 import org.example.gtfsynq.ui.client.DataAccessException;
 import org.example.gtfsynq.ui.client.GtfsQueryClient;
-import org.example.gtfsynq.ui.component.PageHeader;
 import org.example.gtfsynq.ui.component.overview.FeedHealthTile;
 import org.example.gtfsynq.ui.component.overview.StatCard;
 import org.example.gtfsynq.ui.format.TripStatus;
@@ -90,10 +90,11 @@ public class OverviewView extends VerticalLayout implements HasDynamicTitle {
                 statGrid(realtimeFeedsCard, liveTripUpdatesCard, liveStopTimeUpdatesCard, freshnessCard),
                 realtimeTiles);
 
-        add(
-                PageHeader.create(getTranslation("page.overview.title"), getTranslation("page.overview.subtitle")),
-                staticSection,
-                realtimeSection);
+        var welcome = new Div(
+                new Span(getTranslation("overview.welcome.title")), new Span(getTranslation("overview.welcome.body")));
+        welcome.addClassName("overview-welcome");
+
+        add(welcome, staticSection, realtimeSection);
     }
 
     private static Div statGrid(StatCard... cards) {

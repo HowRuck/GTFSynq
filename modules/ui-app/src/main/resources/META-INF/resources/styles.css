@@ -752,3 +752,19 @@ vaadin-grid::part(active-trip first-column-cell) {
 .stat-tone-error {
   color: var(--aura-red-text);
 }
+
+/* Welcome block at the top of the overview: a title, then a sentence. */
+.overview-welcome {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.overview-welcome > span:first-child {
+  font-size: var(--aura-font-size-xl);
+  font-weight: var(--aura-font-weight-semibold);
+}
+
+.overview-welcome > span:last-child {
+  color: var(--vaadin-text-color-secondary);
+}
