@@ -42,9 +42,10 @@ jobs:
           java-version: 25
 
       - name: set-up-node
+        # The current Node LTS line, resolved on every run.
         uses: actions/setup-node@v7
         with:
-          node-version: 26
+          node-version: 'lts/*'
           check-latest: true
 
       - name: set-up-pnpm
