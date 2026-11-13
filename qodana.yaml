@@ -6,7 +6,41 @@ linter: qodana-jvm-community
 profile:
   name: qodana.recommended
 
+plugins:
+  - id: Docker
+  - id: org.jetbrains.plugins.yaml
+  # Third-party Cloud (IaC) Security plugin; provides the docker-compose/Kubernetes
+  # inspections listed below.
+  - id: dev.protsenko.security-linter
+
 include:
+  # --- Docker Compose and Kubernetes (YAML) -----------------------------------
+  - name: DockerCompose
+  - name: NonRootContainer
+  - name: InsecureCapabilities
+  - name: HostNetworkPidIpc
+  - name: PrivilegedContainers
+  - name: HostPathVolumes
+  - name: HostPorts
+  - name: AppArmorOverride
+  - name: SettingSELinux
+  - name: InsecureProcMount
+  - name: SeccompProfile
+  - name: InsecureSysctls
+  - name: DisallowedVolumeType
+
+  # --- Dockerfile -------------------------------------------------------------
+  - name: DockerfileCmdAndEntrypoint
+  - name: DockerfileCopyAndAdd
+  - name: DockerFileEnv
+  - name: DockerfileExpose
+  - name: DockerfileFrom
+  - name: DockerfileHealthCheck
+  - name: DockerfileMaintainer
+  - name: DockerfileRun
+  - name: DockerfileUser
+  - name: DockerfileWorkdir
+
   # --- Text, language and encoding --------------------------------------------
   - name: SpellCheckingInspection
   - name: LanguageDetectionInspection
