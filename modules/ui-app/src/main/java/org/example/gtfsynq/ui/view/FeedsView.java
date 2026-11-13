@@ -12,14 +12,14 @@ import org.example.gtfsynq.ui.component.Columns;
 import org.example.gtfsynq.ui.component.LazyGrid;
 import org.example.gtfsynq.ui.component.PageHeader;
 
-/** One current static feed revision per feed. */
+/** Static feeds (current revision) and polled realtime feeds (latest poll). */
 @Route(value = "feeds", layout = MainLayout.class)
 public class FeedsView extends VerticalLayout implements HasDynamicTitle {
 
     @Inject
     public FeedsView(GtfsQueryClient client) {
         var table = new LazyGrid<StaticFeed>(
-                query -> client.staticFeeds(query.page(), query.size()),
+                query -> client.staticFeeds(query.page(), query.size(), true),
                 "loadedAt",
                 SortDirection.DESCENDING,
                 Columns::feeds);

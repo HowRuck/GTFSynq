@@ -81,8 +81,15 @@ public class GtfsQueryClient {
     }
 
     public PagedResult<StaticFeed> staticFeeds(int page, int size) {
-        var request =
-                StaticFeedsRequest.newBuilder().setPage(page).setSize(size).build();
+        return staticFeeds(page, size, false);
+    }
+
+    public PagedResult<StaticFeed> staticFeeds(int page, int size, boolean includeRealtime) {
+        var request = StaticFeedsRequest.newBuilder()
+                .setPage(page)
+                .setSize(size)
+                .setIncludeRealtime(includeRealtime)
+                .build();
         return call(() -> {
             var reply = stub().listStaticFeeds(request);
             return page(reply.getItemsList(), reply.getPage());

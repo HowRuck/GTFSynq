@@ -228,7 +228,7 @@ no datasource and never calls the REST API.
 | Page | Path | Contents |
 |---|---|---|
 | Overview | `/` | Row counts for static feeds, routes, stops, trips and live updates, plus the most recent static feed revisions |
-| Static Feeds | `/feeds` | One current revision per feed: agency, digest, size, object key, object and source ETags, upstream Last-Modified, source, ingestion and load times |
+| Feeds | `/feeds` | Static feeds (one current revision each) and polled realtime feeds (latest poll), with a kind and poll status column: agency, digest, size, object key, object and source ETags, upstream Last-Modified, source, ingestion and load times |
 | Routes | `/routes` | Static routes with a feed filter and search |
 | Stops | `/stops` | Stops and stations with coordinates, location type and parent station |
 | Trips | `/trips` | Trips with their route, service and direction |
@@ -451,6 +451,12 @@ feeds; the missing side is simply skipped.
 Conditional validators are held in memory per feed and tied to the configured URL. After a
 restart the first poll transfers the archive once more; the content-addressed store recognises
 the digest and nothing is re-uploaded or republished.
+
+GTFS-RT polls are conditional too: the realtime poller sends `If-None-Match` / `If-Modified-Since`
+from the last successfully parsed response (held in memory) and skips parsing on `304`. After
+every poll it publishes a `RealtimeFeedPolled` event (status, ETag, Last-Modified, size) to the
+`gtfs-realtime-feed-state` topic; `store-app` upserts it into `realtime_feed_state`, and the
+Feeds page lists those rows beside the static feeds with a `Kind` column.
 
 When the digest of a polled archive already exists in the bucket, the upload and the event
 are both skipped: downstream consumers are only woken up by an actual revision change.

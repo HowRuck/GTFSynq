@@ -38,6 +38,14 @@ public final class Columns {
 
     public static void feeds(Grid<StaticFeed> grid) {
         grid.addColumn(feed -> UiFormat.text(feed.getFeedId())).setHeader(grid.getTranslation("column.feed"));
+        grid.addColumn(feed ->
+                        grid.getTranslation("feed.kind." + (feed.getKind().isEmpty() ? "static" : feed.getKind())))
+                .setHeader(grid.getTranslation("column.kind"));
+        grid.addColumn(feed -> feed.hasPollStatus()
+                        ? grid.getTranslation(
+                                "feed.pollStatus." + feed.getPollStatus().name())
+                        : UiFormat.NOT_AVAILABLE)
+                .setHeader(grid.getTranslation("column.pollStatus"));
         grid.addColumn(feed -> UiFormat.shortHash(feed.getSha256())).setHeader(grid.getTranslation("column.sha256"));
         grid.addColumn(feed -> UiFormat.bytes(feed.getSizeBytes())).setHeader(grid.getTranslation("column.size"));
         grid.addColumn(StaticFeed::getObjectKey).setHeader(grid.getTranslation("column.objectKey"));

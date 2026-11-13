@@ -14,6 +14,7 @@ import org.example.gtfsynq.api.dto.StopTimeUpdateDto;
 import org.example.gtfsynq.api.dto.TripDto;
 import org.example.gtfsynq.api.dto.TripMarkerDto;
 import org.example.gtfsynq.api.dto.TripUpdateDto;
+import org.example.gtfsynq.shared.protocol.PollStatus;
 import org.example.gtfsynq.shared.protocol.query.OverviewReply;
 import org.example.gtfsynq.shared.protocol.query.PageInfo;
 import org.example.gtfsynq.shared.protocol.query.Route;
@@ -58,11 +59,13 @@ final class GtfsQueryMapper {
                     .setSizeBytes(feed.sizeBytes())
                     .setIngestedAt(timestamp(feed.ingestedAt()))
                     .setLoadedAt(timestamp(feed.loadedAt()))
-                    .addAllAgencyNames(feed.agencyNames());
+                    .addAllAgencyNames(feed.agencyNames())
+                    .setKind(feed.kind());
             setIfPresent(feed.sourceUrl(), item::setSourceUrl);
             setIfPresent(feed.objectEtag(), item::setObjectEtag);
             setIfPresent(feed.sourceEtag(), item::setSourceEtag);
             setIfPresent(feed.sourceLastModified(), item::setSourceLastModified);
+            setIfPresent(feed.pollStatus(), status -> item.setPollStatus(PollStatus.valueOf("POLL_STATUS_" + status)));
             reply.addItems(item);
         }
         return reply.build();

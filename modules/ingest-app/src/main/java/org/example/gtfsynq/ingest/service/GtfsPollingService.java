@@ -19,9 +19,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gtfsynq.ingest.adapter.inbound.http.StaticFeedValidators;
 import org.example.gtfsynq.ingest.adapter.inbound.protobuf.GtfsNativeFilter;
+import org.example.gtfsynq.ingest.adapter.outbound.kafka.GtfsRealtimeFeedStateKafkaProducer;
 import org.example.gtfsynq.ingest.config.HttpTimeouts;
 import org.example.gtfsynq.ingest.service.exception.GtfsIngestionException;
 import org.example.gtfsynq.shared.protocol.BinaryFeedEntityWithMetadata;
+import org.example.gtfsynq.shared.protocol.PollStatus;
+import org.example.gtfsynq.shared.protocol.RealtimeFeedPolled;
 import org.example.gtfsynq.shared.util.SizeFormat;
 
 @ApplicationScoped
@@ -33,6 +36,7 @@ public class GtfsPollingService {
     private final HttpClient httpClient;
     private final HttpTimeouts httpTimeouts;
     private final GtfsNativeFilter nativeFilter;
+    private final GtfsRealtimeFeedStateKafkaProducer feedStateProducer;
 
     /**
      * ETag / Last-Modified of the last successfully parsed response per feed. Kept in memory only:
@@ -80,6 +84,7 @@ public class GtfsPollingService {
 
             if (statusCode == 304) {
                 log.info("Feed {} not modified (etag={}, lastModified={})", feedId, known.etag(), known.lastModified());
+                publishState(feedId, feedUrl, PollStatus.POLL_STATUS_NOT_MODIFIED, 0, known);
                 return List.of();
             }
 
@@ -91,11 +96,13 @@ public class GtfsPollingService {
                         feedId,
                         Optional.ofNullable(retryAfter).orElse("unknown"));
 
+                publishState(feedId, feedUrl, PollStatus.POLL_STATUS_RATE_LIMITED, 0, null);
                 return null;
             }
 
             if (statusCode < 200 || statusCode >= 300) {
                 log.warn("Unexpected HTTP {} for {}", statusCode, feedId);
+                publishState(feedId, feedUrl, PollStatus.POLL_STATUS_HTTP_ERROR, 0, null);
                 return null;
             }
 
@@ -111,12 +118,14 @@ public class GtfsPollingService {
                 } else {
                     validators.put(validatorKey, received);
                 }
+                publishState(feedId, feedUrl, PollStatus.POLL_STATUS_OK, feedBytes.length, received);
                 return entities;
             } finally {
                 log.debug("Processed {} in {} ms", feedId, System.currentTimeMillis() - startTime);
             }
         } catch (IOException e) {
             log.error("I/O error polling feed {}: {}", feedId, e.getMessage());
+            publishState(feedId, feedUrl, PollStatus.POLL_STATUS_ERROR, 0, null);
             return null;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -124,11 +133,30 @@ public class GtfsPollingService {
             return null;
         } catch (GtfsIngestionException e) {
             log.error("Ingestion error polling feed {}: {}", feedId, e.getMessage());
+            publishState(feedId, feedUrl, PollStatus.POLL_STATUS_ERROR, 0, null);
             return null;
         } catch (RuntimeException e) {
             log.error("Unexpected error polling feed {}: {}", feedId, e.getMessage(), e);
+            publishState(feedId, feedUrl, PollStatus.POLL_STATUS_ERROR, 0, null);
             return null;
         }
+    }
+
+    private void publishState(
+            String feedId, String feedUrl, PollStatus status, long sizeBytes, StaticFeedValidators v) {
+        var event = RealtimeFeedPolled.newBuilder()
+                .setFeedId(feedId)
+                .setSourceUrl(feedUrl)
+                .setPolledAtEpochSeconds(java.time.Instant.now().getEpochSecond())
+                .setStatus(status)
+                .setSizeBytes(sizeBytes);
+        if (v != null && v.etag() != null) {
+            event.setSourceEtag(v.etag());
+        }
+        if (v != null && v.lastModified() != null) {
+            event.setSourceLastModified(v.lastModified());
+        }
+        feedStateProducer.send(event.build());
     }
 
     private HttpRequest request(String feedUrl) {

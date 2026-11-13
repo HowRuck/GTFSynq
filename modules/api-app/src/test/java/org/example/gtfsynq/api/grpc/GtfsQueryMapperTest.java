@@ -167,6 +167,31 @@ class GtfsQueryMapperTest {
         assertEquals("Mon, 12 Oct 2026 10:15:00 GMT", feed.getSourceLastModified());
     }
 
+    @Test
+    void mapsKindAndPollStatusOnRealtimeFeeds() {
+        var feed = new StaticFeedDto(
+                "feed",
+                "",
+                "",
+                "",
+                "https://example.com/rt.pb",
+                null,
+                "\"etag\"",
+                null,
+                10,
+                null,
+                null,
+                List.of(),
+                "realtime",
+                "NOT_MODIFIED");
+        var item = GtfsQueryMapper.staticFeedsReply(new PageResponse<>(List.of(feed), 0, 25, 1, 1))
+                .getItems(0);
+
+        assertEquals("realtime", item.getKind());
+        assertEquals(org.example.gtfsynq.shared.protocol.PollStatus.POLL_STATUS_NOT_MODIFIED, item.getPollStatus());
+        assertEquals("\"etag\"", item.getSourceEtag());
+    }
+
     private static TripUpdateDto tripUpdateWithPosition(double lat, double lon, String stopName) {
         return new TripUpdateDto(
                 1,
@@ -209,7 +234,9 @@ class GtfsQueryMapperTest {
                 1024,
                 OffsetDateTime.parse("2026-10-23T10:00:00Z"),
                 OffsetDateTime.parse("2026-10-23T10:01:00Z"),
-                agencyNames);
+                agencyNames,
+                "static",
+                null);
         return new PageResponse<>(List.of(feed), 0, 25, 1, 1);
     }
 

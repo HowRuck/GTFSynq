@@ -95,6 +95,7 @@ gtfsynq:
   kafka:
     trip-updates-topic: gtfs-trip-updates
     static-feeds-topic: gtfs-static-feeds
+    realtime-feed-state-topic: gtfs-realtime-feed-state
 
   # ---- Polling -------------------------------------------------------------
   # Durations; the realtime and static feeds run on independent schedules.

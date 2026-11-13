@@ -143,6 +143,19 @@ mp:
         throttled:
           unprocessed-record-max-age:
             ms: 1800000
+      # Poll outcomes of GTFS-RT feeds (validators and status), shown beside the static feeds.
+      gtfs-realtime-feed-state:
+        connector: smallrye-kafka
+        topic: gtfs-realtime-feed-state
+        group:
+          id: gtfsynq-store-realtime-state
+        auto:
+          offset:
+            reset: earliest
+        key:
+          deserializer: org.apache.kafka.common.serialization.StringDeserializer
+        value:
+          deserializer: org.apache.kafka.common.serialization.ByteArrayDeserializer
 
 gtfsynq:
   # ---- Static archive storage (read path) ----------------------------------

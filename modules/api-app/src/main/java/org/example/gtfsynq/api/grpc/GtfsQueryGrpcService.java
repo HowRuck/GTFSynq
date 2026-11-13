@@ -83,7 +83,8 @@ public class GtfsQueryGrpcService extends GtfsQueryServiceGrpc.GtfsQueryServiceI
     public void listStaticFeeds(StaticFeedsRequest request, StreamObserver<StaticFeedsReply> observer) {
         unary(
                 observer,
-                () -> GtfsQueryMapper.staticFeedsReply(repository.staticFeeds(request.getPage(), request.getSize())));
+                () -> GtfsQueryMapper.staticFeedsReply(
+                        repository.staticFeeds(request.getPage(), request.getSize(), request.getIncludeRealtime())));
     }
 
     @Override

@@ -238,12 +238,17 @@ public class GtfsQueryRepository {
     }
 
     public PageResponse<StaticFeedDto> staticFeeds(int page, int size) {
+        return staticFeeds(page, size, false);
+    }
+
+    public PageResponse<StaticFeedDto> staticFeeds(int page, int size, boolean includeRealtime) {
         // A feed may describe several agencies, so they are aggregated into one array beside the
         // feed's row instead of widening the page by one row per agency.
         String select = """
             SELECT f.feed_id::text, f.sha256, f.bucket, f.object_key, f.source_url,
                    f.object_etag, f.source_etag, f.source_last_modified, f.size_bytes,
-                   f.ingested_at, f.loaded_at, a.agency_names
+                   f.ingested_at, f.loaded_at, a.agency_names,
+                   'static' AS kind, NULL::text AS poll_status
             FROM static_feeds f
             LEFT JOIN LATERAL (
                 SELECT array_agg(agency_name ORDER BY agency_id) AS agency_names
@@ -252,11 +257,25 @@ public class GtfsQueryRepository {
             ) a ON TRUE
             """;
         String count = "SELECT count(*) FROM static_feeds";
+        if (includeRealtime) {
+            // Polled GTFS-RT feeds have no archive: the archive columns are empty, ingested_at is
+            // the last poll that brought a new body and loaded_at the last poll of any outcome.
+            select = "SELECT * FROM (" + select + """
+                    UNION ALL
+                    SELECT r.feed_id, '', '', '', r.source_url,
+                           NULL, r.source_etag, r.source_last_modified, r.size_bytes,
+                           COALESCE(r.last_changed_at, r.last_polled_at), r.last_polled_at, NULL::text[],
+                           'realtime', r.last_status
+                    FROM realtime_feed_state r
+                ) feeds\
+                """;
+            count = "SELECT (SELECT count(*) FROM static_feeds) + (SELECT count(*) FROM realtime_feed_state)";
+        }
         return page(
                 select,
                 count,
                 List.of(),
-                "f.loaded_at DESC, f.feed_id ASC",
+                includeRealtime ? "loaded_at DESC, feed_id ASC" : "f.loaded_at DESC, f.feed_id ASC",
                 page,
                 size,
                 rs -> new StaticFeedDto(
@@ -271,7 +290,9 @@ public class GtfsQueryRepository {
                         rs.getLong("size_bytes"),
                         offsetDateTime(rs, "ingested_at"),
                         offsetDateTime(rs, "loaded_at"),
-                        stringList(rs, "agency_names")));
+                        stringList(rs, "agency_names"),
+                        rs.getString("kind"),
+                        rs.getString("poll_status")));
     }
 
     /**

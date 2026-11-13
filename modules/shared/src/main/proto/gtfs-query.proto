@@ -3,6 +3,7 @@ syntax = "proto3";
 package gtfsynq.query;
 
 import "google/protobuf/timestamp.proto";
+import "realtime-feed-state.proto";
 
 option java_package = "org.example.gtfsynq.shared.protocol.query";
 option java_multiple_files = true;
@@ -102,11 +103,19 @@ message StaticFeed {
   optional string source_etag = 11;
   // Upstream HTTP Last-Modified header value, verbatim. Diagnostic only.
   optional string source_last_modified = 12;
+  // "static" for archive revisions, "realtime" for polled GTFS-RT feeds. A realtime row has no
+  // sha256, bucket or object key; ingested_at is the last poll that transferred a new body and
+  // loaded_at is the last poll of any outcome.
+  string kind = 13;
+  // Outcome of the last poll; realtime rows only.
+  optional gtfsynq.realtime.PollStatus poll_status = 14;
 }
 
 message StaticFeedsRequest {
   int32 page = 1;
   int32 size = 2;
+  // Also return the polled GTFS-RT feeds, with kind = "realtime".
+  bool include_realtime = 3;
 }
 
 message StaticFeedsReply {

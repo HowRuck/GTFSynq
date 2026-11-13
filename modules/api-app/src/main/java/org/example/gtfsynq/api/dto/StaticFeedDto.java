@@ -3,7 +3,10 @@ package org.example.gtfsynq.api.dto;
 import java.time.OffsetDateTime;
 import java.util.List;
 
-/** One row from {@code static_feeds}, with the agencies that feed describes. */
+/**
+ * One row from {@code static_feeds} with the agencies that feed describes, or, when {@code kind} is
+ * {@code realtime}, one row from {@code realtime_feed_state}.
+ */
 public record StaticFeedDto(
         String feedId,
         String sha256,
@@ -16,4 +19,6 @@ public record StaticFeedDto(
         long sizeBytes,
         OffsetDateTime ingestedAt,
         OffsetDateTime loadedAt,
-        List<String> agencyNames) {}
+        List<String> agencyNames,
+        String kind,
+        String pollStatus) {}

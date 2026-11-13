@@ -29,23 +29,23 @@ class UiI18nProviderTest {
 
     @Test
     void resolvesEnglish() {
-        assertEquals("Static Feeds", provider.getTranslation("nav.feeds", Locale.ENGLISH));
+        assertEquals("Feeds", provider.getTranslation("nav.feeds", Locale.ENGLISH));
         assertEquals("Stops · GTFSynq", provider.getTranslation("document.title", Locale.ENGLISH, "Stops"));
     }
 
     @Test
     void resolvesGerman() {
-        assertEquals("Statische Feeds", provider.getTranslation("nav.feeds", Locale.GERMAN));
+        assertEquals("Feeds", provider.getTranslation("nav.feeds", Locale.GERMAN));
         assertEquals(
                 "Haltestellen · GTFSynq", provider.getTranslation("document.title", Locale.GERMAN, "Haltestellen"));
-        assertEquals("Statische Feeds", provider.getTranslation("nav.feeds", Locale.GERMANY));
+        assertEquals("Feeds", provider.getTranslation("nav.feeds", Locale.GERMANY));
     }
 
     @Test
     void resolvesFrench() {
-        assertEquals("Flux statiques", provider.getTranslation("nav.feeds", Locale.FRENCH));
+        assertEquals("Flux", provider.getTranslation("nav.feeds", Locale.FRENCH));
         assertEquals("Arrêts · GTFSynq", provider.getTranslation("document.title", Locale.FRENCH, "Arrêts"));
-        assertEquals("Flux statiques", provider.getTranslation("nav.feeds", Locale.FRANCE));
+        assertEquals("Flux", provider.getTranslation("nav.feeds", Locale.FRANCE));
     }
 
     @Test

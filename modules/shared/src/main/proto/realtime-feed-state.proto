@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package gtfsynq.realtime;
+
+option java_package = "org.example.gtfsynq.shared.protocol";
+option java_multiple_files = true;
+option java_outer_classname = "RealtimeFeedStateProtocol";
+
+// Outcome of one poll of a GTFS-RT feed.
+enum PollStatus {
+  POLL_STATUS_UNSPECIFIED = 0;
+  // A new body was downloaded and parsed.
+  POLL_STATUS_OK = 1;
+  // The origin answered 304 Not Modified.
+  POLL_STATUS_NOT_MODIFIED = 2;
+  // The origin answered 429 Too Many Requests.
+  POLL_STATUS_RATE_LIMITED = 3;
+  // The origin answered with another non-2xx status.
+  POLL_STATUS_HTTP_ERROR = 4;
+  // Transport, parsing or other failure before a usable response.
+  POLL_STATUS_ERROR = 5;
+}
+
+// Event published by the ingest app after every poll of a GTFS-RT feed. It carries the HTTP
+// cache validators the origin sent, so the feeds table can track realtime feeds beside the
+// static ones. It never carries feed content.
+message RealtimeFeedPolled {
+  // Feed source identifier, e.g. "gtfs-de".
+  string feed_id = 1;
+
+  // Upstream URL that was polled.
+  string source_url = 2;
+
+  // Time of the poll, in seconds since the epoch.
+  int64 polled_at_epoch_seconds = 3;
+
+  // Outcome of the poll.
+  PollStatus status = 4;
+
+  // Size of the downloaded body in bytes; 0 when no body was transferred.
+  uint64 size_bytes = 5;
+
+  // Upstream ETag, verbatim; empty when the origin sent none or the poll failed.
+  string source_etag = 6;
+
+  // Upstream Last-Modified, verbatim; empty when the origin sent none or the poll failed.
+  string source_last_modified = 7;
+}
