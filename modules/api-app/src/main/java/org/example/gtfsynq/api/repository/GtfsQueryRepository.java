@@ -1130,7 +1130,7 @@ public class GtfsQueryRepository {
     }
 
     private static String sortColumn(Map<String, String> allowed, String requested, String fallback) {
-        return allowed.getOrDefault(requested, fallback);
+        return requested == null ? fallback : allowed.getOrDefault(requested, fallback);
     }
 
     private static String direction(String requested) {
