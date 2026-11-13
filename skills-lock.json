@@ -61,6 +61,12 @@
       "skillPath": "java/java-conventions/SKILL.md",
       "computedHash": "7ba12d464e28e10f057637859416011acd9501e6ee8f153a6d69f0199adfdca1"
     },
+    "microsoft-docs": {
+      "source": "microsoft/skills",
+      "sourceType": "github",
+      "skillPath": ".github/skills/microsoft-docs/SKILL.md",
+      "computedHash": "ab0f71e078ec443d80314fd7b7adbeb566d24247ed3b76e6134d164e65d9b6e4"
+    },
     "migrate-postgres-tables-to-hypertables": {
       "source": "timescale/pg-aiguide",
       "sourceType": "github",
