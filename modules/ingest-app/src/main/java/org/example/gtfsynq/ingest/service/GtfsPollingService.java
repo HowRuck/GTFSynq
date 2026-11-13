@@ -10,6 +10,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -147,7 +148,7 @@ public class GtfsPollingService {
         var event = RealtimeFeedPolled.newBuilder()
                 .setFeedId(feedId)
                 .setSourceUrl(feedUrl)
-                .setPolledAtEpochSeconds(java.time.Instant.now().getEpochSecond())
+                .setPolledAtEpochSeconds(Instant.now().getEpochSecond())
                 .setStatus(status)
                 .setSizeBytes(sizeBytes);
         if (v != null && v.etag() != null) {

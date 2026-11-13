@@ -22,4 +22,4 @@ CREATE TABLE IF NOT EXISTS realtime_feed_state (
     last_changed_at      TIMESTAMPTZ,
     last_polled_at       TIMESTAMPTZ NOT NULL,
     PRIMARY KEY (feed_id, source_url)
-);
+) WITH (fillfactor = 90);

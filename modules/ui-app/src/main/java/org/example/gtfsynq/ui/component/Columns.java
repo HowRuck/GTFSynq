@@ -41,11 +41,7 @@ public final class Columns {
         grid.addColumn(feed ->
                         grid.getTranslation("feed.kind." + (feed.getKind().isEmpty() ? "static" : feed.getKind())))
                 .setHeader(grid.getTranslation("column.kind"));
-        grid.addColumn(feed -> feed.hasPollStatus()
-                        ? grid.getTranslation(
-                                "feed.pollStatus." + feed.getPollStatus().name())
-                        : UiFormat.NOT_AVAILABLE)
-                .setHeader(grid.getTranslation("column.pollStatus"));
+        grid.addComponentColumn(feed -> pollStatus(grid, feed)).setHeader(grid.getTranslation("column.pollStatus"));
         grid.addColumn(feed -> UiFormat.shortHash(feed.getSha256())).setHeader(grid.getTranslation("column.sha256"));
         grid.addColumn(feed -> UiFormat.bytes(feed.getSizeBytes())).setHeader(grid.getTranslation("column.size"));
         grid.addColumn(StaticFeed::getObjectKey).setHeader(grid.getTranslation("column.objectKey"));
@@ -216,6 +212,25 @@ public final class Columns {
         Column<?>[] columns =
                 java.util.Arrays.stream(columnKeys).map(grid::getColumnByKey).toArray(Column<?>[]::new);
         row.join(columns).setText(grid.getTranslation(groupKey));
+    }
+
+    /** Last poll outcome of a realtime feed as a badge; static feeds have none. */
+    private static Component pollStatus(Grid<StaticFeed> grid, StaticFeed feed) {
+        if (!feed.hasPollStatus()) {
+            return new Span(UiFormat.NOT_AVAILABLE);
+        }
+        var status = feed.getPollStatus();
+        var badge = new Badge(grid.getTranslation("feed.pollStatus." + status.name()));
+        badge.addThemeVariants(BadgeVariant.SMALL);
+        switch (status) {
+            case POLL_STATUS_OK -> badge.addThemeVariants(BadgeVariant.SUCCESS);
+            case POLL_STATUS_RATE_LIMITED -> badge.addThemeVariants(BadgeVariant.WARNING);
+            case POLL_STATUS_HTTP_ERROR, POLL_STATUS_ERROR -> badge.addThemeVariants(BadgeVariant.ERROR);
+            default -> {
+                // Not modified is the quiet default colour: nothing new, nothing wrong.
+            }
+        }
+        return badge;
     }
 
     /** Trip status as a badge; the hover title explains the statuses that are only inferred. */

@@ -11,6 +11,7 @@ import org.example.gtfsynq.api.dto.StaticFeedDto;
 import org.example.gtfsynq.api.dto.StopTimeUpdateDto;
 import org.example.gtfsynq.api.dto.TripMarkerDto;
 import org.example.gtfsynq.api.dto.TripUpdateDto;
+import org.example.gtfsynq.shared.protocol.PollStatus;
 import org.junit.jupiter.api.Test;
 
 class GtfsQueryMapperTest {
@@ -188,7 +189,7 @@ class GtfsQueryMapperTest {
                 .getItems(0);
 
         assertEquals("realtime", item.getKind());
-        assertEquals(org.example.gtfsynq.shared.protocol.PollStatus.POLL_STATUS_NOT_MODIFIED, item.getPollStatus());
+        assertEquals(PollStatus.POLL_STATUS_NOT_MODIFIED, item.getPollStatus());
         assertEquals("\"etag\"", item.getSourceEtag());
     }
 
