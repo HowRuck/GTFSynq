@@ -61,6 +61,17 @@ message OverviewReply {
   int64 live_stop_time_updates = 6;
   // Last time a trip update was seen, when any is held; drives the console's freshness line.
   optional google.protobuf.Timestamp last_trip_update_at = 7;
+  // Health of the static feeds and of the realtime feeds, by the state of their last poll.
+  FeedHealthCounts static_health = 8;
+  FeedHealthCounts realtime_health = 9;
+}
+
+// How many feeds of one kind are in each state.
+message FeedHealthCounts {
+  int64 healthy = 1;
+  int64 warning = 2;
+  int64 error = 3;
+  int64 unknown = 4;
 }
 
 message FeedIdsRequest {}

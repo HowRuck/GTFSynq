@@ -21,6 +21,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.sql.DataSource;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.example.gtfsynq.api.dto.FeedHealthDto;
 import org.example.gtfsynq.api.dto.OverviewDto;
 import org.example.gtfsynq.api.dto.PageResponse;
 import org.example.gtfsynq.api.dto.RouteDto;
@@ -213,7 +214,9 @@ public class GtfsQueryRepository {
                     rs.getLong(4),
                     rs.getLong(5),
                     rs.getLong(6),
-                    rs.getObject(7, OffsetDateTime.class));
+                    rs.getObject(7, OffsetDateTime.class),
+                    feedHealth(connection, "static"),
+                    feedHealth(connection, "realtime"));
             cachedOverview = result;
             cachedOverviewAt = now;
             return result;
@@ -221,6 +224,54 @@ public class GtfsQueryRepository {
             throw new IllegalStateException("Failed to load overview", e);
         }
     }
+
+    /**
+     * Counts the feeds of one kind by the state of their last poll. The rules match the health tiles
+     * on the overview: a failed poll is an error, a rate limit or a poll older than 15 minutes is a
+     * warning, and a feed that was never polled is unknown.
+     */
+    private static FeedHealthDto feedHealth(Connection connection, String kind) throws SQLException {
+        // Static feeds: the latest poll of each loaded feed. Realtime feeds: their own poll rows.
+        String sql = switch (kind) {
+            case "static" -> """
+                SELECT %s AS state, count(*)
+                FROM static_feeds f
+                LEFT JOIN LATERAL (
+                    SELECT last_status, last_polled_at
+                    FROM feed_poll_state
+                    WHERE kind = 'static' AND feed_id = f.feed_id::text
+                    ORDER BY last_polled_at DESC
+                    LIMIT 1
+                ) p ON TRUE
+                GROUP BY 1
+                """.formatted(FEED_STATE);
+            case "realtime" -> """
+                SELECT %s AS state, count(*)
+                FROM feed_poll_state
+                WHERE kind = 'realtime'
+                GROUP BY 1
+                """.formatted(FEED_STATE);
+            default -> throw new IllegalArgumentException("Unknown feed kind " + kind);
+        };
+        Map<String, Long> counts = new HashMap<>();
+        try (PreparedStatement statement = connection.prepareStatement(sql);
+                ResultSet rs = statement.executeQuery()) {
+            while (rs.next()) {
+                counts.put(rs.getString(1), rs.getLong(2));
+            }
+        }
+        return FeedHealthDto.of(counts);
+    }
+
+    /** Health state of a feed from its last poll; uses the bare poll columns, so it reads either query. */
+    private static final String FEED_STATE = """
+        CASE
+            WHEN last_status IS NULL THEN 'unknown'
+            WHEN last_status IN ('HTTP_ERROR', 'ERROR') THEN 'error'
+            WHEN last_status = 'RATE_LIMITED' OR last_polled_at < now() - interval '15 minutes' THEN 'warning'
+            ELSE 'healthy'
+        END\
+        """;
 
     public List<String> feedIds() {
         // Probe the five enum values instead of scanning the (potentially large) hot table.

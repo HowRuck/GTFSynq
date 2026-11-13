@@ -717,3 +717,10 @@ vaadin-grid::part(active-trip first-column-cell) {
 .feed-tile-stale {
   color: var(--aura-orange-text);
 }
+
+/* Breakdown line under a KPI value, such as the health of the feeds behind a count. */
+.stat-detail {
+  color: var(--vaadin-text-color-secondary);
+  font-size: var(--aura-font-size-s);
+  font-variant-numeric: tabular-nums;
+}

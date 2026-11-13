@@ -22,6 +22,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import org.example.gtfsynq.shared.protocol.query.FeedHealthCounts;
 import org.example.gtfsynq.shared.protocol.query.OverviewReply;
 import org.example.gtfsynq.shared.protocol.query.StaticFeed;
 import org.example.gtfsynq.ui.MainLayout;
@@ -65,6 +66,7 @@ public class OverviewView extends VerticalLayout implements HasDynamicTitle {
 
         statCards = List.of(
                 new StatCard(getTranslation("overview.stats.staticFeeds")),
+                new StatCard(getTranslation("overview.stats.realtimeFeeds")),
                 new StatCard(getTranslation("overview.stats.routes")),
                 new StatCard(getTranslation("overview.stats.stops")),
                 new StatCard(getTranslation("overview.stats.trips")),
@@ -158,8 +160,10 @@ public class OverviewView extends VerticalLayout implements HasDynamicTitle {
     }
 
     private void showCounts(OverviewReply overview) {
+        var realtimeFeeds = totalFeeds(overview.getRealtimeHealth());
         var counts = new long[] {
             overview.getStaticFeeds(),
+            realtimeFeeds,
             overview.getRoutes(),
             overview.getStops(),
             overview.getTrips(),
@@ -169,7 +173,22 @@ public class OverviewView extends VerticalLayout implements HasDynamicTitle {
         for (var i = 0; i < counts.length; i++) {
             statCards.get(i).show(counts[i], UiFormat.count(counts[i]));
         }
+        statCards.get(0).showDetail(healthText(overview.getStaticHealth()));
+        statCards.get(1).showDetail(healthText(overview.getRealtimeHealth()));
         showFreshness(overview.hasLastTripUpdateAt() ? UiFormat.instant(overview.getLastTripUpdateAt()) : null);
+    }
+
+    private static long totalFeeds(FeedHealthCounts health) {
+        return health.getHealthy() + health.getWarning() + health.getError() + health.getUnknown();
+    }
+
+    /** "12 healthy · 1 warning · 0 error", with the feeds never polled appended when there are any. */
+    private String healthText(FeedHealthCounts health) {
+        var text =
+                getTranslation("overview.health.summary", health.getHealthy(), health.getWarning(), health.getError());
+        return health.getUnknown() > 0
+                ? text + " · " + getTranslation("overview.health.unknown", health.getUnknown())
+                : text;
     }
 
     /** Replaces the tiles; each tile is built here, on the UI thread, so its translations resolve. */

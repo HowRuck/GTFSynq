@@ -44,6 +44,8 @@ public class StatCard extends Card {
 
     private final Span amount = new Span(UiFormat.NOT_AVAILABLE);
 
+    private final Span detail = new Span();
+
     private final Div change = new Div();
 
     private Long shown;
@@ -52,10 +54,12 @@ public class StatCard extends Card {
         var title = new Span(label);
         title.addClassName("stat-label");
         amount.addClassName("stat-value");
+        detail.addClassName("stat-detail");
+        detail.setVisible(false);
         change.addClassName("stat-change");
         change.setVisible(false);
 
-        var content = new VerticalLayout(title, amount, change);
+        var content = new VerticalLayout(title, amount, detail, change);
         content.setPadding(false);
         content.setSpacing(false);
         add(content);
@@ -76,6 +80,16 @@ public class StatCard extends Card {
             showChange(value - shown);
         }
         shown = value;
+    }
+
+    /**
+     * Shows a line of detail under the value, such as a breakdown; an empty text hides it.
+     *
+     * @param text the detail line
+     */
+    public void showDetail(String text) {
+        detail.setText(text);
+        detail.setVisible(!text.isEmpty());
     }
 
     private void showChange(long difference) {

@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
+import org.example.gtfsynq.api.dto.FeedHealthDto;
 import org.example.gtfsynq.api.dto.OverviewDto;
 import org.example.gtfsynq.api.dto.PageResponse;
 import org.example.gtfsynq.api.dto.StaticFeedDto;
@@ -170,11 +172,35 @@ class GtfsQueryMapperTest {
     }
 
     @Test
+    void mapsStaticAndRealtimeHealthSeparately() {
+        var overview = new OverviewDto(
+                3,
+                0,
+                0,
+                0,
+                0,
+                0,
+                null,
+                new FeedHealthDto(2, 1, 0, 0),
+                FeedHealthDto.of(Map.of("healthy", 4L, "error", 2L)));
+
+        var reply = GtfsQueryMapper.toReply(overview);
+
+        assertEquals(2, reply.getStaticHealth().getHealthy());
+        assertEquals(1, reply.getStaticHealth().getWarning());
+        assertEquals(4, reply.getRealtimeHealth().getHealthy());
+        assertEquals(2, reply.getRealtimeHealth().getError());
+        assertEquals(0, reply.getRealtimeHealth().getWarning());
+    }
+
+    @Test
     void mapsLastTripUpdateOnlyWhenOneIsHeld() {
         var seen = OffsetDateTime.parse("2026-11-13T12:00:00Z");
 
-        var held = GtfsQueryMapper.toReply(new OverviewDto(1, 2, 3, 4, 5, 6, seen));
-        var none = GtfsQueryMapper.toReply(new OverviewDto(1, 2, 3, 4, 5, 6, null));
+        var held = GtfsQueryMapper.toReply(
+                new OverviewDto(1, 2, 3, 4, 5, 6, seen, FeedHealthDto.of(Map.of()), FeedHealthDto.of(Map.of())));
+        var none = GtfsQueryMapper.toReply(
+                new OverviewDto(1, 2, 3, 4, 5, 6, null, FeedHealthDto.of(Map.of()), FeedHealthDto.of(Map.of())));
 
         assertEquals(seen.toEpochSecond(), held.getLastTripUpdateAt().getSeconds());
         assertFalse(none.hasLastTripUpdateAt());

@@ -5,6 +5,7 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.function.Consumer;
+import org.example.gtfsynq.api.dto.FeedHealthDto;
 import org.example.gtfsynq.api.dto.OverviewDto;
 import org.example.gtfsynq.api.dto.PageResponse;
 import org.example.gtfsynq.api.dto.RouteDto;
@@ -15,6 +16,7 @@ import org.example.gtfsynq.api.dto.TripDto;
 import org.example.gtfsynq.api.dto.TripMarkerDto;
 import org.example.gtfsynq.api.dto.TripUpdateDto;
 import org.example.gtfsynq.shared.protocol.PollStatus;
+import org.example.gtfsynq.shared.protocol.query.FeedHealthCounts;
 import org.example.gtfsynq.shared.protocol.query.OverviewReply;
 import org.example.gtfsynq.shared.protocol.query.PageInfo;
 import org.example.gtfsynq.shared.protocol.query.Route;
@@ -46,7 +48,18 @@ final class GtfsQueryMapper {
                 .setLiveTripUpdates(dto.liveTripUpdates())
                 .setLiveStopTimeUpdates(dto.liveStopTimeUpdates());
         setIfPresent(dto.lastTripUpdateAt(), at -> reply.setLastTripUpdateAt(timestamp(at)));
+        reply.setStaticHealth(healthCounts(dto.staticHealth()));
+        reply.setRealtimeHealth(healthCounts(dto.realtimeHealth()));
         return reply.build();
+    }
+
+    private static FeedHealthCounts healthCounts(FeedHealthDto health) {
+        return FeedHealthCounts.newBuilder()
+                .setHealthy(health.healthy())
+                .setWarning(health.warning())
+                .setError(health.error())
+                .setUnknown(health.unknown())
+                .build();
     }
 
     static StaticFeedsReply staticFeedsReply(PageResponse<StaticFeedDto> page) {
