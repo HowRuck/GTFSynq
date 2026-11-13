@@ -8,6 +8,7 @@ import com.vaadin.flow.component.badge.Badge;
 import com.vaadin.flow.component.badge.BadgeVariant;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.JustifyContentMode;
@@ -51,11 +52,25 @@ public class OverviewView extends VerticalLayout implements HasDynamicTitle {
 
     private final GtfsQueryClient client;
 
-    private final List<StatCard> statCards;
+    private final StatCard staticFeedsCard = new StatCard(getTranslation("overview.stats.staticFeeds"));
+
+    private final StatCard routesCard = new StatCard(getTranslation("overview.stats.routes"));
+
+    private final StatCard stopsCard = new StatCard(getTranslation("overview.stats.stops"));
+
+    private final StatCard tripsCard = new StatCard(getTranslation("overview.stats.trips"));
+
+    private final StatCard realtimeFeedsCard = new StatCard(getTranslation("overview.stats.realtimeFeeds"));
+
+    private final StatCard liveTripUpdatesCard = new StatCard(getTranslation("overview.stats.liveTripUpdates"));
+
+    private final StatCard liveStopTimeUpdatesCard = new StatCard(getTranslation("overview.stats.liveStopTimeUpdates"));
 
     private final Badge freshness = new Badge();
 
-    private final Div tiles = new Div();
+    private final Div staticTiles = new Div();
+
+    private final Div realtimeTiles = new Div();
 
     private Registration pollRegistration;
 
@@ -64,36 +79,52 @@ public class OverviewView extends VerticalLayout implements HasDynamicTitle {
         this.client = client;
         setSizeFull();
 
-        statCards = List.of(
-                new StatCard(getTranslation("overview.stats.staticFeeds")),
-                new StatCard(getTranslation("overview.stats.realtimeFeeds")),
-                new StatCard(getTranslation("overview.stats.routes")),
-                new StatCard(getTranslation("overview.stats.stops")),
-                new StatCard(getTranslation("overview.stats.trips")),
-                new StatCard(getTranslation("overview.stats.liveTripUpdates")),
-                new StatCard(getTranslation("overview.stats.liveStopTimeUpdates")));
-        var stats = new Div();
-        stats.addClassName("stat-grid");
-        stats.add(statCards.toArray(Component[]::new));
-
-        tiles.addClassName("feed-tile-grid");
-
-        var sectionHeader = new HorizontalLayout(
-                new H2(getTranslation("overview.section.health")),
-                new RouterLink(getTranslation("overview.link.allFeeds"), FeedsView.class));
-        sectionHeader.setPadding(false);
-        sectionHeader.setWidthFull();
-        sectionHeader.setAlignItems(Alignment.CENTER);
-        sectionHeader.setJustifyContentMode(JustifyContentMode.BETWEEN);
-
+        staticTiles.addClassName("feed-tile-grid");
+        realtimeTiles.addClassName("feed-tile-grid");
         freshness.setVisible(false);
+
+        var staticSection = section(
+                getTranslation("overview.section.static"),
+                statGrid(staticFeedsCard, routesCard, stopsCard, tripsCard),
+                healthHeader(getTranslation("overview.section.staticHealth")),
+                staticTiles);
+        var realtimeSection = section(
+                getTranslation("overview.section.realtime"),
+                freshness,
+                statGrid(realtimeFeedsCard, liveTripUpdatesCard, liveStopTimeUpdatesCard),
+                healthHeader(getTranslation("overview.section.realtimeHealth")),
+                realtimeTiles);
 
         add(
                 PageHeader.create(getTranslation("page.overview.title"), getTranslation("page.overview.subtitle")),
-                freshness,
-                stats,
-                sectionHeader,
-                tiles);
+                staticSection,
+                realtimeSection);
+    }
+
+    private static Div statGrid(StatCard... cards) {
+        var grid = new Div(cards);
+        grid.addClassName("stat-grid");
+        return grid;
+    }
+
+    private static VerticalLayout section(String title, Component... content) {
+        var layout = new VerticalLayout(new H2(title));
+        layout.add(content);
+        layout.setPadding(false);
+        layout.setSpacing(true);
+        layout.setWidthFull();
+        return layout;
+    }
+
+    /** Health subheading with a link to the full feed list. */
+    private HorizontalLayout healthHeader(String title) {
+        var header = new HorizontalLayout(
+                new H3(title), new RouterLink(getTranslation("overview.link.allFeeds"), FeedsView.class));
+        header.setPadding(false);
+        header.setWidthFull();
+        header.setAlignItems(Alignment.CENTER);
+        header.setJustifyContentMode(JustifyContentMode.BETWEEN);
+        return header;
     }
 
     @Override
@@ -160,21 +191,17 @@ public class OverviewView extends VerticalLayout implements HasDynamicTitle {
     }
 
     private void showCounts(OverviewReply overview) {
+        staticFeedsCard.show(overview.getStaticFeeds(), UiFormat.count(overview.getStaticFeeds()));
+        staticFeedsCard.showDetail(healthText(overview.getStaticHealth()));
         var realtimeFeeds = totalFeeds(overview.getRealtimeHealth());
-        var counts = new long[] {
-            overview.getStaticFeeds(),
-            realtimeFeeds,
-            overview.getRoutes(),
-            overview.getStops(),
-            overview.getTrips(),
-            overview.getLiveTripUpdates(),
-            overview.getLiveStopTimeUpdates()
-        };
-        for (var i = 0; i < counts.length; i++) {
-            statCards.get(i).show(counts[i], UiFormat.count(counts[i]));
-        }
-        statCards.get(0).showDetail(healthText(overview.getStaticHealth()));
-        statCards.get(1).showDetail(healthText(overview.getRealtimeHealth()));
+        realtimeFeedsCard.show(realtimeFeeds, UiFormat.count(realtimeFeeds));
+        realtimeFeedsCard.showDetail(healthText(overview.getRealtimeHealth()));
+        routesCard.show(overview.getRoutes(), UiFormat.count(overview.getRoutes()));
+        stopsCard.show(overview.getStops(), UiFormat.count(overview.getStops()));
+        tripsCard.show(overview.getTrips(), UiFormat.count(overview.getTrips()));
+        liveTripUpdatesCard.show(overview.getLiveTripUpdates(), UiFormat.count(overview.getLiveTripUpdates()));
+        liveStopTimeUpdatesCard.show(
+                overview.getLiveStopTimeUpdates(), UiFormat.count(overview.getLiveStopTimeUpdates()));
         showFreshness(overview.hasLastTripUpdateAt() ? UiFormat.instant(overview.getLastTripUpdateAt()) : null);
     }
 
@@ -194,8 +221,13 @@ public class OverviewView extends VerticalLayout implements HasDynamicTitle {
     /** Replaces the tiles; each tile is built here, on the UI thread, so its translations resolve. */
     private void showTiles(List<StaticFeed> feeds) {
         var now = Instant.now();
-        tiles.removeAll();
-        feeds.forEach(feed -> tiles.add(new FeedHealthTile(feed, now)));
+        staticTiles.removeAll();
+        realtimeTiles.removeAll();
+        feeds.forEach(feed -> (isRealtime(feed) ? realtimeTiles : staticTiles).add(new FeedHealthTile(feed, now)));
+    }
+
+    private static boolean isRealtime(StaticFeed feed) {
+        return "realtime".equals(feed.getKind());
     }
 
     /** Shows how long ago the newest trip update arrived, coloured by how stale it is. */
