@@ -7,6 +7,12 @@ frontend work to the matching skill under `.agents/skills/`, lists the repositor
 that apply on top of that skill, and defines the verification checklist. Load the matching skill
 before editing; where a skill's default conflicts with the development guide, the guide wins.
 
+## Git
+
+Never commit or push on your own. Leave changes in the working tree and only run `git commit`
+or `git push` when the user explicitly asks for it in that turn. A request to fix or change
+something is not a request to commit it.
+
 ## CI workflow naming
 
 Every CI workflow must use **kebab-case** for names and identifiers —
