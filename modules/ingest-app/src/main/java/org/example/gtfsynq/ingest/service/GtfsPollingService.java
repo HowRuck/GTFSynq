@@ -13,8 +13,11 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.gtfsynq.ingest.adapter.inbound.http.StaticFeedValidators;
 import org.example.gtfsynq.ingest.adapter.inbound.protobuf.GtfsNativeFilter;
 import org.example.gtfsynq.ingest.config.HttpTimeouts;
 import org.example.gtfsynq.ingest.service.exception.GtfsIngestionException;
@@ -30,6 +33,12 @@ public class GtfsPollingService {
     private final HttpClient httpClient;
     private final HttpTimeouts httpTimeouts;
     private final GtfsNativeFilter nativeFilter;
+
+    /**
+     * ETag / Last-Modified of the last successfully parsed response per feed. Kept in memory only:
+     * after a restart the first poll is unconditional.
+     */
+    private final ConcurrentMap<String, StaticFeedValidators> validators = new ConcurrentHashMap<>();
 
     public byte[] downloadToBytes(String feedUrl) {
         var startTime = System.currentTimeMillis();
@@ -64,8 +73,15 @@ public class GtfsPollingService {
         log.debug("Polling GTFS feed stream for feed {} from {}", feedId, feedUrl);
 
         try {
-            var response = httpClient.send(request(feedUrl), HttpResponse.BodyHandlers.ofByteArray());
+            var validatorKey = feedId + "\0" + feedUrl;
+            var known = validators.getOrDefault(validatorKey, StaticFeedValidators.none());
+            var response = httpClient.send(request(feedUrl, known), HttpResponse.BodyHandlers.ofByteArray());
             var statusCode = response.statusCode();
+
+            if (statusCode == 304) {
+                log.info("Feed {} not modified (etag={}, lastModified={})", feedId, known.etag(), known.lastModified());
+                return List.of();
+            }
 
             if (statusCode == 429) {
                 var retryAfter = response.headers().firstValue("Retry-After").orElse(null);
@@ -85,7 +101,17 @@ public class GtfsPollingService {
 
             try {
                 var feedBytes = response.body();
-                return parseWithRetry(feedId, feedUrl, feedBytes);
+                var entities = parseWithRetry(feedId, feedUrl, feedBytes);
+                // Remember validators only after a successful parse so a failure is retried in full.
+                var received = new StaticFeedValidators(
+                        response.headers().firstValue("ETag").orElse(null),
+                        response.headers().firstValue("Last-Modified").orElse(null));
+                if (received.isEmpty()) {
+                    validators.remove(validatorKey);
+                } else {
+                    validators.put(validatorKey, received);
+                }
+                return entities;
             } finally {
                 log.debug("Processed {} in {} ms", feedId, System.currentTimeMillis() - startTime);
             }
@@ -106,10 +132,20 @@ public class GtfsPollingService {
     }
 
     private HttpRequest request(String feedUrl) {
-        return HttpRequest.newBuilder(URI.create(feedUrl))
+        return request(feedUrl, StaticFeedValidators.none());
+    }
+
+    private HttpRequest request(String feedUrl, StaticFeedValidators known) {
+        var builder = HttpRequest.newBuilder(URI.create(feedUrl))
                 .timeout(Duration.ofMillis(httpTimeouts.readMs()))
-                .GET()
-                .build();
+                .GET();
+        if (known.etag() != null) {
+            builder.header("If-None-Match", known.etag());
+        }
+        if (known.lastModified() != null) {
+            builder.header("If-Modified-Since", known.lastModified());
+        }
+        return builder.build();
     }
 
     private List<BinaryFeedEntityWithMetadata> parseWithRetry(String id, String url, byte[] data)
