@@ -7,7 +7,6 @@ import jakarta.inject.Singleton;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
-import org.example.gtfsynq.shared.protocol.FeedKind;
 import org.example.gtfsynq.shared.protocol.FeedPolled;
 import org.example.gtfsynq.store.adapter.outbound.database.FeedPollStateRepository;
 
@@ -34,15 +33,11 @@ public class GtfsFeedPollConsumer {
                 log.error("Discarding feed poll event without a feed id or URL (key {})", record.key());
                 return;
             }
-            if (event.getKind() == FeedKind.FEED_KIND_STATIC) {
-                repository.recordStaticPoll(event);
-            } else {
-                repository.upsert(event);
-            }
+            repository.upsert(event);
         } catch (InvalidProtocolBufferException e) {
             log.error("Discarding malformed realtime feed state event (key {})", record.key(), e);
         } catch (RuntimeException e) {
-            log.error("Failed to record realtime feed state (key {})", record.key(), e);
+            log.error("Failed to record feed poll state (key {})", record.key(), e);
         }
     }
 }

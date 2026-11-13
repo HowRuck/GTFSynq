@@ -248,8 +248,15 @@ public class GtfsQueryRepository {
             SELECT f.feed_id::text, f.sha256, f.bucket, f.object_key, f.source_url,
                    f.object_etag, f.source_etag, f.source_last_modified, f.size_bytes,
                    f.ingested_at, f.loaded_at, a.agency_names,
-                   'static' AS kind, f.last_poll_status::text AS poll_status
+                   'static' AS kind, p.last_status::text AS poll_status
             FROM static_feeds f
+            LEFT JOIN LATERAL (
+                SELECT last_status
+                FROM feed_poll_state
+                WHERE kind = 'static' AND feed_id = f.feed_id::text
+                ORDER BY last_polled_at DESC
+                LIMIT 1
+            ) p ON TRUE
             LEFT JOIN LATERAL (
                 SELECT array_agg(agency_name ORDER BY agency_id) AS agency_names
                 FROM static_agency
@@ -267,10 +274,12 @@ public class GtfsQueryRepository {
                            NULL, r.source_etag, r.source_last_modified, r.size_bytes,
                            COALESCE(r.last_changed_at, r.last_polled_at), r.last_polled_at, NULL::text[],
                            'realtime', r.last_status::text
-                    FROM realtime_feed_state r
+                    FROM feed_poll_state r
+                    WHERE r.kind = 'realtime'
                 ) feeds\
                 """;
-            count = "SELECT (SELECT count(*) FROM static_feeds) + (SELECT count(*) FROM realtime_feed_state)";
+            count = "SELECT (SELECT count(*) FROM static_feeds) + (SELECT count(*) FROM feed_poll_state WHERE kind ="
+                    + " 'realtime')";
         }
         return page(
                 select,

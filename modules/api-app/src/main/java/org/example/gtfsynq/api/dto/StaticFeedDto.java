@@ -5,7 +5,7 @@ import java.util.List;
 
 /**
  * One row from {@code static_feeds} with the agencies that feed describes, or, when {@code kind} is
- * {@code realtime}, one row from {@code realtime_feed_state}.
+ * {@code realtime}, one row from {@code feed_poll_state}.
  */
 public record StaticFeedDto(
         String feedId,
