@@ -1,292 +1,268 @@
-// Renovate replaces Dependabot for this repository. It runs self-hosted from
-// .github/workflows/renovate.yml, which is also where the global config
-// (.github/renovate-global.json5) is picked up; the hosted Renovate app cannot
-// run the postUpgradeTasks below.
 {
-  $schema: "https://docs.renovatebot.com/renovate-schema.json",
-
-  extends: ["config:recommended"],
-
-  // Gradle's build/ and Maven's target/ are build output, not source. They are
-  // gitignored, but a local dry run would otherwise scan stale copies (the
-  // build-logic build directory holds a generated copy of the build script).
-  // The rest repeats the defaults from `config:recommended`, which this option
-  // replaces rather than extends.
-  ignorePaths: [
-    "**/node_modules/**",
-    "**/bower_components/**",
-    "**/vendor/**",
-    "**/examples/**",
-    "**/__tests__/**",
-    "**/test/**",
-    "**/tests/**",
-    "**/__fixtures__/**",
-    "**/build/**",
-    "**/target/**",
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: [
+    'config:recommended',
   ],
-
-  // Dependabot ran daily; keep that cadence but batch the runs into one early
-  // morning window (UTC) so PRs do not trickle in all day.
-  schedule: ["* 0-5 * * *"],
-
-  // Commit messages stay in the shape Dependabot produced:
-  // `build(deps): bump <dependency> to <version>`.
-  semanticCommitType: "build",
-  semanticCommitScope: "deps",
-  commitMessageAction: "bump",
-
-  // The Dependency Dashboard issue lists every pending update and lets you
-  // trigger a PR by hand; handy for the prerelease groups below. It is a status
-  // view, not an approval gate: PRs are opened as soon as an update is found.
-  dependencyDashboard: true,
+  ignorePaths: [
+    '**/node_modules/**',
+    '**/bower_components/**',
+    '**/vendor/**',
+    '**/examples/**',
+    '**/__tests__/**',
+    '**/test/**',
+    '**/tests/**',
+    '**/__fixtures__/**',
+    '**/build/**',
+    '**/target/**',
+  ],
+  schedule: [
+    '* 0-5 * * *',
+  ],
+  semanticCommitType: 'build',
+  semanticCommitScope: 'deps',
+  commitMessageAction: 'bump',
+  dependencyDashboard: {
+    enabled: true,
+  },
   dependencyDashboardApproval: false,
-  prCreation: "immediate",
-
-  // Renovate already opens a PR for every update it finds. Auto-merge is
-  // enabled only for the safe Gradle patch/minor lane at the bottom of
-  // packageRules: those PRs change build files, so the resolve-dependencies
-  // workflow runs on them. Majors, Quarkus/Vaadin prereleases, the Gradle
-  // wrapper, Docker images and GitHub Actions stay manual because they either
-  // need a compatibility review or do not trigger a PR check.
+  prCreation: 'immediate',
   automerge: false,
-  automergeType: "pr",
-  // Use Renovate's own automerge: main is not a protected branch and the
-  // repository does not enable GitHub's auto-merge, so platform automerge would
-  // have nothing to wait for. Renovate waits for the PR's checks (notably
-  // resolve-dependencies) before it merges.
+  automergeType: 'pr',
   platformAutomerge: false,
-
-  // Every Renovate PR gets this label; the per-manager tags are added through
-  // the `addLabels` rules at the top of packageRules below. Renovate does not
-  // create labels, so each name must already exist in the repository.
-  labels: ["dependencies"],
-
-  // Besides GitHub's own advisory database, check osv.dev.
+  labels: [
+    'dependencies',
+  ],
   osvVulnerabilityAlerts: true,
-
-  // Vaadin components declare extra npm packages with `@NpmPackage(...)` on the
-  // Java class, and the Vaadin Gradle plugin copies that version into
-  // modules/ui-app/package.json on the next Quarkus build. For those packages the
-  // annotation is the source of truth and package.json is generated output, so
-  // they are bumped here and not by the npm manager (see the npm rule below).
   customManagers: [
     {
-      customType: "regex",
-      managerFilePatterns: ["/\\.java$/"],
+      customType: 'regex',
+      managerFilePatterns: [
+        '/\\.java$/',
+      ],
       matchStrings: [
         '@NpmPackage\\(\\s*value\\s*=\\s*"(?<depName>[^"]+)"\\s*,\\s*version\\s*=\\s*"(?<currentValue>[^"]+)"',
         '@NpmPackage\\(\\s*version\\s*=\\s*"(?<currentValue>[^"]+)"\\s*,\\s*value\\s*=\\s*"(?<depName>[^"]+)"',
       ],
-      datasourceTemplate: "npm",
+      datasourceTemplate: 'npm',
     },
   ],
-
   packageRules: [
-    // --- Labels -------------------------------------------------------------
-    // Manager-wide tags, so they apply to majors too (the group rules further
-    // down only match minor/patch). `addLabels` is mergeable, so a Vaadin bump
-    // ends up with `dependencies`, `java` and `vaadin`.
-    //
-    // `gradle` marks the build tooling itself (the wrapper), not every
-    // dependency that happens to be declared in a Gradle file.
     {
-      matchManagers: ["gradle"],
-      addLabels: ["java"],
-    },
-    {
-      matchManagers: ["gradle-wrapper"],
-      addLabels: ["gradle"],
-    },
-    {
-      matchManagers: ["docker-compose"],
-      addLabels: ["docker"],
-    },
-    {
-      matchManagers: ["github-actions"],
-      addLabels: ["github-actions"],
-    },
-    {
-      // The @NpmPackage annotations in the ui-app sources.
-      matchManagers: ["custom.regex"],
-      matchFileNames: ["modules/ui-app/src/main/java/**"],
-      addLabels: ["npm", "frontend"],
-    },
-
-    // --- Gradle -------------------------------------------------------------
-    {
-      // Routine library and plugin bumps go out together; majors keep their
-      // own PR (Renovate default) because they need a compatibility review.
-      // Covers build.gradle.kts, settings.gradle.kts, build-logic/ and
-      // gradle/libs.versions.toml.
-      matchManagers: ["gradle"],
-      matchUpdateTypes: ["minor", "patch"],
-      groupName: "gradle-dependencies",
-    },
-    {
-      // Quarkus is pinned to a 4.0 Beta and every app is built on that BOM, so
-      // a Quarkus bump gets its own PR that can be built and reverted alone.
-      // The glob covers the BOM, the Gradle plugin
-      // (io.quarkus:io.quarkus.gradle.plugin) and the quarkiverse Amazon
-      // Services BOM, which share the `quarkus` version in the catalog.
-      matchManagers: ["gradle"],
-      matchPackageNames: ["io.quarkus*"],
-      addLabels: ["quarkus"],
-      groupName: "quarkus",
-    },
-    {
-      // Vaadin is on a 25.4 alpha, and a Vaadin bump also changes the generated
-      // frontend (see the npm rule below), so it stays isolated from every
-      // other update. Vaadin prereleases live in their own repository; the
-      // Gradle manager picks that up from settings.gradle.kts, and the rule
-      // restates it plus Maven Central so the alpha line keeps resolving.
-      matchManagers: ["gradle"],
-      matchPackageNames: ["com.vaadin*"],
-      registryUrls: [
-        "https://maven.vaadin.com/vaadin-prereleases",
-        "https://repo1.maven.org/maven2",
+      matchManagers: [
+        'gradle',
       ],
-      addLabels: ["vaadin", "frontend"],
-      groupName: "vaadin",
+      addLabels: [
+        'java',
+      ],
     },
     {
-      // This instance runs with allowedUnsafeExecutions including
-      // `gradleWrapper`, so Renovate does not just edit distributionUrl: it
-      // fetches <distributionUrl>.sha256, updates distributionSha256Sum, and
-      // runs `./gradlew :wrapper` on the branch, which also regenerates
-      // gradlew, gradlew.bat and gradle-wrapper.jar from the new Gradle's
-      // templates. The PR is therefore complete on its own -- check that it
-      // touches those four files, and only fall back to the manual two-run
-      // ritual in .agents/skills/gradle-wrapper-upgrade if Renovate warns that
-      // the wrapper command failed.
-      matchManagers: ["gradle-wrapper"],
+      matchManagers: [
+        'gradle-wrapper',
+      ],
+      addLabels: [
+        'gradle',
+      ],
+    },
+    {
+      matchManagers: [
+        'docker-compose',
+      ],
+      addLabels: [
+        'docker',
+      ],
+    },
+    {
+      matchManagers: [
+        'github-actions',
+      ],
+      addLabels: [
+        'github-actions',
+      ],
+    },
+    {
+      matchManagers: [
+        'custom.regex',
+      ],
+      matchFileNames: [
+        'modules/ui-app/src/main/java/**',
+      ],
+      addLabels: [
+        'npm',
+        'frontend',
+      ],
+    },
+    {
+      matchManagers: [
+        'gradle',
+      ],
+      matchUpdateTypes: [
+        'minor',
+        'patch',
+      ],
+      groupName: 'gradle-dependencies',
+    },
+    {
+      matchManagers: [
+        'gradle',
+      ],
+      matchPackageNames: [
+        'io.quarkus*',
+      ],
+      addLabels: [
+        'quarkus',
+      ],
+      groupName: 'quarkus',
+    },
+    {
+      matchManagers: [
+        'gradle',
+      ],
+      matchPackageNames: [
+        'com.vaadin*',
+      ],
+      registryUrls: [
+        'https://maven.vaadin.com/vaadin-prereleases',
+        'https://repo1.maven.org/maven2',
+      ],
+      addLabels: [
+        'vaadin',
+        'frontend',
+      ],
+      groupName: 'vaadin',
+    },
+    {
+      matchManagers: [
+        'gradle-wrapper',
+      ],
       enabled: true,
     },
-
-    // --- GitHub Actions -----------------------------------------------------
     {
-      // .github/workflows/images.yml and qodana.yml move together, so one PR
-      // updates every action pinned there.
-      matchManagers: ["github-actions"],
-      groupName: "github-actions",
-    },
-
-    // --- Docker Compose -----------------------------------------------------
-    {
-      // Routine image bumps for the dev, monitoring and application stacks in
-      // one PR. Image majors (Grafana, Kafka, TimescaleDB, ...) keep their own
-      // PR, since they need a manual review of the compose files and the
-      // Grafana dashboards under monitoring/.
-      matchManagers: ["docker-compose"],
-      matchUpdateTypes: ["minor", "patch", "digest", "pin"],
-      groupName: "docker-images",
+      matchManagers: [
+        'github-actions',
+      ],
+      groupName: 'github-actions',
     },
     {
-      // The application images in docker-compose.yaml are built and pushed by
-      // .github/workflows/images.yml; their tag is picked by the build (jib),
-      // so Renovate must not bump ghcr.io/howruck/gtfsynq-*.
-      matchManagers: ["docker-compose"],
-      matchPackageNames: ["/^ghcr\\.io\\/howruck\\/gtfsynq-/"],
+      matchManagers: [
+        'docker-compose',
+      ],
+      matchUpdateTypes: [
+        'minor',
+        'patch',
+        'digest',
+        'pin',
+      ],
+      groupName: 'docker-images',
+    },
+    {
+      matchManagers: [
+        'docker-compose',
+      ],
+      matchPackageNames: [
+        '/^ghcr\\.io\\/howruck\\/gtfsynq-/',
+      ],
       enabled: false,
     },
     {
-      // pgadmin4 still publishes legacy tags like 2021-12-15-2. They parse as
-      // absurd major versions, so Renovate's maxMajorIncrement guard already
-      // drops them (that check runs before allowedVersions, hence the log
-      // noise). This rule pins the candidate set to the numeric release tags
-      // (9.17, 10.0.1, ...) so a date tag can never win if the guard is
-      // relaxed or raised later.
-      matchManagers: ["docker-compose"],
-      matchPackageNames: ["docker.io/dpage/pgadmin4"],
-      allowedVersions: "/^\\d+(\\.\\d+)*$/",
+      matchManagers: [
+        'docker-compose',
+      ],
+      matchPackageNames: [
+        'docker.io/dpage/pgadmin4',
+      ],
+      allowedVersions: '/^\\d+(\\.\\d+)*$/',
     },
-
-    // --- Vaadin frontend ----------------------------------------------------
     {
-      // modules/ui-app/package.json, pnpm-workspace.yaml and pnpm-lock.yaml are
-      // generated by the Vaadin build (see the post-upgrade task below): every entry is mirrored in the
-      // "vaadin" block together with a hash of the last write, and the plugin
-      // restores its own versions on the next build. Bump `vaadin` in
-      // gradle/libs.versions.toml instead; that regenerates the frontend.
-      matchManagers: ["npm"],
-      matchFileNames: ["modules/ui-app/**"],
+      matchManagers: [
+        'npm',
+      ],
+      matchFileNames: [
+        'modules/ui-app/**',
+      ],
       enabled: false,
     },
-    // --- Post-upgrade tasks ------------------------------------------------
-    // These run only on the self-hosted instance (.github/workflows/renovate.yml),
-    // which whitelists them in .github/renovate-global.json5. The hosted app
-    // rejects any command that is not `git add`, `git reset` or `pwd`.
     {
-      // modules/ui-app/package.json and pnpm-workspace.yaml are generated from two
-      // inputs: the `@NpmPackage` annotations (custom.regex manager above) and the
-      // Vaadin version in gradle/libs.versions.toml (gradle manager, `com.vaadin*`).
-      // `vaadinPrepareFrontend` does NOT rewrite them -- it leaves stale versions
-      // untouched -- only the Quarkus build's frontend step does, so that is what
-      // runs here, with tests skipped.
-      //
-      // pnpm-lock.yaml is deliberately not listed: it is gitignored.
-      matchManagers: ["custom.regex"],
-      matchFileNames: ["modules/ui-app/src/main/java/**"],
+      matchManagers: [
+        'custom.regex',
+      ],
+      matchFileNames: [
+        'modules/ui-app/src/main/java/**',
+      ],
       postUpgradeTasks: {
-        commands: ["./gradlew :ui-app:quarkusBuild -x test --console=plain"],
-        fileFilters: [
-          "modules/ui-app/package.json",
-          "modules/ui-app/pnpm-workspace.yaml",
+        commands: [
+          './gradlew :ui-app:quarkusBuild -x test --console=plain',
         ],
-        executionMode: "update",
+        fileFilters: [
+          'modules/ui-app/package.json',
+          'modules/ui-app/pnpm-workspace.yaml',
+        ],
+        executionMode: 'update',
       },
     },
     {
-      // Same regeneration for a Vaadin platform bump.
-      matchManagers: ["gradle"],
-      matchPackageNames: ["com.vaadin*"],
+      matchManagers: [
+        'gradle',
+      ],
+      matchPackageNames: [
+        'com.vaadin*',
+      ],
       postUpgradeTasks: {
-        commands: ["./gradlew :ui-app:quarkusBuild -x test --console=plain"],
-        fileFilters: [
-          "modules/ui-app/package.json",
-          "modules/ui-app/pnpm-workspace.yaml",
+        commands: [
+          './gradlew :ui-app:quarkusBuild -x test --console=plain',
         ],
-        executionMode: "update",
+        fileFilters: [
+          'modules/ui-app/package.json',
+          'modules/ui-app/pnpm-workspace.yaml',
+        ],
+        executionMode: 'update',
       },
     },
     {
-      // The gradle-wrapper manager already runs `./gradlew :wrapper` itself
-      // (allowedUnsafeExecutions above). A failure there is only logged as a
-      // warning, which would leave the new distributionUrl next to stale scripts
-      // and jar, so the script redoes the upgrade properly and the result is
-      // verified before the commit.
-      matchManagers: ["gradle-wrapper"],
+      matchManagers: [
+        'gradle-wrapper',
+      ],
       postUpgradeTasks: {
-        commands: ["./scripts/update-gradle-wrapper.sh"],
-        fileFilters: [
-          "gradlew",
-          "gradlew.bat",
-          "gradle/wrapper/gradle-wrapper.jar",
-          "gradle/wrapper/gradle-wrapper.properties",
+        commands: [
+          './scripts/update-gradle-wrapper.sh',
         ],
-        executionMode: "update",
+        fileFilters: [
+          'gradlew',
+          'gradlew.bat',
+          'gradle/wrapper/gradle-wrapper.jar',
+          'gradle/wrapper/gradle-wrapper.properties',
+        ],
+        executionMode: 'update',
       },
     },
-
-    // --- Auto-merge ---------------------------------------------------------
-    // Only the routine Gradle dependency lane merges itself. These updates
-    // touch gradle/**, build.gradle.kts or modules/**, so the
-    // resolve-dependencies workflow runs on the PR; Renovate waits for it and
-    // leaves a failed resolution unmerged. Everything below stays manual:
-    // - Quarkus and Vaadin are prerelease lines that need a compatibility check;
-    // - the wrapper also regenerates gradlew and the wrapper jar;
-    // - Docker and GitHub Actions do not run resolve-dependencies.
     {
-      matchManagers: ["gradle"],
-      matchUpdateTypes: ["minor", "patch", "pin", "digest"],
+      matchManagers: [
+        'gradle',
+      ],
+      matchUpdateTypes: [
+        'minor',
+        'patch',
+        'pin',
+        'digest',
+      ],
       automerge: true,
     },
     {
-      matchManagers: ["gradle"],
-      matchPackageNames: ["io.quarkus*", "com.vaadin*"],
+      matchManagers: [
+        'gradle',
+      ],
+      matchPackageNames: [
+        'io.quarkus*',
+        'com.vaadin*',
+      ],
       automerge: false,
     },
     {
-      matchManagers: ["gradle-wrapper", "docker-compose", "github-actions", "custom.regex"],
+      matchManagers: [
+        'gradle-wrapper',
+        'docker-compose',
+        'github-actions',
+        'custom.regex',
+      ],
       automerge: false,
     },
   ],
