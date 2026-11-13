@@ -3,6 +3,7 @@ package org.example.gtfsynq.ui.component.overview;
 import com.vaadin.flow.component.card.Card;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import org.example.gtfsynq.ui.format.UiFormat;
@@ -92,18 +93,25 @@ public class StatCard extends Card {
         detail.setVisible(!text.isEmpty());
     }
 
+    /** A change arrow sized to the change text, not to the icon's default box. */
+    private static Icon arrow(VaadinIcon kind) {
+        var icon = kind.create();
+        icon.addClassName("stat-change-icon");
+        return icon;
+    }
+
     private void showChange(long difference) {
         change.setVisible(true);
         change.removeAll();
         if (difference > 0) {
             change.setClassName("stat-change stat-change-up");
             change.add(
-                    VaadinIcon.ARROW_UP.create(),
+                    arrow(VaadinIcon.ARROW_UP),
                     new Span(getTranslation("overview.delta.up", UiFormat.count(difference))));
         } else if (difference < 0) {
             change.setClassName("stat-change stat-change-down");
             change.add(
-                    VaadinIcon.ARROW_DOWN.create(),
+                    arrow(VaadinIcon.ARROW_DOWN),
                     new Span(getTranslation("overview.delta.down", UiFormat.count(-difference))));
         } else {
             change.setClassName("stat-change stat-change-none");

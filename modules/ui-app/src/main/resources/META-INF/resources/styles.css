@@ -116,6 +116,12 @@ html {
   color: var(--aura-red-text);
 }
 
+.stat-change-icon {
+  --vaadin-icon-size: 0.9em;
+  font-size: inherit;
+  flex-shrink: 0;
+}
+
 .stat-value {
   font-size: var(--aura-font-size-xl);
   font-weight: var(--aura-font-weight-semibold);
