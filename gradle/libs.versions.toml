@@ -4,6 +4,7 @@ spotless = "8.11.0"
 open-java-format = "21.0.2"
 
 # Frameworks & runtimes
+quarkus-amazon-services = "4.0.0.Beta5"
 quarkus = "4.0.0.CR1"
 quarkus-amazon-services = "4.0.0.Beta4"
 protobuf = "4.36.2"
