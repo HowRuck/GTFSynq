@@ -4,11 +4,8 @@ import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.UI;
-import com.vaadin.flow.component.badge.Badge;
-import com.vaadin.flow.component.badge.BadgeVariant;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H2;
-import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.JustifyContentMode;
@@ -66,7 +63,7 @@ public class OverviewView extends VerticalLayout implements HasDynamicTitle {
 
     private final StatCard liveStopTimeUpdatesCard = new StatCard(getTranslation("overview.stats.liveStopTimeUpdates"));
 
-    private final Badge freshness = new Badge();
+    private final StatCard freshnessCard = new StatCard(getTranslation("overview.stats.lastTripUpdate"));
 
     private final Div staticTiles = new Div();
 
@@ -81,18 +78,16 @@ public class OverviewView extends VerticalLayout implements HasDynamicTitle {
 
         staticTiles.addClassName("feed-tile-grid");
         realtimeTiles.addClassName("feed-tile-grid");
-        freshness.setVisible(false);
 
         var staticSection = section(
                 getTranslation("overview.section.static"),
+                feedsLink(),
                 statGrid(staticFeedsCard, routesCard, stopsCard, tripsCard),
-                healthHeader(getTranslation("overview.section.staticHealth")),
                 staticTiles);
         var realtimeSection = section(
                 getTranslation("overview.section.realtime"),
-                freshness,
-                statGrid(realtimeFeedsCard, liveTripUpdatesCard, liveStopTimeUpdatesCard),
-                healthHeader(getTranslation("overview.section.realtimeHealth")),
+                feedsLink(),
+                statGrid(realtimeFeedsCard, liveTripUpdatesCard, liveStopTimeUpdatesCard, freshnessCard),
                 realtimeTiles);
 
         add(
@@ -107,8 +102,15 @@ public class OverviewView extends VerticalLayout implements HasDynamicTitle {
         return grid;
     }
 
-    private static VerticalLayout section(String title, Component... content) {
-        var layout = new VerticalLayout(new H2(title));
+    /** A heading row with the section's link, then its content. */
+    private static VerticalLayout section(String title, Component link, Component... content) {
+        var header = new HorizontalLayout(new H2(title), link);
+        header.setPadding(false);
+        header.setWidthFull();
+        header.setAlignItems(Alignment.CENTER);
+        header.setJustifyContentMode(JustifyContentMode.BETWEEN);
+
+        var layout = new VerticalLayout(header);
         layout.add(content);
         layout.setPadding(false);
         layout.setSpacing(true);
@@ -116,15 +118,8 @@ public class OverviewView extends VerticalLayout implements HasDynamicTitle {
         return layout;
     }
 
-    /** Health subheading with a link to the full feed list. */
-    private HorizontalLayout healthHeader(String title) {
-        var header = new HorizontalLayout(
-                new H3(title), new RouterLink(getTranslation("overview.link.allFeeds"), FeedsView.class));
-        header.setPadding(false);
-        header.setWidthFull();
-        header.setAlignItems(Alignment.CENTER);
-        header.setJustifyContentMode(JustifyContentMode.BETWEEN);
-        return header;
+    private Component feedsLink() {
+        return new RouterLink(getTranslation("overview.link.allFeeds"), FeedsView.class);
     }
 
     @Override
@@ -232,27 +227,24 @@ public class OverviewView extends VerticalLayout implements HasDynamicTitle {
 
     /** Shows how long ago the newest trip update arrived, coloured by how stale it is. */
     private void showFreshness(Instant lastTripUpdate) {
-        freshness.setVisible(true);
-        freshness.removeThemeVariants(BadgeVariant.SUCCESS, BadgeVariant.WARNING, BadgeVariant.ERROR);
         if (lastTripUpdate == null) {
-            freshness.setText(getTranslation("overview.freshness.none"));
-            freshness.addThemeVariants(BadgeVariant.ERROR);
+            freshnessCard.showText(getTranslation("overview.freshness.none"), "error");
             return;
         }
 
         var age = Duration.between(lastTripUpdate, Instant.now());
-        if (age.compareTo(SECONDS_LABEL_LIMIT) < 0) {
-            freshness.setText(getTranslation("overview.freshness.seconds", Math.max(0, age.toSeconds())));
-        } else {
-            freshness.setText(getTranslation("overview.freshness.minutes", age.toMinutes()));
-        }
+        var text = age.compareTo(SECONDS_LABEL_LIMIT) < 0
+                ? getTranslation("overview.age.seconds", Math.max(0, age.toSeconds()))
+                : getTranslation("overview.age.minutes", age.toMinutes());
+        String tone;
         if (age.compareTo(FRESH_WITHIN) < 0) {
-            freshness.addThemeVariants(BadgeVariant.SUCCESS);
+            tone = "ok";
         } else if (age.compareTo(TripStatus.STALE_AFTER) < 0) {
-            freshness.addThemeVariants(BadgeVariant.WARNING);
+            tone = "warning";
         } else {
-            freshness.addThemeVariants(BadgeVariant.ERROR);
+            tone = "error";
         }
+        freshnessCard.showText(text, tone);
     }
 
     @Override

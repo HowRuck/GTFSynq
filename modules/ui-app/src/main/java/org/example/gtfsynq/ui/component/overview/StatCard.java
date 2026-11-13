@@ -84,6 +84,18 @@ public class StatCard extends Card {
     }
 
     /**
+     * Shows a text value, such as a relative time, coloured by its tone; no count-up or change line.
+     *
+     * @param text the value as displayed
+     * @param tone {@code ok}, {@code warning} or {@code error}, which colours the value
+     */
+    public void showText(String text, String tone) {
+        amount.setText(text);
+        amount.setClassName("stat-value stat-tone-" + tone);
+        change.setVisible(false);
+    }
+
+    /**
      * Shows a line of detail under the value, such as a breakdown; an empty text hides it.
      *
      * @param text the detail line
