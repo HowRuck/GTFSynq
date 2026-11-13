@@ -238,13 +238,14 @@ public class GtfsQueryRepository {
     }
 
     public PageResponse<StaticFeedDto> staticFeeds(int page, int size) {
-        return staticFeeds(page, size, false);
+        return staticFeeds(page, size, false, null, null, null);
     }
 
-    public PageResponse<StaticFeedDto> staticFeeds(int page, int size, boolean includeRealtime) {
+    public PageResponse<StaticFeedDto> staticFeeds(
+            int page, int size, boolean includeRealtime, String feedId, String search, String kind) {
         // A feed may describe several agencies, so they are aggregated into one array beside the
         // feed's row instead of widening the page by one row per agency.
-        String select = """
+        String rows = """
             SELECT f.feed_id::text, f.sha256, f.bucket, f.object_key, f.source_url,
                    f.object_etag, f.source_etag, f.source_last_modified, f.size_bytes,
                    f.ingested_at, f.loaded_at, a.agency_names,
@@ -263,29 +264,42 @@ public class GtfsQueryRepository {
                 WHERE feed_id = f.feed_id
             ) a ON TRUE
             """;
-        String count = "SELECT count(*) FROM static_feeds";
-        if (includeRealtime) {
-            // Polled GTFS-RT feeds have no stored archive: bucket and object key are empty, sha256 is the
-            // digest of the last body, ingested_at is
-            // the last poll that brought a new body and loaded_at the last poll of any outcome.
-            select = "SELECT * FROM (" + select + """
-                    UNION ALL
-                    SELECT r.feed_id, COALESCE(r.sha256, ''), '', '', r.source_url,
-                           NULL, r.source_etag, r.source_last_modified, r.size_bytes,
-                           COALESCE(r.last_changed_at, r.last_polled_at), r.last_polled_at, NULL::text[],
-                           'realtime', r.last_status::text
-                    FROM feed_poll_state r
-                    WHERE r.kind = 'realtime'
-                ) feeds\
+        // Polled GTFS-RT feeds have no stored archive: bucket and object key are empty, sha256 is the
+        // digest of the last body, ingested_at is the last poll that brought a new body and loaded_at
+        // the last poll of any outcome.
+        if (includeRealtime || "realtime".equals(kind)) {
+            rows += """
+                UNION ALL
+                SELECT r.feed_id, COALESCE(r.sha256, ''), '', '', r.source_url,
+                       NULL, r.source_etag, r.source_last_modified, r.size_bytes,
+                       COALESCE(r.last_changed_at, r.last_polled_at), r.last_polled_at, NULL::text[],
+                       'realtime', r.last_status::text
+                FROM feed_poll_state r
+                WHERE r.kind = 'realtime'
                 """;
-            count = "SELECT (SELECT count(*) FROM static_feeds) + (SELECT count(*) FROM feed_poll_state WHERE kind ="
-                    + " 'realtime')";
+        }
+
+        List<String> conditions = new ArrayList<>();
+        List<Object> parameters = new ArrayList<>();
+        if (hasText(feedId)) {
+            conditions.add("feed_id = ?");
+            parameters.add(feedId);
+        }
+        var searchTerm = normalizedSearch(search);
+        if (searchTerm != null) {
+            conditions.add("strpos(lower(feed_id), lower(?)) > 0");
+            parameters.add(searchTerm);
+        }
+        if (hasText(kind)) {
+            conditions.add("kind = ?");
+            parameters.add(kind);
         }
         return page(
-                select,
-                count,
-                List.of(),
-                includeRealtime ? "loaded_at DESC, feed_id ASC" : "f.loaded_at DESC, f.feed_id ASC",
+                "SELECT * FROM (" + rows + ") feeds",
+                "SELECT count(*) FROM (" + rows + ") feeds",
+                conditions,
+                parameters,
+                "loaded_at DESC, feed_id ASC",
                 page,
                 size,
                 rs -> new StaticFeedDto(

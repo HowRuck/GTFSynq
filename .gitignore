@@ -68,3 +68,4 @@ modules/ui-app/pnpm-lock.yaml
 modules/ui-app/pnpmfile.js
 modules/ui-app/.vite/
 modules/ui-app/.vaadin/
+site/

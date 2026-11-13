@@ -127,9 +127,18 @@ public final class Filters {
         return select(placeholder, "13rem", options, onChange);
     }
 
-    private static ComboBox<Integer> select(
-            String placeholder, String width, Map<Integer, String> options, Consumer<Integer> onChange) {
-        var select = new ComboBox<Integer>();
+    /** Feed kind selector: static or realtime; an empty value means both. */
+    public static ComboBox<String> kind(String placeholder, Function<String, String> label, Consumer<String> onChange) {
+        var options = new LinkedHashMap<String, String>();
+        for (var kind : List.of("static", "realtime")) {
+            options.put(kind, label.apply(kind));
+        }
+        return select(placeholder, "12rem", options, onChange);
+    }
+
+    private static <T> ComboBox<T> select(
+            String placeholder, String width, Map<T, String> options, Consumer<T> onChange) {
+        var select = new ComboBox<T>();
         select.setPlaceholder(placeholder);
         select.getElement().setAttribute("aria-label", placeholder);
         select.setClearButtonVisible(true);

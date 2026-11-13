@@ -116,6 +116,12 @@ message StaticFeedsRequest {
   int32 size = 2;
   // Also return the polled GTFS-RT feeds, with kind = "realtime".
   bool include_realtime = 3;
+  // Exact feed id, when set.
+  optional string feed_id = 4;
+  // Case-insensitive part of the feed id; ignored below three characters.
+  optional string search = 5;
+  // "static" or "realtime", when set.
+  optional string kind = 6;
 }
 
 message StaticFeedsReply {

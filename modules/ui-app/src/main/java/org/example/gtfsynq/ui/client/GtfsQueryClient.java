@@ -85,13 +85,24 @@ public class GtfsQueryClient {
     }
 
     public PagedResult<StaticFeed> staticFeeds(int page, int size, boolean includeRealtime) {
-        var request = StaticFeedsRequest.newBuilder()
-                .setPage(page)
-                .setSize(size)
-                .setIncludeRealtime(includeRealtime)
-                .build();
+        return staticFeeds(page, size, includeRealtime, null, null, null);
+    }
+
+    public PagedResult<StaticFeed> staticFeeds(
+            int page, int size, boolean includeRealtime, String feedId, String search, String kind) {
+        var request =
+                StaticFeedsRequest.newBuilder().setPage(page).setSize(size).setIncludeRealtime(includeRealtime);
+        if (feedId != null) {
+            request.setFeedId(feedId);
+        }
+        if (search != null && !search.isBlank()) {
+            request.setSearch(search);
+        }
+        if (kind != null) {
+            request.setKind(kind);
+        }
         return call(() -> {
-            var reply = stub().listStaticFeeds(request);
+            var reply = stub().listStaticFeeds(request.build());
             return page(reply.getItemsList(), reply.getPage());
         });
     }

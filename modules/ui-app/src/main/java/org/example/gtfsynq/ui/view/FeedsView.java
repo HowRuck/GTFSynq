@@ -9,6 +9,7 @@ import org.example.gtfsynq.shared.protocol.query.StaticFeed;
 import org.example.gtfsynq.ui.MainLayout;
 import org.example.gtfsynq.ui.client.GtfsQueryClient;
 import org.example.gtfsynq.ui.component.Columns;
+import org.example.gtfsynq.ui.component.Filters;
 import org.example.gtfsynq.ui.component.LazyGrid;
 import org.example.gtfsynq.ui.component.PageHeader;
 
@@ -16,16 +17,32 @@ import org.example.gtfsynq.ui.component.PageHeader;
 @Route(value = "feeds", layout = MainLayout.class)
 public class FeedsView extends VerticalLayout implements HasDynamicTitle {
 
+    private String kind;
+
     @Inject
     public FeedsView(GtfsQueryClient client) {
         var table = new LazyGrid<StaticFeed>(
-                query -> client.staticFeeds(query.page(), query.size(), true),
+                query -> client.staticFeeds(query.page(), query.size(), true, query.feedId(), query.search(), kind),
                 "loadedAt",
                 SortDirection.DESCENDING,
                 Columns::feeds);
+        var feed = Filters.feed(client, getTranslation("filter.feed.placeholder"), table::setFeedId);
+        var kindFilter = Filters.kind(
+                getTranslation("filter.kind.placeholder"), value -> getTranslation("feed.kind." + value), value -> {
+                    kind = value;
+                    table.refresh();
+                });
+        var search = Filters.search(getTranslation("filter.search.placeholder"), table::setSearch);
 
         setSizeFull();
-        add(PageHeader.create(getTranslation("page.feeds.title"), getTranslation("page.feeds.subtitle")), table);
+        add(
+                PageHeader.create(
+                        getTranslation("page.feeds.title"),
+                        getTranslation("page.feeds.subtitle"),
+                        feed,
+                        kindFilter,
+                        search),
+                table);
         setFlexGrow(1, table);
     }
 
