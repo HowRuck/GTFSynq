@@ -63,6 +63,12 @@ quarkus:
     group: howruck
     name: gtfsynq-ui-app
 
+  # ---- Native image --------------------------------------------------------
+  native:
+    # Build with upstream GraalVM CE rather than the default Mandrel builder image.
+    builder-image:
+      image: graalvm
+
 # ---- Session-lock diagnostics ---------------------------------------------
 # Every request and every ui.access() runs under the browser session's lock, and Vaadin does not
 # time out a lock wait. A holder that never releases it freezes the session; these thresholds make

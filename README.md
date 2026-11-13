@@ -48,7 +48,7 @@ It is built with **Gradle**, runs on **Java 25**, and is designed to work with *
 | Serialization | Protobuf 4 | GTFS-RT message encoding |
 | Monitoring | SmallRye Health + OpenTelemetry (OTLP) | Health, metrics, logs and traces |
 | Images | Quarkus container-image Jib | Container image build (no Dockerfile) |
-| Native image | GraalVM / Mandrel 25 | Ahead-of-time compiled native executables |
+| Native image | GraalVM CE 25 | Ahead-of-time compiled native executables |
 
 ## Prerequisites
 
@@ -767,13 +767,14 @@ in each app's `application.yaml` and can be overridden on the command line, e.g.
 ### GraalVM native images
 
 Quarkus builds native executables out of the box. For a local (non-container)
-binary you need GraalVM (or Mandrel) 25 on `PATH`:
+binary you need GraalVM 25 on `PATH`:
 
 ```bash
 ./gradlew :api-app:build -Dnative
 ```
 
-Alternatively let Quarkus run the native build in a container (Docker/Podman
+Alternatively let Quarkus run the native build in a container (the upstream GraalVM CE
+builder image, set via `quarkus.native.builder-image.image` in each `application.yaml`; Docker/Podman
 required, ~8 GB RAM recommended, first build takes 5-15 min per service):
 
 ```bash
@@ -865,7 +866,7 @@ GTFSynq is primarily intended for educational and exploratory use. It is a good 
 - Flyway database migrations
 - TimescaleDB time-series modeling
 - Protobuf-based transport formats
-- GraalVM/Mandrel native image compilation
+- GraalVM native image compilation
 - off-heap state with the Java foreign memory API
 
 ## License

@@ -80,6 +80,12 @@ quarkus:
     group: howruck
     name: gtfsynq-api-app
 
+  # ---- Native image --------------------------------------------------------
+  native:
+    # Build with upstream GraalVM CE rather than the default Mandrel builder image.
+    builder-image:
+      image: graalvm
+
 # ---- Live map snapshot ----------------------------------------------------
 # The marker query is the console's heaviest read: every positioned trip in one unpaged reply,
 # with per-trip work on the hot table. It runs in the background and requests read the snapshot
