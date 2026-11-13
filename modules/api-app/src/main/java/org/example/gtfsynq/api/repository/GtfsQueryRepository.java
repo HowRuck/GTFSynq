@@ -237,12 +237,27 @@ public class GtfsQueryRepository {
         return feedIds;
     }
 
+    private static final Map<String, String> FEED_SORTS = Map.of(
+            "feedId", "feed_id",
+            "kind", "kind",
+            "pollStatus", "poll_status",
+            "size", "size_bytes",
+            "ingestedAt", "ingested_at",
+            "loadedAt", "loaded_at");
+
     public PageResponse<StaticFeedDto> staticFeeds(int page, int size) {
-        return staticFeeds(page, size, false, null, null, null);
+        return staticFeeds(page, size, false, null, null, null, null, null);
     }
 
     public PageResponse<StaticFeedDto> staticFeeds(
-            int page, int size, boolean includeRealtime, String feedId, String search, String kind) {
+            int page,
+            int size,
+            boolean includeRealtime,
+            String feedId,
+            String search,
+            String kind,
+            String sort,
+            String direction) {
         // A feed may describe several agencies, so they are aggregated into one array beside the
         // feed's row instead of widening the page by one row per agency.
         String rows = """
@@ -299,7 +314,7 @@ public class GtfsQueryRepository {
                 "SELECT count(*) FROM (" + rows + ") feeds",
                 conditions,
                 parameters,
-                "loaded_at DESC, feed_id ASC",
+                sortColumn(FEED_SORTS, sort, "loaded_at") + " " + direction(direction) + ", feed_id ASC",
                 page,
                 size,
                 rs -> new StaticFeedDto(

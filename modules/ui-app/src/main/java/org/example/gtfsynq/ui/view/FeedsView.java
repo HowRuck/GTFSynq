@@ -32,7 +32,15 @@ public class FeedsView extends VerticalLayout implements HasDynamicTitle {
     @Inject
     public FeedsView(GtfsQueryClient client) {
         table = new LazyGrid<StaticFeed>(
-                query -> client.staticFeeds(query.page(), query.size(), true, query.feedId(), query.search(), kind),
+                query -> client.staticFeeds(
+                        query.page(),
+                        query.size(),
+                        true,
+                        query.feedId(),
+                        query.search(),
+                        kind,
+                        query.sort(),
+                        query.direction()),
                 "loadedAt",
                 SortDirection.DESCENDING,
                 Columns::feeds);

@@ -37,13 +37,28 @@ public final class Columns {
     }
 
     public static void feeds(Grid<StaticFeed> grid) {
-        grid.addColumn(feed -> UiFormat.text(feed.getFeedId())).setHeader(grid.getTranslation("column.feed"));
+        grid.addColumn(feed -> UiFormat.text(feed.getFeedId()))
+                .setHeader(grid.getTranslation("column.feed"))
+                .setKey("feedId")
+                .setSortProperty("feedId")
+                .setSortable(true);
         grid.addColumn(feed ->
                         grid.getTranslation("feed.kind." + (feed.getKind().isEmpty() ? "static" : feed.getKind())))
-                .setHeader(grid.getTranslation("column.kind"));
-        grid.addComponentColumn(feed -> pollStatus(grid, feed)).setHeader(grid.getTranslation("column.pollStatus"));
+                .setHeader(grid.getTranslation("column.kind"))
+                .setKey("kind")
+                .setSortProperty("kind")
+                .setSortable(true);
+        grid.addComponentColumn(feed -> pollStatus(grid, feed))
+                .setHeader(grid.getTranslation("column.pollStatus"))
+                .setKey("pollStatus")
+                .setSortProperty("pollStatus")
+                .setSortable(true);
         grid.addColumn(feed -> UiFormat.shortHash(feed.getSha256())).setHeader(grid.getTranslation("column.sha256"));
-        grid.addColumn(feed -> UiFormat.bytes(feed.getSizeBytes())).setHeader(grid.getTranslation("column.size"));
+        grid.addColumn(feed -> UiFormat.bytes(feed.getSizeBytes()))
+                .setHeader(grid.getTranslation("column.size"))
+                .setKey("size")
+                .setSortProperty("size")
+                .setSortable(true);
         grid.addComponentColumn(feed -> UiComponents.truncated(feed.getObjectKey(), UiComponents.OBJECT_KEY_WIDTH))
                 .setHeader(grid.getTranslation("column.objectKey"));
         grid.addComponentColumn(feed -> UiComponents.etag(feed.hasObjectEtag() ? feed.getObjectEtag() : null))
@@ -54,8 +69,15 @@ public final class Columns {
         grid.addColumn(feed -> UiFormat.text(feed.hasSourceLastModified() ? feed.getSourceLastModified() : null))
                 .setHeader(grid.getTranslation("column.sourceLastModified"));
         grid.addColumn(feed -> UiFormat.dateTime(feed.getIngestedAt()))
-                .setHeader(grid.getTranslation("column.ingested"));
-        grid.addColumn(feed -> UiFormat.dateTime(feed.getLoadedAt())).setHeader(grid.getTranslation("column.loaded"));
+                .setHeader(grid.getTranslation("column.ingested"))
+                .setKey("ingestedAt")
+                .setSortProperty("ingestedAt")
+                .setSortable(true);
+        grid.addColumn(feed -> UiFormat.dateTime(feed.getLoadedAt()))
+                .setHeader(grid.getTranslation("column.loaded"))
+                .setKey("loadedAt")
+                .setSortProperty("loadedAt")
+                .setSortable(true);
     }
 
     public static void routes(Grid<Route> grid) {

@@ -89,7 +89,9 @@ public class GtfsQueryGrpcService extends GtfsQueryServiceGrpc.GtfsQueryServiceI
                         request.getIncludeRealtime(),
                         request.hasFeedId() ? request.getFeedId() : null,
                         request.hasSearch() ? request.getSearch() : null,
-                        request.hasKind() ? request.getKind() : null)));
+                        request.hasKind() ? request.getKind() : null,
+                        request.getSort(),
+                        request.getDirection())));
     }
 
     @Override

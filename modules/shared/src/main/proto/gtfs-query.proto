@@ -122,6 +122,9 @@ message StaticFeedsRequest {
   optional string search = 5;
   // "static" or "realtime", when set.
   optional string kind = 6;
+  // Sort key and direction ("asc" or "desc"); unknown keys fall back to the load time.
+  string sort = 7;
+  string direction = 8;
 }
 
 message StaticFeedsReply {
