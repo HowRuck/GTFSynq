@@ -14,6 +14,12 @@ import org.example.gtfsynq.ui.format.UiFormat;
 /** Small presentational building blocks used inside grid cells and cards. */
 public final class UiComponents {
 
+    /** Longest source URL shown in the feeds table before it is shortened. */
+    public static final int SOURCE_URL_WIDTH = 48;
+
+    /** Longest object key shown in the feeds table before it is shortened. */
+    public static final int OBJECT_KEY_WIDTH = 40;
+
     private UiComponents() {}
 
     public static Component routeColor(Route route) {
@@ -39,9 +45,19 @@ public final class UiComponents {
         if (!feed.hasSourceUrl() || feed.getSourceUrl().isBlank()) {
             return new Span(UiFormat.NOT_AVAILABLE);
         }
-        var link = new Anchor(feed.getSourceUrl(), feed.getSourceUrl());
+        var link = new Anchor(feed.getSourceUrl(), UiFormat.elide(feed.getSourceUrl(), SOURCE_URL_WIDTH));
+        link.setTitle(feed.getSourceUrl());
         link.setTarget("_blank");
         return link;
+    }
+
+    /**
+     * Text cell shortened to {@code maxLength} characters, with the full value as a tooltip.
+     */
+    public static Component truncated(String value, int maxLength) {
+        var span = new Span(UiFormat.elide(value, maxLength));
+        span.setTitle(UiFormat.text(value));
+        return span;
     }
 
     /**

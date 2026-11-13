@@ -44,7 +44,8 @@ public final class Columns {
         grid.addComponentColumn(feed -> pollStatus(grid, feed)).setHeader(grid.getTranslation("column.pollStatus"));
         grid.addColumn(feed -> UiFormat.shortHash(feed.getSha256())).setHeader(grid.getTranslation("column.sha256"));
         grid.addColumn(feed -> UiFormat.bytes(feed.getSizeBytes())).setHeader(grid.getTranslation("column.size"));
-        grid.addColumn(StaticFeed::getObjectKey).setHeader(grid.getTranslation("column.objectKey"));
+        grid.addComponentColumn(feed -> UiComponents.truncated(feed.getObjectKey(), UiComponents.OBJECT_KEY_WIDTH))
+                .setHeader(grid.getTranslation("column.objectKey"));
         grid.addComponentColumn(feed -> UiComponents.etag(feed.hasObjectEtag() ? feed.getObjectEtag() : null))
                 .setHeader(grid.getTranslation("column.objectEtag"));
         grid.addComponentColumn(UiComponents::sourceLink).setHeader(grid.getTranslation("column.source"));
