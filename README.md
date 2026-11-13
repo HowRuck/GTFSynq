@@ -455,7 +455,7 @@ the digest and nothing is re-uploaded or republished.
 GTFS-RT polls are conditional too: the realtime poller sends `If-None-Match` / `If-Modified-Since`
 from the last successfully parsed response (held in memory) and skips parsing on `304`. After
 every poll of a static or realtime feed, ingest publishes a `FeedPolled` event (kind, status, ETag,
-Last-Modified, size, body SHA-256) to the `gtfs-feed-polls` topic. `store-app` upserts each event
+Last-Modified, size, body SHA-256) to the `gtfs-feed-polls` topic (ingest creates it at startup if the broker does not have it; the trip-update and static topics are created the same way. Partitions and replication factor come from `gtfsynq.kafka.topic-partitions` and `gtfsynq.kafka.topic-replication-factor`, both 1 by default). `store-app` upserts each event
 into the single `feed_poll_state` table, keyed by kind, feed and URL; the Feeds page joins it to
 `static_feeds` for static feeds and lists realtime feeds from it directly, with a `Kind` and a
 last poll status column.

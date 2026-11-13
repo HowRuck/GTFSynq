@@ -92,6 +92,9 @@ gtfsynq:
     trip-updates-topic: gtfs-trip-updates
     static-feeds-topic: gtfs-static-feeds
     feed-polls-topic: gtfs-feed-polls
+    # Partitions and replication factor for every topic ingest creates at startup.
+    topic-partitions: 1
+    topic-replication-factor: 1
 
   # ---- Polling -------------------------------------------------------------
   # Durations; the realtime and static feeds run on independent schedules.
