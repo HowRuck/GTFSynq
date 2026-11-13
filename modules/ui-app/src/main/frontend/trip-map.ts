@@ -111,6 +111,10 @@ class TripMap extends BasemapElement {
   /** Replaces the drawn stops; assigned by Flow as a JSON string. */
   set stops(json: string) {
     this.stopData = parseJsonArray(json, isTripStop, 'trip-map');
+    // Cleared while the next trip loads: that trip must be framed, not left in the previous view.
+    if (this.positionedStops().length === 0) {
+      this.forgetFraming();
+    }
     this.updateSource();
   }
 

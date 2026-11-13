@@ -131,6 +131,14 @@ export abstract class BasemapElement extends HTMLElement {
     this.applyFit();
   }
 
+  /**
+   * Forgets that the view was framed, so the next subject is framed even when the current view
+   * already shows it. Without this, a new trip inside the previous trip's view keeps that view.
+   */
+  protected forgetFraming(): void {
+    this.hasFitted = false;
+  }
+
   protected currentStyle(): string {
     return styleFor(this.customStyleUrl);
   }
