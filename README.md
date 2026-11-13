@@ -454,9 +454,10 @@ the digest and nothing is re-uploaded or republished.
 
 GTFS-RT polls are conditional too: the realtime poller sends `If-None-Match` / `If-Modified-Since`
 from the last successfully parsed response (held in memory) and skips parsing on `304`. After
-every poll it publishes a `RealtimeFeedPolled` event (status, ETag, Last-Modified, size) to the
-`gtfs-realtime-feed-state` topic; `store-app` upserts it into `realtime_feed_state`, and the
-Feeds page lists those rows beside the static feeds with a `Kind` column.
+every poll of a static or realtime feed, ingest publishes a `FeedPolled` event (kind, status, ETag,
+Last-Modified, size, body SHA-256) to the `gtfs-feed-polls` topic. `store-app` records static
+outcomes on the feed's `static_feeds` row and upserts realtime ones into `realtime_feed_state`; the
+Feeds page lists both with a `Kind` and a last poll status column.
 
 When the digest of a polled archive already exists in the bucket, the upload and the event
 are both skipped: downstream consumers are only woken up by an actual revision change.

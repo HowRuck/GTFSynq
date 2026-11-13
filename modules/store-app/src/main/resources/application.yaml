@@ -140,11 +140,11 @@ mp:
           unprocessed-record-max-age:
             ms: 1800000
       # Poll outcomes of GTFS-RT feeds (validators and status), shown beside the static feeds.
-      gtfs-realtime-feed-state:
+      gtfs-feed-polls:
         connector: smallrye-kafka
-        topic: gtfs-realtime-feed-state
+        topic: gtfs-feed-polls
         group:
-          id: gtfsynq-store-realtime-state
+          id: gtfsynq-store-feed-polls
         auto:
           offset:
             reset: earliest

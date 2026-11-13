@@ -21,11 +21,15 @@ import org.example.gtfsynq.ingest.adapter.inbound.http.GtfsStaticFeedDownloader.
 import org.example.gtfsynq.ingest.adapter.inbound.http.StaticFeedDownload;
 import org.example.gtfsynq.ingest.adapter.inbound.http.StaticFeedDownloadException;
 import org.example.gtfsynq.ingest.adapter.inbound.http.StaticFeedRateLimitedException;
+import org.example.gtfsynq.ingest.adapter.inbound.http.StaticFeedValidators;
+import org.example.gtfsynq.ingest.adapter.outbound.kafka.GtfsFeedPollKafkaProducer;
 import org.example.gtfsynq.ingest.adapter.outbound.kafka.GtfsStaticFeedKafkaProducer;
 import org.example.gtfsynq.ingest.adapter.outbound.storage.S3StaticFeedStorage;
 import org.example.gtfsynq.ingest.config.S3StorageProperties;
 import org.example.gtfsynq.ingest.service.metrics.StaticFeedMetrics;
 import org.example.gtfsynq.ingest.service.metrics.StaticFeedMetrics.Outcome;
+import org.example.gtfsynq.shared.protocol.FeedKind;
+import org.example.gtfsynq.shared.protocol.PollStatus;
 import org.example.gtfsynq.shared.protocol.StaticFeedIngested;
 import org.example.gtfsynq.shared.util.SizeFormat;
 import software.amazon.awssdk.core.exception.SdkException;
@@ -50,6 +54,7 @@ public class GtfsStaticIngestionAsyncService {
     private final GtfsStaticFeedDownloader staticFeedDownloader;
     private final S3StaticFeedStorage staticFeedStorage;
     private final GtfsStaticFeedKafkaProducer staticFeedKafkaProducer;
+    private final GtfsFeedPollKafkaProducer feedPollProducer;
     private final StaticFeedValidatorCache validatorCache;
     private final StaticFeedMetrics metrics;
     private final S3StorageProperties storageProperties;
@@ -98,6 +103,8 @@ public class GtfsStaticIngestionAsyncService {
             switch (download) {
                 case StaticFeedDownload.NotModified notModified -> {
                     validatorCache.put(feedId, sourceUrl, notModified.validators());
+                    publishPoll(
+                            feedId, sourceUrl, PollStatus.POLL_STATUS_NOT_MODIFIED, 0, null, notModified.validators());
                     metrics.recordNotModified(feedId);
                     metrics.recordOutcome(feedId, Outcome.UNCHANGED);
 
@@ -119,13 +126,16 @@ public class GtfsStaticIngestionAsyncService {
             rateLimitedUntil.put(feedId, until);
             metrics.recordDownloadFailure(feedId, System.nanoTime() - downloadStart);
             metrics.recordOutcome(feedId, Outcome.RATE_LIMITED);
+            publishPoll(feedId, sourceUrl, PollStatus.POLL_STATUS_RATE_LIMITED, 0, null, null);
             log.warn("Static feed {} ({}) is rate limited (HTTP 429); next attempt after {}", feedId, sourceUrl, until);
         } catch (StaticFeedDownloadException e) {
             metrics.recordDownloadFailure(feedId, System.nanoTime() - downloadStart);
             metrics.recordOutcome(feedId, Outcome.FAILED);
+            publishPoll(feedId, sourceUrl, PollStatus.POLL_STATUS_HTTP_ERROR, 0, null, null);
             log.error("Static feed {} ({}) could not be downloaded", feedId, sourceUrl, e);
         } catch (Exception e) {
             metrics.recordOutcome(feedId, Outcome.FAILED);
+            publishPoll(feedId, sourceUrl, PollStatus.POLL_STATUS_ERROR, 0, null, null);
             log.error("Unexpected error ingesting static feed {} ({})", feedId, sourceUrl, e);
         }
     }
@@ -154,10 +164,29 @@ public class GtfsStaticIngestionAsyncService {
                 // Only a revision that actually reached object storage may be revalidated by
                 // the next poll; remembering a failed attempt would let a 304 hide the retry.
                 validatorCache.put(feedId, sourceUrl, feed.validators());
+                publishPoll(
+                        feedId,
+                        sourceUrl,
+                        PollStatus.POLL_STATUS_OK,
+                        feed.sizeBytes(),
+                        feed.sha256(),
+                        feed.validators());
+            } else {
+                publishPoll(feedId, sourceUrl, PollStatus.POLL_STATUS_ERROR, feed.sizeBytes(), feed.sha256(), null);
             }
         } finally {
             staticFeedDownloader.discard(feed);
         }
+    }
+
+    private void publishPoll(
+            String feedId,
+            String sourceUrl,
+            PollStatus status,
+            long sizeBytes,
+            String sha256,
+            StaticFeedValidators validators) {
+        feedPollProducer.publish(FeedKind.FEED_KIND_STATIC, feedId, sourceUrl, status, sizeBytes, sha256, validators);
     }
 
     void shutdown(@Observes ShutdownEvent event) {

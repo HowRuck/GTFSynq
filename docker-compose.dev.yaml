@@ -62,7 +62,7 @@ services:
             - |
                 /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --if-not-exists --topic gtfs-trip-updates --partitions 1 --replication-factor 1
                 /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --if-not-exists --topic gtfs-static-feeds --partitions 1 --replication-factor 1
-                /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --if-not-exists --topic gtfs-realtime-feed-state --partitions 1 --replication-factor 1
+                /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --if-not-exists --topic gtfs-feed-polls --partitions 1 --replication-factor 1
         restart: "no"
 
     s3:

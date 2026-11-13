@@ -1,12 +1,12 @@
 syntax = "proto3";
 
-package gtfsynq.realtime;
+package gtfsynq.poll;
 
 option java_package = "org.example.gtfsynq.shared.protocol";
 option java_multiple_files = true;
-option java_outer_classname = "RealtimeFeedStateProtocol";
+option java_outer_classname = "FeedPollProtocol";
 
-// Outcome of one poll of a GTFS-RT feed.
+// Outcome of one poll of a feed, static or realtime.
 enum PollStatus {
   POLL_STATUS_UNSPECIFIED = 0;
   // A new body was downloaded and parsed.
@@ -21,10 +21,17 @@ enum PollStatus {
   POLL_STATUS_ERROR = 5;
 }
 
-// Event published by the ingest app after every poll of a GTFS-RT feed. It carries the HTTP
-// cache validators the origin sent, so the feeds table can track realtime feeds beside the
-// static ones. It never carries feed content.
-message RealtimeFeedPolled {
+// Which kind of feed was polled.
+enum FeedKind {
+  FEED_KIND_UNSPECIFIED = 0;
+  FEED_KIND_STATIC = 1;
+  FEED_KIND_REALTIME = 2;
+}
+
+// Event published by the ingest app after every poll of a feed. It carries the poll outcome and
+// the HTTP cache validators the origin sent, so the feeds table can show the state of static and
+// realtime feeds side by side. It never carries feed content.
+message FeedPolled {
   // Feed source identifier, e.g. "gtfs-de".
   string feed_id = 1;
 
@@ -36,6 +43,12 @@ message RealtimeFeedPolled {
 
   // Outcome of the poll.
   PollStatus status = 4;
+
+  // Kind of feed that was polled.
+  FeedKind kind = 8;
+
+  // Hex encoded SHA-256 of the downloaded body; empty when no body was transferred.
+  string sha256 = 9;
 
   // Size of the downloaded body in bytes; 0 when no body was transferred.
   uint64 size_bytes = 5;

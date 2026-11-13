@@ -3,7 +3,7 @@ syntax = "proto3";
 package gtfsynq.query;
 
 import "google/protobuf/timestamp.proto";
-import "realtime-feed-state.proto";
+import "feed-poll.proto";
 
 option java_package = "org.example.gtfsynq.shared.protocol.query";
 option java_multiple_files = true;
@@ -108,7 +108,7 @@ message StaticFeed {
   // loaded_at is the last poll of any outcome.
   string kind = 13;
   // Outcome of the last poll; realtime rows only.
-  optional gtfsynq.realtime.PollStatus poll_status = 14;
+  optional gtfsynq.poll.PollStatus poll_status = 14;
 }
 
 message StaticFeedsRequest {

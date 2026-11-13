@@ -9,8 +9,10 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
-import java.time.Instant;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -20,12 +22,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gtfsynq.ingest.adapter.inbound.http.StaticFeedValidators;
 import org.example.gtfsynq.ingest.adapter.inbound.protobuf.GtfsNativeFilter;
-import org.example.gtfsynq.ingest.adapter.outbound.kafka.GtfsRealtimeFeedStateKafkaProducer;
+import org.example.gtfsynq.ingest.adapter.outbound.kafka.GtfsFeedPollKafkaProducer;
 import org.example.gtfsynq.ingest.config.HttpTimeouts;
 import org.example.gtfsynq.ingest.service.exception.GtfsIngestionException;
 import org.example.gtfsynq.shared.protocol.BinaryFeedEntityWithMetadata;
+import org.example.gtfsynq.shared.protocol.FeedKind;
 import org.example.gtfsynq.shared.protocol.PollStatus;
-import org.example.gtfsynq.shared.protocol.RealtimeFeedPolled;
 import org.example.gtfsynq.shared.util.SizeFormat;
 
 @ApplicationScoped
@@ -37,7 +39,7 @@ public class GtfsPollingService {
     private final HttpClient httpClient;
     private final HttpTimeouts httpTimeouts;
     private final GtfsNativeFilter nativeFilter;
-    private final GtfsRealtimeFeedStateKafkaProducer feedStateProducer;
+    private final GtfsFeedPollKafkaProducer feedPollProducer;
 
     /**
      * ETag / Last-Modified of the last successfully parsed response per feed. Kept in memory only:
@@ -85,7 +87,7 @@ public class GtfsPollingService {
 
             if (statusCode == 304) {
                 log.info("Feed {} not modified (etag={}, lastModified={})", feedId, known.etag(), known.lastModified());
-                publishState(feedId, feedUrl, PollStatus.POLL_STATUS_NOT_MODIFIED, 0, known);
+                publishState(feedId, feedUrl, PollStatus.POLL_STATUS_NOT_MODIFIED, null, known);
                 return List.of();
             }
 
@@ -97,13 +99,13 @@ public class GtfsPollingService {
                         feedId,
                         Optional.ofNullable(retryAfter).orElse("unknown"));
 
-                publishState(feedId, feedUrl, PollStatus.POLL_STATUS_RATE_LIMITED, 0, null);
+                publishState(feedId, feedUrl, PollStatus.POLL_STATUS_RATE_LIMITED, null, null);
                 return null;
             }
 
             if (statusCode < 200 || statusCode >= 300) {
                 log.warn("Unexpected HTTP {} for {}", statusCode, feedId);
-                publishState(feedId, feedUrl, PollStatus.POLL_STATUS_HTTP_ERROR, 0, null);
+                publishState(feedId, feedUrl, PollStatus.POLL_STATUS_HTTP_ERROR, null, null);
                 return null;
             }
 
@@ -119,14 +121,14 @@ public class GtfsPollingService {
                 } else {
                     validators.put(validatorKey, received);
                 }
-                publishState(feedId, feedUrl, PollStatus.POLL_STATUS_OK, feedBytes.length, received);
+                publishState(feedId, feedUrl, PollStatus.POLL_STATUS_OK, feedBytes, received);
                 return entities;
             } finally {
                 log.debug("Processed {} in {} ms", feedId, System.currentTimeMillis() - startTime);
             }
         } catch (IOException e) {
             log.error("I/O error polling feed {}: {}", feedId, e.getMessage());
-            publishState(feedId, feedUrl, PollStatus.POLL_STATUS_ERROR, 0, null);
+            publishState(feedId, feedUrl, PollStatus.POLL_STATUS_ERROR, null, null);
             return null;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -134,30 +136,35 @@ public class GtfsPollingService {
             return null;
         } catch (GtfsIngestionException e) {
             log.error("Ingestion error polling feed {}: {}", feedId, e.getMessage());
-            publishState(feedId, feedUrl, PollStatus.POLL_STATUS_ERROR, 0, null);
+            publishState(feedId, feedUrl, PollStatus.POLL_STATUS_ERROR, null, null);
             return null;
         } catch (RuntimeException e) {
             log.error("Unexpected error polling feed {}: {}", feedId, e.getMessage(), e);
-            publishState(feedId, feedUrl, PollStatus.POLL_STATUS_ERROR, 0, null);
+            publishState(feedId, feedUrl, PollStatus.POLL_STATUS_ERROR, null, null);
             return null;
         }
     }
 
     private void publishState(
-            String feedId, String feedUrl, PollStatus status, long sizeBytes, StaticFeedValidators v) {
-        var event = RealtimeFeedPolled.newBuilder()
-                .setFeedId(feedId)
-                .setSourceUrl(feedUrl)
-                .setPolledAtEpochSeconds(Instant.now().getEpochSecond())
-                .setStatus(status)
-                .setSizeBytes(sizeBytes);
-        if (v != null && v.etag() != null) {
-            event.setSourceEtag(v.etag());
+            String feedId, String feedUrl, PollStatus status, byte[] body, StaticFeedValidators validators) {
+        var sha256 =
+                body == null ? null : HexFormat.of().formatHex(sha256Digest().digest(body));
+        feedPollProducer.publish(
+                FeedKind.FEED_KIND_REALTIME,
+                feedId,
+                feedUrl,
+                status,
+                body == null ? 0 : body.length,
+                sha256,
+                validators);
+    }
+
+    private static MessageDigest sha256Digest() {
+        try {
+            return MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is not available", e);
         }
-        if (v != null && v.lastModified() != null) {
-            event.setSourceLastModified(v.lastModified());
-        }
-        feedStateProducer.send(event.build());
     }
 
     private HttpRequest request(String feedUrl) {

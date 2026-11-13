@@ -248,7 +248,7 @@ public class GtfsQueryRepository {
             SELECT f.feed_id::text, f.sha256, f.bucket, f.object_key, f.source_url,
                    f.object_etag, f.source_etag, f.source_last_modified, f.size_bytes,
                    f.ingested_at, f.loaded_at, a.agency_names,
-                   'static' AS kind, NULL::text AS poll_status
+                   'static' AS kind, f.last_poll_status::text AS poll_status
             FROM static_feeds f
             LEFT JOIN LATERAL (
                 SELECT array_agg(agency_name ORDER BY agency_id) AS agency_names
@@ -258,11 +258,12 @@ public class GtfsQueryRepository {
             """;
         String count = "SELECT count(*) FROM static_feeds";
         if (includeRealtime) {
-            // Polled GTFS-RT feeds have no archive: the archive columns are empty, ingested_at is
+            // Polled GTFS-RT feeds have no stored archive: bucket and object key are empty, sha256 is the
+            // digest of the last body, ingested_at is
             // the last poll that brought a new body and loaded_at the last poll of any outcome.
             select = "SELECT * FROM (" + select + """
                     UNION ALL
-                    SELECT r.feed_id, '', '', '', r.source_url,
+                    SELECT r.feed_id, COALESCE(r.sha256, ''), '', '', r.source_url,
                            NULL, r.source_etag, r.source_last_modified, r.size_bytes,
                            COALESCE(r.last_changed_at, r.last_polled_at), r.last_polled_at, NULL::text[],
                            'realtime', r.last_status::text
