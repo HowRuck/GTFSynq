@@ -144,7 +144,7 @@ jobs:
         run: ./gradlew :${{ matrix.app }}:imageBuild -Dquarkus.container-image.push=true
 
       - name: build-and-push-native-image
-        # Native compilation happens in the upstream GraalVM CE builder container (Docker is
+        # Native compilation happens in the GraalVM builder container (Docker is
         # available on the runner), then Jib packages the executable without a
         # daemon. quarkus.package.jar.enabled=false is mandatory: the Gradle
         # plugin cannot emit a JAR and a native binary in the same build.

@@ -82,11 +82,9 @@ quarkus:
 
   # ---- Native image --------------------------------------------------------
   # OffHeapLongTable uses Arena.ofShared(); GraalVM disables shared arenas by
-  # default in native images. GraalVM 25 removed the parallel GC, so the
+  # default in native images. JDK 25 Mandrel removed the parallel GC, so the
   # default serial GC is used (valid --gc values are epsilon and serial).
   native:
-    # Build with upstream GraalVM CE rather than the default Mandrel builder image.
-    builder-image: graalvm
     # -O3 enables all optimizations (the default is -O2). Not -march=native: the executable must
     # run on CPUs other than the build machine (default target is x86-64-v3).
     additional-build-args: "-O3,-H:+UnlockExperimentalVMOptions,-H:+SharedArenaSupport"
