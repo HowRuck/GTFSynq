@@ -265,7 +265,7 @@ public class GtfsQueryRepository {
                     SELECT r.feed_id, '', '', '', r.source_url,
                            NULL, r.source_etag, r.source_last_modified, r.size_bytes,
                            COALESCE(r.last_changed_at, r.last_polled_at), r.last_polled_at, NULL::text[],
-                           'realtime', r.last_status
+                           'realtime', r.last_status::text
                     FROM realtime_feed_state r
                 ) feeds\
                 """;

@@ -24,7 +24,7 @@ public class RealtimeFeedStateRepository {
         INSERT INTO realtime_feed_state (
             feed_id, source_url, source_etag, source_last_modified,
             last_status, size_bytes, last_changed_at, last_polled_at)
-        VALUES (?, ?, ?, ?, CAST(? AS realtime_poll_status), ?, CASE WHEN ? THEN ? END, ?)
+        VALUES (?, ?, ?, ?, CAST(? AS realtime_poll_status), ?, CASE WHEN ? THEN CAST(? AS timestamptz) END, ?)
         ON CONFLICT (feed_id, source_url) DO UPDATE
         SET source_etag = CASE WHEN ? THEN EXCLUDED.source_etag ELSE realtime_feed_state.source_etag END,
             source_last_modified = CASE WHEN ? THEN EXCLUDED.source_last_modified
