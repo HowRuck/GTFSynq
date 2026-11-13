@@ -38,14 +38,15 @@ final class GtfsQueryMapper {
     private GtfsQueryMapper() {}
 
     static OverviewReply toReply(OverviewDto dto) {
-        return OverviewReply.newBuilder()
+        var reply = OverviewReply.newBuilder()
                 .setStaticFeeds(dto.staticFeeds())
                 .setRoutes(dto.routes())
                 .setStops(dto.stops())
                 .setTrips(dto.trips())
                 .setLiveTripUpdates(dto.liveTripUpdates())
-                .setLiveStopTimeUpdates(dto.liveStopTimeUpdates())
-                .build();
+                .setLiveStopTimeUpdates(dto.liveStopTimeUpdates());
+        setIfPresent(dto.lastTripUpdateAt(), at -> reply.setLastTripUpdateAt(timestamp(at)));
+        return reply.build();
     }
 
     static StaticFeedsReply staticFeedsReply(PageResponse<StaticFeedDto> page) {
@@ -66,6 +67,7 @@ final class GtfsQueryMapper {
             setIfPresent(feed.sourceEtag(), item::setSourceEtag);
             setIfPresent(feed.sourceLastModified(), item::setSourceLastModified);
             setIfPresent(feed.pollStatus(), status -> item.setPollStatus(PollStatus.valueOf("POLL_STATUS_" + status)));
+            setIfPresent(feed.lastPolledAt(), at -> item.setLastPolledAt(timestamp(at)));
             reply.addItems(item);
         }
         return reply.build();

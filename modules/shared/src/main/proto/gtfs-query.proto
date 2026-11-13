@@ -59,6 +59,8 @@ message OverviewReply {
   int64 trips = 4;
   int64 live_trip_updates = 5;
   int64 live_stop_time_updates = 6;
+  // Last time a trip update was seen, when any is held; drives the console's freshness line.
+  optional google.protobuf.Timestamp last_trip_update_at = 7;
 }
 
 message FeedIdsRequest {}
@@ -109,6 +111,8 @@ message StaticFeed {
   string kind = 13;
   // Outcome of the last poll; realtime rows only.
   optional gtfsynq.poll.PollStatus poll_status = 14;
+  // When the feed was last polled, whatever the outcome. Set for static and realtime feeds alike.
+  optional google.protobuf.Timestamp last_polled_at = 15;
 }
 
 message StaticFeedsRequest {

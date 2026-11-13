@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import org.example.gtfsynq.api.dto.OverviewDto;
 import org.example.gtfsynq.api.dto.PageResponse;
 import org.example.gtfsynq.api.dto.StaticFeedDto;
 import org.example.gtfsynq.api.dto.StopTimeUpdateDto;
@@ -169,6 +170,17 @@ class GtfsQueryMapperTest {
     }
 
     @Test
+    void mapsLastTripUpdateOnlyWhenOneIsHeld() {
+        var seen = OffsetDateTime.parse("2026-11-13T12:00:00Z");
+
+        var held = GtfsQueryMapper.toReply(new OverviewDto(1, 2, 3, 4, 5, 6, seen));
+        var none = GtfsQueryMapper.toReply(new OverviewDto(1, 2, 3, 4, 5, 6, null));
+
+        assertEquals(seen.toEpochSecond(), held.getLastTripUpdateAt().getSeconds());
+        assertFalse(none.hasLastTripUpdateAt());
+    }
+
+    @Test
     void mapsKindAndPollStatusOnRealtimeFeeds() {
         var feed = new StaticFeedDto(
                 "feed",
@@ -184,7 +196,8 @@ class GtfsQueryMapperTest {
                 null,
                 List.of(),
                 "realtime",
-                "NOT_MODIFIED");
+                "NOT_MODIFIED",
+                null);
         var item = GtfsQueryMapper.staticFeedsReply(new PageResponse<>(List.of(feed), 0, 25, 1, 1))
                 .getItems(0);
 
@@ -237,6 +250,7 @@ class GtfsQueryMapperTest {
                 OffsetDateTime.parse("2026-10-23T10:01:00Z"),
                 agencyNames,
                 "static",
+                null,
                 null);
         return new PageResponse<>(List.of(feed), 0, 25, 1, 1);
     }

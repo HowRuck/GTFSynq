@@ -98,6 +98,24 @@ html {
   font-size: var(--aura-font-size-s);
 }
 
+/* Change since the previous refresh, under a KPI value. */
+.stat-change {
+  display: flex;
+  align-items: center;
+  gap: var(--vaadin-gap-xs);
+  color: var(--vaadin-text-color-secondary);
+  font-size: var(--aura-font-size-s);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-change-up {
+  color: var(--aura-green-text);
+}
+
+.stat-change-down {
+  color: var(--aura-red-text);
+}
+
 .stat-value {
   font-size: var(--aura-font-size-xl);
   font-weight: var(--aura-font-weight-semibold);
@@ -647,4 +665,55 @@ vaadin-grid::part(active-trip first-column-cell) {
     line-height: 1.5;
     max-width: 34rem;
     overflow-wrap: anywhere;
+}
+
+/* Feed health tiles on the overview: one card per feed, coloured by its last poll outcome. */
+.feed-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  gap: var(--vaadin-gap-m);
+  width: 100%;
+}
+
+.feed-tile {
+  border-inline-start: 3px solid var(--vaadin-border-color);
+}
+
+.feed-tile-ok {
+  border-inline-start-color: var(--aura-green-text);
+}
+
+.feed-tile-warning {
+  border-inline-start-color: var(--aura-orange-text);
+}
+
+.feed-tile-error {
+  border-inline-start-color: var(--aura-red-text);
+}
+
+.feed-tile-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--vaadin-gap-s);
+}
+
+.feed-tile-name {
+  font-weight: var(--aura-font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.feed-tile-kind {
+  color: var(--vaadin-text-color-secondary);
+  font-size: var(--aura-font-size-s);
+}
+
+.feed-tile-line {
+  color: var(--vaadin-text-color-secondary);
+  font-size: var(--aura-font-size-s);
+  font-variant-numeric: tabular-nums;
+}
+
+.feed-tile-stale {
+  color: var(--aura-orange-text);
 }

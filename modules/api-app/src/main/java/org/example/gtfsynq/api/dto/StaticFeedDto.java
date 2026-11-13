@@ -21,4 +21,5 @@ public record StaticFeedDto(
         OffsetDateTime loadedAt,
         List<String> agencyNames,
         String kind,
-        String pollStatus) {}
+        String pollStatus,
+        OffsetDateTime lastPolledAt) {}

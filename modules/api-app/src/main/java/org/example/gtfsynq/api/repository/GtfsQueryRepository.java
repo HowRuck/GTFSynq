@@ -199,14 +199,21 @@ public class GtfsQueryRepository {
                    (SELECT coalesce(sum(stop_count), 0) FROM static_feeds),
                    (SELECT coalesce(sum(trip_count), 0) FROM static_feeds),
                    (SELECT count(*) FROM rt_trip_updates_hot),
-                   (SELECT count(*) FROM rt_stop_time_updates_hot)
+                   (SELECT count(*) FROM rt_stop_time_updates_hot),
+                   (SELECT max(last_seen_at) FROM rt_trip_updates_hot)
             """;
         try (Connection connection = dataSource.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql);
                 ResultSet rs = statement.executeQuery()) {
             rs.next();
             var result = new OverviewDto(
-                    rs.getLong(1), rs.getLong(2), rs.getLong(3), rs.getLong(4), rs.getLong(5), rs.getLong(6));
+                    rs.getLong(1),
+                    rs.getLong(2),
+                    rs.getLong(3),
+                    rs.getLong(4),
+                    rs.getLong(5),
+                    rs.getLong(6),
+                    rs.getObject(7, OffsetDateTime.class));
             cachedOverview = result;
             cachedOverviewAt = now;
             return result;
@@ -264,10 +271,10 @@ public class GtfsQueryRepository {
             SELECT f.feed_id::text, f.sha256, f.bucket, f.object_key, f.source_url,
                    f.object_etag, f.source_etag, f.source_last_modified, f.size_bytes,
                    f.ingested_at, f.loaded_at, a.agency_names,
-                   'static' AS kind, p.last_status::text AS poll_status
+                   'static' AS kind, p.last_status::text AS poll_status, p.last_polled_at
             FROM static_feeds f
             LEFT JOIN LATERAL (
-                SELECT last_status
+                SELECT last_status, last_polled_at
                 FROM feed_poll_state
                 WHERE kind = 'static' AND feed_id = f.feed_id::text
                 ORDER BY last_polled_at DESC
@@ -288,7 +295,7 @@ public class GtfsQueryRepository {
                 SELECT r.feed_id, COALESCE(r.sha256, ''), '', '', r.source_url,
                        NULL, r.source_etag, r.source_last_modified, r.size_bytes,
                        COALESCE(r.last_changed_at, r.last_polled_at), r.last_polled_at, NULL::text[],
-                       'realtime', r.last_status::text
+                       'realtime', r.last_status::text, r.last_polled_at
                 FROM feed_poll_state r
                 WHERE r.kind = 'realtime'
                 """;
@@ -331,7 +338,8 @@ public class GtfsQueryRepository {
                         offsetDateTime(rs, "loaded_at"),
                         stringList(rs, "agency_names"),
                         rs.getString("kind"),
-                        rs.getString("poll_status")));
+                        rs.getString("poll_status"),
+                        rs.getObject("last_polled_at", OffsetDateTime.class)));
     }
 
     /**

@@ -1,6 +1,8 @@
 package org.example.gtfsynq.ui.component;
 
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.badge.Badge;
+import com.vaadin.flow.component.badge.BadgeVariant;
 import com.vaadin.flow.component.card.Card;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Span;
@@ -39,6 +41,28 @@ public final class UiComponents {
         cell.addClassName("route-color");
         cell.getElement().setAttribute("title", color);
         return cell;
+    }
+
+    /**
+     * Last poll outcome of a feed as a badge, coloured by how healthy it is. Feeds that were never
+     * polled show "N/A", and "Not Modified" stays in the quiet default colour.
+     */
+    public static Component pollStatus(Component context, StaticFeed feed) {
+        if (!feed.hasPollStatus()) {
+            return new Span(UiFormat.NOT_AVAILABLE);
+        }
+        var status = feed.getPollStatus();
+        var badge = new Badge(context.getTranslation("feed.pollStatus." + status.name()));
+        badge.addThemeVariants(BadgeVariant.SMALL);
+        switch (status) {
+            case POLL_STATUS_OK -> badge.addThemeVariants(BadgeVariant.SUCCESS);
+            case POLL_STATUS_RATE_LIMITED -> badge.addThemeVariants(BadgeVariant.WARNING);
+            case POLL_STATUS_HTTP_ERROR, POLL_STATUS_ERROR -> badge.addThemeVariants(BadgeVariant.ERROR);
+            default -> {
+                // Not modified is the quiet default colour: nothing new, nothing wrong.
+            }
+        }
+        return badge;
     }
 
     public static Component sourceLink(StaticFeed feed) {

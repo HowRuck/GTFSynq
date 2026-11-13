@@ -109,7 +109,7 @@ public final class UiFormat {
         return value != null && !(value.getSeconds() == 0 && value.getNanos() == 0);
     }
 
-    private static Instant instant(Timestamp value) {
+    public static Instant instant(Timestamp value) {
         return Instant.ofEpochSecond(value.getSeconds(), value.getNanos());
     }
 
