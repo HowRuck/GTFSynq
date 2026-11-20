@@ -1,6 +1,6 @@
 services:
   postgres-exporter:
-    image: docker.io/prometheuscommunity/postgres-exporter:v0.20.1
+    image: docker.io/prometheuscommunity/postgres-exporter:v0.21.1
     container_name: postgres-exporter
     depends_on:
       timescaledb:
@@ -106,7 +106,7 @@ services:
   # bind of / works on SELinux-enforcing hosts (CentOS / RHEL) without
   # needing recursive :Z relabels, which podman refuses for /.
   node-exporter:
-    image: docker.io/prom/node-exporter:v1.12.1
+    image: docker.io/prom/node-exporter:v1.13.1
     container_name: node-exporter
     pid: host
     security_opt:
