@@ -63,6 +63,7 @@
     },
     "microsoft-docs": {
       "source": "microsoft/skills",
+      "commit": "47eb3888eb42aef074fcb617931bf6e5934e45d9",
       "sourceType": "github",
       "skillPath": ".github/skills/microsoft-docs/SKILL.md",
       "computedHash": "ab0f71e078ec443d80314fd7b7adbeb566d24247ed3b76e6134d164e65d9b6e4"
