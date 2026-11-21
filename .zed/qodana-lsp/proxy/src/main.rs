@@ -159,7 +159,18 @@ fn write_message(writer: &Mutex<impl Write>, body: &[u8]) -> io::Result<()> {
 
 // --- injected requests ---------------------------------------------------------------------
 
-fn watch_sarif(server: &Mutex<ChildStdin>, args: &Args) {
+/// Tells the client (a `window/showMessage` notification, which Zed shows as a toast) that a
+/// report was loaded.
+fn notify_client(client: &Mutex<io::Stdout>, message: &str) -> io::Result<()> {
+    let notification = json!({
+        "jsonrpc": "2.0",
+        "method": "window/showMessage",
+        "params": { "type": 3, "message": message },
+    });
+    write_message(client, notification.to_string().as_bytes())
+}
+
+fn watch_sarif(server: &Mutex<ChildStdin>, client: &Mutex<io::Stdout>, args: &Args) {
     let mut counter = 0;
     let mut request = |method: &str, params: Value| {
         counter += 1;
@@ -176,6 +187,7 @@ fn watch_sarif(server: &Mutex<ChildStdin>, args: &Args) {
         return;
     }
     let (mut previous, mut sent) = (None, None);
+    let mut loads = 0;
     loop {
         let current = fs::metadata(&args.sarif).and_then(|m| m.modified()).ok();
         // Load only once the file has stopped changing between two polls.
@@ -187,6 +199,15 @@ fn watch_sarif(server: &Mutex<ChildStdin>, args: &Args) {
                 "showBaselineIssues": args.show_baseline_issues,
             });
             if request("setSarifFile", params).is_err() {
+                return;
+            }
+            loads += 1;
+            let verb = if loads == 1 { "loaded" } else { "reloaded" };
+            let name = args.sarif.file_name().map_or_else(
+                || args.sarif.display().to_string(),
+                |n| n.to_string_lossy().into_owned(),
+            );
+            if notify_client(client, &format!("Qodana: report {verb} ({name})")).is_err() {
                 return;
             }
         }
@@ -325,6 +346,7 @@ fn start_cloud_sync(args: &Args) {
 fn forward_client_messages(
     args: &Arc<Args>,
     server_in: &Arc<Mutex<ChildStdin>>,
+    client_out: &Arc<Mutex<io::Stdout>>,
     initialize_id: &Mutex<Option<Value>>,
 ) -> Result<()> {
     let mut stdin = BufReader::new(io::stdin());
@@ -335,8 +357,12 @@ fn forward_client_messages(
             Some("initialize") => *lock(initialize_id) = message.get("id").cloned(),
             Some("initialized") if !watching => {
                 watching = true;
-                let (server_in, args) = (Arc::clone(server_in), Arc::clone(args));
-                thread::spawn(move || watch_sarif(&server_in, &args));
+                let (server_in, client_out, args) = (
+                    Arc::clone(server_in),
+                    Arc::clone(client_out),
+                    Arc::clone(args),
+                );
+                thread::spawn(move || watch_sarif(&server_in, &client_out, &args));
             }
             _ => {}
         }
@@ -355,14 +381,15 @@ fn run() -> Result<i32> {
     start_cloud_sync(&args);
 
     let initialize_id = Arc::new(Mutex::new(None));
+    let client_out = Arc::new(Mutex::new(io::stdout()));
     {
         let (initialize_id, child) = (Arc::clone(&initialize_id), Arc::clone(&server.child));
-        let client_out = Mutex::new(io::stdout());
+        let client_out = Arc::clone(&client_out);
         thread::spawn(move || {
             forward_server_messages(server.stdout, &client_out, &initialize_id, &child)
         });
     }
-    forward_client_messages(&args, &server.stdin, &initialize_id)?;
+    forward_client_messages(&args, &server.stdin, &client_out, &initialize_id)?;
 
     // The client went away: give the server a moment to exit, then stop it.
     wait_or_kill(&server.child, EXIT_GRACE)?;
