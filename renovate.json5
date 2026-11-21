@@ -65,6 +65,24 @@
     },
     {
       matchManagers: [
+        'cargo',
+      ],
+      addLabels: [
+        'rust',
+      ],
+    },
+    {
+      matchManagers: [
+        'cargo',
+      ],
+      matchUpdateTypes: [
+        'minor',
+        'patch',
+      ],
+      groupName: 'rust-dependencies',
+    },
+    {
+      matchManagers: [
         'docker-compose',
       ],
       addLabels: [
@@ -262,6 +280,7 @@
         'docker-compose',
         'github-actions',
         'custom.regex',
+        'cargo',
       ],
       automerge: false,
     },
