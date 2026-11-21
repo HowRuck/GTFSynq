@@ -1,6 +1,10 @@
 // See the root settings.gradle.kts: the central repository API is still @Incubating in Gradle.
 @file:Suppress("UnstableApiUsage", "GradleUnstableApiUsage")
 
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+}
+
 dependencyResolutionManagement {
     repositories {
         // The portal serves the Spotless plugin and the open-java-format Gradle
