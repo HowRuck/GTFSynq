@@ -218,6 +218,16 @@ Dev mode needs a working Docker or Podman with Compose V2 (`docker compose` or
 `podman compose`). Starting the infrastructure yourself with the same file still
 works; dev mode then discovers the running containers instead of starting them.
 
+### Qodana diagnostics in Zed
+
+The repository ships a small Zed extension, [`.zed/qodana-lsp`](.zed/qodana-lsp/README.md),
+that shows [Qodana](https://www.jetbrains.com/qodana/) results (configured in
+[`qodana.yaml`](qodana.yaml) and run by the `qodana` workflow) as editor diagnostics. It reads
+a local report from `.qodana/results/` or downloads the latest report of a Qodana Cloud
+project. [`.zed/settings.json`](.zed/settings.json) already enables it for Java; the extension
+itself is installed once per machine, so follow its
+[README](.zed/qodana-lsp/README.md) for the prerequisites and install steps.
+
 ## Web Console
 
 The console in `modules/ui-app` is a server-side Vaadin Flow application. It is a
@@ -312,8 +322,14 @@ GTFSynq/
 │   ├── api-app/
 │   └── ui-app/
 ├── monitoring/
+├── .zed/
+│   ├── settings.json
+│   └── qodana-lsp/
 └── README.md
 ```
+
+`.zed/` holds the Zed editor settings and the Qodana LSP extension (see
+[Qodana diagnostics in Zed](#qodana-diagnostics-in-zed)).
 
 Each application module keeps its runtime configuration in
 `modules/<app>/src/main/resources/application.yaml`, and `store-app` keeps
