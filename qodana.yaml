@@ -8,7 +8,10 @@ projectJDK: "25"
 # - The kotlin-dsl plugin in build-logic registers a pluginUnderTestMetadata directory on the
 #   test classpath. It only exists once that task has run, so generate it too; otherwise the
 #   import warns that the root was not resolved.
-bootstrap: ./gradlew :shared:generateProto --quiet && ./gradlew -p build-logic pluginUnderTestMetadata --quiet
+bootstrap: |+
+  set -eu
+  ./gradlew :shared:generateProto
+  ./gradlew -p build-logic pluginUnderTestMetadata
 
 # Start from the recommended profile; the `include` list below enables further
 # inspections on top of it.
