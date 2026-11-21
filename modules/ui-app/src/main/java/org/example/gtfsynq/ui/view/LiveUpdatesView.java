@@ -52,14 +52,14 @@ public class LiveUpdatesView extends VerticalLayout implements HasDynamicTitle {
 
     private static final int POLL_INTERVAL_MS = 60_000;
 
+    /** Markers older than this are too out of date to trust, so the map is locked until a refresh. */
+    static final Duration MAX_MARKER_AGE = Duration.ofMinutes(15);
+
     /**
      * Runs the blocking backend loads. One virtual thread per load keeps a slow query from starving
      * the others - and the other sessions - which the common ForkJoinPool does once a few
      * multi-second gRPC calls are in flight.
      */
-    /** Markers older than this are too out of date to trust, so the map is locked until a refresh. */
-    static final Duration MAX_MARKER_AGE = Duration.ofMinutes(15);
-
     private static final ExecutorService BACKGROUND_LOADS = Executors.newVirtualThreadPerTaskExecutor();
 
     private final GtfsQueryClient client;

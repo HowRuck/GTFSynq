@@ -12,7 +12,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.example.gtfsynq.shared.model.dto.TripDescriptorDto;
 import org.example.gtfsynq.shared.model.dto.TripStopTimeUpdateDto;
 
@@ -24,7 +23,6 @@ import org.example.gtfsynq.shared.model.dto.TripStopTimeUpdateDto;
  */
 @ApplicationScoped
 @RequiredArgsConstructor
-@Slf4j
 public class TripUpdateRepository {
 
     private static final int BATCH_SIZE = 5000;

@@ -4,12 +4,10 @@ import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.WireFormat;
 import java.io.IOException;
 import java.util.Objects;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * Scans GTFS-RT entities and extracts the stable ID and entity type.
  */
-@Slf4j
 public class GtfsScanner {
 
     // GTFS-RT feed entity field numbers

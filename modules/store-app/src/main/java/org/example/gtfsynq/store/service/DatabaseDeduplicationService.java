@@ -4,7 +4,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import lombok.extern.slf4j.Slf4j;
 import org.example.gtfsynq.shared.model.dto.TripStopTimeUpdateDto;
 import org.example.gtfsynq.shared.model.dto.TripUpdateDto;
 import org.example.gtfsynq.shared.protocol.offheap.OffHeapHashStore;
@@ -15,7 +14,6 @@ import org.example.gtfsynq.shared.util.FeedHashing;
  * Service for deduplicating trip updates in the database
  */
 @ApplicationScoped
-@Slf4j
 public class DatabaseDeduplicationService {
 
     /** The off-heap hash store used for storing trip update state */

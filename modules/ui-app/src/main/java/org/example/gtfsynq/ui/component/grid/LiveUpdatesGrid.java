@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
+import lombok.Setter;
 import org.example.gtfsynq.shared.protocol.query.TripUpdate;
 import org.example.gtfsynq.ui.client.DataAccessException;
 import org.example.gtfsynq.ui.client.GtfsQueryClient;
@@ -34,6 +35,8 @@ public class LiveUpdatesGrid extends ConsoleGrid<TripUpdate> {
     private final String loadErrorPattern;
     private String activeTripKey;
     private TripUpdate activeTrip;
+    /** The handler invoked by the per-row open button. */
+    @Setter
     private SerializableConsumer<TripUpdate> openTripHandler = trip -> {};
 
     public LiveUpdatesGrid(GtfsQueryClient client, String defaultSort, SortDirection defaultDirection) {
@@ -163,11 +166,6 @@ public class LiveUpdatesGrid extends ConsoleGrid<TripUpdate> {
         if (provider.setSearch(value)) {
             refresh();
         }
-    }
-
-    /** Sets the handler invoked by the per-row open button. */
-    public void setOpenTripHandler(SerializableConsumer<TripUpdate> handler) {
-        openTripHandler = handler;
     }
 
     /**

@@ -112,6 +112,8 @@ exclude:
   - name: UnusedProperty
     paths:
       - modules/ui-app/src/main/resources/vaadin-i18n
+      # Grouped by topic with explanatory comments, so alphabetical order would scatter them.
+      - gradle.properties
       - modules/ui-app/src/main/resources/vaadin-featureflags.properties
   # Translation keys are grouped by feature, and different keys legitimately share a value
   # ("Routes" as a nav label and as a stat title), so neither value duplicates nor
@@ -124,3 +126,5 @@ exclude:
   - name: AlphaUnsortedPropertiesFile
     paths:
       - modules/ui-app/src/main/resources/vaadin-i18n
+      # Grouped by topic with explanatory comments, so alphabetical order would scatter them.
+      - gradle.properties
