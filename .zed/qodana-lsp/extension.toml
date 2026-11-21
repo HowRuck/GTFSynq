@@ -1,0 +1,11 @@
+id = "qodana-lsp"
+name = "Qodana LSP"
+description = "Shows Qodana (SARIF) static analysis results as diagnostics, using JetBrains/qodana-lsp."
+version = "0.1.0"
+schema_version = 1
+authors = ["GTFSynq"]
+repository = "https://github.com/JetBrains/qodana-lsp"
+
+[language_servers.qodana]
+name = "Qodana"
+languages = ["Java", "Kotlin", "YAML", "Dockerfile", "Python", "JavaScript", "TypeScript", "Go", "PHP"]

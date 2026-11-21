@@ -8,7 +8,7 @@
     },
   },
   "languages": {
-    "Java": { "language_servers": ["jdtls"] },
+    "Java": { "language_servers": ["jdtls", "qodana"] },
   },
   "context_servers": {
     "vaadin": {
