@@ -59,8 +59,6 @@ jobs:
           java-version: 27
       - name: set-up-gradle
         uses: gradle/actions/setup-gradle@v6
-      - name: generate-proto-sources
-        run: ./gradlew :shared:generateProto
       - name: qodana-scan
         uses: JetBrains/qodana-action@v2026.3.1
         with:

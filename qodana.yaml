@@ -3,6 +3,13 @@ linter: qodana-jvm-community
 
 projectJDK: "25"
 
+# Runs before the IDE imports the Gradle project.
+# - :shared:generateProto writes the protobuf sources the modules compile against.
+# - The kotlin-dsl plugin in build-logic registers a pluginUnderTestMetadata directory on the
+#   test classpath. It only exists once that task has run, so generate it too; otherwise the
+#   import warns that the root was not resolved.
+bootstrap: ./gradlew :shared:generateProto --quiet && ./gradlew -p build-logic pluginUnderTestMetadata --quiet
+
 # Start from the recommended profile; the `include` list below enables further
 # inspections on top of it.
 profile:
