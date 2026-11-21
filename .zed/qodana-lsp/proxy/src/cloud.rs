@@ -15,6 +15,7 @@
 use std::fs::{self, File};
 use std::io;
 use std::path::Path;
+use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 
@@ -37,6 +38,8 @@ pub struct CloudConfig {
     /// Needed for private projects; public ones can be read anonymously.
     pub token: Option<String>,
     pub interval: Duration,
+    /// Id of the report now on disk, for the client notification.
+    pub report_id: Mutex<Option<String>>,
 }
 
 // --- response parsing ----------------------------------------------------------------------
@@ -148,6 +151,7 @@ fn sync_once(
     let url = parse_file_url(&files)
         .ok_or_else(|| anyhow!("report {report_id} has no qodana.sarif.json"))?;
     download(agent, &url, dest)?;
+    *crate::lock(&config.report_id) = Some(report_id.clone());
     log(format!("downloaded cloud report {report_id}"));
     Ok(report_id)
 }
@@ -222,6 +226,7 @@ mod tests {
             project_id: "Rvqv1".into(),
             token: None,
             interval: MIN_INTERVAL,
+            report_id: Mutex::default(),
         };
 
         let id = sync_once(&agent(), &config, &dest, None).unwrap();
@@ -300,6 +305,7 @@ mod tests {
             project_id: "p1".into(),
             token: Some("secret-token".into()),
             interval: MIN_INTERVAL,
+            report_id: Mutex::default(),
         };
         let agent = agent();
 

@@ -92,6 +92,7 @@ fn parse_args() -> Result<Args> {
                 .ok()
                 .filter(|token| !token.is_empty()),
             interval: cloud_interval,
+            report_id: Mutex::default(),
         })
     });
     // Cloud reports get their own file so they never overwrite a locally produced report.
@@ -207,7 +208,12 @@ fn watch_sarif(server: &Mutex<ChildStdin>, client: &Mutex<io::Stdout>, args: &Ar
                 || args.sarif.display().to_string(),
                 |n| n.to_string_lossy().into_owned(),
             );
-            if notify_client(client, &format!("Qodana: report {verb} ({name})")).is_err() {
+            let report_id = args
+                .cloud
+                .as_ref()
+                .and_then(|cloud| lock(&cloud.report_id).clone());
+            let label = report_id.map_or(name, |id| format!("cloud report {id}"));
+            if notify_client(client, &format!("Qodana: report {verb} ({label})")).is_err() {
                 return;
             }
         }
