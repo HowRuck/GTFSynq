@@ -1,0 +1,16 @@
+{
+  "lsp": {
+    "jdtls": {
+      "binary": {
+        "path": "/bin/sh",
+        "arguments": ["-c", "exec .lathe/lathe-launcher.sh"],
+      },
+    },
+  },
+  "languages": {
+    "Java": { "language_servers": ["jdtls"] },
+  },
+  "context_servers": {
+
+  }
+}

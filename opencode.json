@@ -21,6 +21,11 @@
         ],
         "disabled": false
       },
+      "lathe": {
+        "type": "local",
+        "command": [".lathe/lathe-mcp-launcher.sh"],
+        "cwd": "."
+      },
       "quarkus-agent": {
         "type": "local",
         "command": ["jbang", "quarkus-agent-mcp@quarkusio"]
