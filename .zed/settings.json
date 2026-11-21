@@ -11,6 +11,36 @@
     "Java": { "language_servers": ["jdtls"] },
   },
   "context_servers": {
-
+    "vaadin": {
+      "url": "https://mcp.vaadin.com/docs",
+    },
+    "vaadin-directory": {
+      "url": "https://vaadin.com/directory/mcp",
+    },
+    "gradle": {
+      "command": "jbang",
+      "args": ["run", "--quiet", "--fresh", "gradle-mcp@rnett"],
+    },
+    "lathe": {
+      "command": ".lathe/lathe-mcp-launcher.sh",
+      "args": [],
+    },
+    "quarkus-agent": {
+      "command": "jbang",
+      "args": ["quarkus-agent-mcp@quarkusio"],
+    },
+    "grafana": {
+      "command": "bash",
+      "args": ["scripts/run-grafana-mcp.sh"],
+    },
+    "podman": {
+      "command": "npx",
+      "args": ["-y", "podman-mcp-server@latest"],
+    },
+    "playwright": {
+      "enabled": false,
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"],
+    },
   }
 }
