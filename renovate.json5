@@ -3,6 +3,11 @@
   extends: [
     'config:recommended',
   ],
+  // One pull request per dependency: turn off the presets that group packages.
+  ignorePresets: [
+    'group:monorepos',
+    'group:recommended',
+  ],
   ignorePaths: [
     '**/node_modules/**',
     '**/bower_components/**',
@@ -73,16 +78,6 @@
     },
     {
       matchManagers: [
-        'cargo',
-      ],
-      matchUpdateTypes: [
-        'minor',
-        'patch',
-      ],
-      groupName: 'rust-dependencies',
-    },
-    {
-      matchManagers: [
         'docker-compose',
       ],
       addLabels: [
@@ -113,23 +108,12 @@
       matchManagers: [
         'gradle',
       ],
-      matchUpdateTypes: [
-        'minor',
-        'patch',
-      ],
-      groupName: 'gradle-dependencies',
-    },
-    {
-      matchManagers: [
-        'gradle',
-      ],
       matchPackageNames: [
         'io.quarkus*',
       ],
       addLabels: [
         'quarkus',
       ],
-      groupName: 'quarkus',
     },
     {
       matchManagers: [
@@ -146,31 +130,12 @@
         'vaadin',
         'frontend',
       ],
-      groupName: 'vaadin',
     },
     {
       matchManagers: [
         'gradle-wrapper',
       ],
       enabled: true,
-    },
-    {
-      matchManagers: [
-        'github-actions',
-      ],
-      groupName: 'github-actions',
-    },
-    {
-      matchManagers: [
-        'docker-compose',
-      ],
-      matchUpdateTypes: [
-        'minor',
-        'patch',
-        'digest',
-        'pin',
-      ],
-      groupName: 'docker-images',
     },
     {
       matchManagers: [
