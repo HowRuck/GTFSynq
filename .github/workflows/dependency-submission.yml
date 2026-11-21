@@ -1,0 +1,35 @@
+name: dependency-submission
+
+# Replaces GitHub's built-in "Automatic dependency submission" for Gradle. That
+# dynamic workflow runs on Java 21 and cannot be configured, so it fails on
+# build-logic, which needs Java 25. After merging, set
+# Settings > Advanced Security > Dependency graph > Automatic dependency
+# submission to "Disabled" so only this workflow submits the graph.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  submit-gradle-dependencies:
+    runs-on: avrea-ubuntu-26.04-4-vcpu-8gb
+    steps:
+      - name: checkout
+        uses: actions/checkout@v7
+
+      - name: set-up-java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - name: submit-dependency-graph
+        uses: gradle/actions/dependency-submission@v6
