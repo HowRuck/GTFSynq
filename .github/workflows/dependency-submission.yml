@@ -9,6 +9,14 @@ on:
   push:
     branches:
       - main
+    # Only when the dependency graph can change.
+    paths:
+      - "**/*.gradle"
+      - "**/*.gradle.kts"
+      - "gradle.properties"
+      - "gradle/**"
+      - "build-logic/**"
+      - ".github/workflows/dependency-submission.yml"
   workflow_dispatch:
 
 concurrency:
