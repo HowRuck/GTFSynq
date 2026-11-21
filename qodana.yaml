@@ -104,3 +104,21 @@ exclude:
       - "**/generated/**"
       - "**/extracted-protos/**"
       - "**/extracted-include-protos/**"
+  # Property keys that are built at runtime (for example "filter.routeType." + type or
+  # "feed.pollStatus." + status.name()) and the Vaadin feature flags that Vaadin reads by
+  # name cannot be traced statically, so UnusedProperty reports them falsely.
+  - name: UnusedProperty
+    paths:
+      - modules/ui-app/src/main/resources/vaadin-i18n
+      - modules/ui-app/src/main/resources/vaadin-featureflags.properties
+  # Translation keys are grouped by feature, and different keys legitimately share a value
+  # ("Routes" as a nav label and as a stat title), so neither value duplicates nor
+  # alphabetical order apply. The Gradle and Vaadin settings files repeat values like "true".
+  - name: DuplicatePropertyInspection
+    paths:
+      - modules/ui-app/src/main/resources
+      - gradle.properties
+      - gradle/wrapper/gradle-wrapper.properties
+  - name: AlphaUnsortedPropertiesFile
+    paths:
+      - modules/ui-app/src/main/resources/vaadin-i18n
