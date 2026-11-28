@@ -1,13 +1,11 @@
 include:
     - docker-compose.monitoring.yaml
 
+# Shared timing only. The probe itself is declared per service: Podman runs
+# healthcheck commands without the container's environment, so the port has to
+# be literal, and every command is shell builtins only so no extra process is
+# forked while probing.
 x-app-healthcheck: &app-healthcheck
-    test:
-        - CMD-SHELL
-        - >-
-            bash -c 'exec 3<>/dev/tcp/127.0.0.1/$$QUARKUS_HTTP_PORT;
-            echo -e "GET /q/health/ready HTTP/1.0\n" >&3;
-            read -r _ code _ <&3; [ "$$code" = 200 ]'
     interval: 10s
     timeout: 5s
     retries: 12
@@ -17,6 +15,7 @@ services:
     api-app:
         image: ghcr.io/howruck/gtfsynq-api-app-native:0.0.1-SNAPSHOT
         container_name: gtfsynq-api-app
+        restart: unless-stopped
         depends_on:
             kafka:
                 condition: service_healthy
@@ -39,11 +38,21 @@ services:
             - "127.0.0.1:8080:8080"
         volumes:
             - gtfsynq-api-data:/app/data
-        healthcheck: *app-healthcheck
+        healthcheck:
+            <<: *app-healthcheck
+            test:
+                - CMD
+                - bash
+                - -c
+                - >-
+                    exec 3<>/dev/tcp/127.0.0.1/8080;
+                    printf "GET /q/health/ready HTTP/1.0\r\n\r\n" >&3;
+                    read -r proto code reason <&3; [ "$$code" = 200 ]
 
     ui-app:
         image: ghcr.io/howruck/gtfsynq-ui-app-native:0.0.1-SNAPSHOT
         container_name: gtfsynq-ui-app
+        restart: unless-stopped
         depends_on:
             api-app:
                 condition: service_healthy
@@ -63,11 +72,21 @@ services:
         ports:
             # Host-only by default, same policy as the API.
             - "127.0.0.1:8083:8083"
-        healthcheck: *app-healthcheck
+        healthcheck:
+            <<: *app-healthcheck
+            test:
+                - CMD
+                - bash
+                - -c
+                - >-
+                    exec 3<>/dev/tcp/127.0.0.1/8083;
+                    printf "GET /q/health/ready HTTP/1.0\r\n\r\n" >&3;
+                    read -r proto code reason <&3; [ "$$code" = 200 ]
 
     ingest-app:
         image: ghcr.io/howruck/gtfsynq-ingest-app-native:0.0.1-SNAPSHOT
         container_name: gtfsynq-ingest-app
+        restart: unless-stopped
         depends_on:
             kafka:
                 condition: service_healthy
@@ -92,11 +111,21 @@ services:
             - "127.0.0.1:8081:8081"
         volumes:
             - gtfsynq-ingest-data:/app/data
-        healthcheck: *app-healthcheck
+        healthcheck:
+            <<: *app-healthcheck
+            test:
+                - CMD
+                - bash
+                - -c
+                - >-
+                    exec 3<>/dev/tcp/127.0.0.1/8081;
+                    printf "GET /q/health/ready HTTP/1.0\r\n\r\n" >&3;
+                    read -r proto code reason <&3; [ "$$code" = 200 ]
 
     store-app:
         image: ghcr.io/howruck/gtfsynq-store-app-native:0.0.1-SNAPSHOT
         container_name: gtfsynq-store-app
+        restart: unless-stopped
         depends_on:
             kafka:
                 condition: service_healthy
@@ -125,7 +154,16 @@ services:
             - "127.0.0.1:8082:8082"
         volumes:
             - gtfsynq-store-data:/app/data
-        healthcheck: *app-healthcheck
+        healthcheck:
+            <<: *app-healthcheck
+            test:
+                - CMD
+                - bash
+                - -c
+                - >-
+                    exec 3<>/dev/tcp/127.0.0.1/8082;
+                    printf "GET /q/health/ready HTTP/1.0\r\n\r\n" >&3;
+                    read -r proto code reason <&3; [ "$$code" = 200 ]
 
     kafka:
         image: docker.io/apache/kafka-native:4.4.0
@@ -168,11 +206,10 @@ services:
             # the /opt/kafka/bin CLI scripts (kafka-broker-api-versions.sh etc.),
             # so probe the listener socket instead. The image includes bash, whose
             # /dev/tcp pseudo-device can open a TCP connection without extra tools.
-            test:
-                [
-                    "CMD-SHELL",
-                    "timeout 5 bash -c 'echo > /dev/tcp/127.0.0.1/9092'",
-                ]
+            # Do not wrap this in `timeout`: that forks, and the probe then fails
+            # with "fork: Resource temporarily unavailable" when the host is out
+            # of PIDs. Podman already enforces the healthcheck timeout below.
+            test: ["CMD", "bash", "-c", "echo > /dev/tcp/127.0.0.1/9092"]
             interval: 10s
             timeout: 5s
             retries: 12

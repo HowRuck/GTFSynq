@@ -819,9 +819,11 @@ resource registrations) and embeds the production frontend bundle, so it needs n
 extra flags or GraalVM configuration.
 
 Compose already references the `-native` tags; swap them for the plain tags to
-run the JVM images instead. Note the native run image has no shell, so any
-`wget`/`curl`-based Compose healthcheck must be replaced (e.g. a Docker
-`httpGet`-style check).
+run the JVM images instead. The native run image is based on UBI micro, which
+still provides `bash` and `/bin/sh` but no `curl`, so the app healthchecks use
+bash's `/dev/tcp` pseudo-device. Podman does not pass the container environment
+to healthcheck commands, so each probe hardcodes its service port instead of
+reading `QUARKUS_HTTP_PORT`.
 
 ## Monitoring
 

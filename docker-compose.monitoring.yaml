@@ -140,8 +140,11 @@ services:
       - victoria-metrics-data:/victoria-metrics-data
       - ./monitoring/vm:/etc/vm:ro,Z
     healthcheck:
+      # Use the IPv4 literal: inside the container `localhost` may resolve to
+      # ::1 first, while VictoriaMetrics listens on IPv4, which shows up as
+      # "connection refused" in the health log even though /health is fine.
       test:
-        ["CMD-SHELL", "wget --spider -q http://localhost:8428/health || exit 1"]
+        ["CMD-SHELL", "wget --spider -q http://127.0.0.1:8428/-/healthy || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
