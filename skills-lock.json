@@ -69,7 +69,7 @@
       "sourceType": "github",
       "skillPath": "java/java-conventions/SKILL.md",
       "computedHash": "1e597462a4e43648d0090cefe1f40909db6b0ac9354fe6b99abb4b7cffd870cc",
-      "commit": "9afc78abe664c398a679787898aeeeb41eb4f5fd"
+      "commit": "164a3429a145bb28a7cefc7bf2c9b7a7daad1c63"
     },
     "microsoft-docs": {
       "source": "microsoft/skills",
@@ -89,8 +89,8 @@
       "source": "quarkusio/skills",
       "sourceType": "github",
       "skillPath": "skills/migrate-spring-to-quarkus/SKILL.md",
-      "computedHash": "9b8132a62fc06254d5dd217d793700a2c394413c75666f9ae8f3e787f34945e6",
-      "commit": "4e7fa5699e2202f4f0b25571c07dfd61300f451f"
+      "computedHash": "0915456d449304d1a5540a500768569386a9414f6421459adf3b16aa02d48bc7",
+      "commit": "7f83499fcd910aa8972703fa6d6bda71f8d27616"
     },
     "opentelemetry": {
       "source": "grafana/skills",
@@ -146,14 +146,14 @@
       "sourceType": "github",
       "skillPath": "skills/quarkus-update/SKILL.md",
       "computedHash": "06b9d625ce4ebef2629f03d7a1c848f37647df2df7fec71398ec8c912245e43d",
-      "commit": "4e7fa5699e2202f4f0b25571c07dfd61300f451f"
+      "commit": "7f83499fcd910aa8972703fa6d6bda71f8d27616"
     },
     "scaffold-quarkus-mcp-server": {
       "source": "quarkusio/skills",
       "sourceType": "github",
       "skillPath": "skills/scaffold-quarkus-mcp-server/SKILL.md",
       "computedHash": "e8c4e2105922bdd7c82bd0e2159495e5138295927183129624b56ba47f4c669d",
-      "commit": "4e7fa5699e2202f4f0b25571c07dfd61300f451f"
+      "commit": "7f83499fcd910aa8972703fa6d6bda71f8d27616"
     },
     "schema-exploration": {
       "source": "timescale/pg-aiguide",
