@@ -23,7 +23,7 @@ pluginManagement {
 plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
     id("com.gradle.develocity") version "4.6.1"
-    id("com.autonomousapps.build-health") version "3.20.4"
+    id("com.autonomousapps.build-health") version "3.21.0"
     id("io.github.ag-libs.lathe") version "0.3.1"
     // Lathe's Gradle settings plugin is not yet resolvable from the Gradle Plugin Portal
     // (first-version review is pending). Uncomment once the plugin page resolves:
